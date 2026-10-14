@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "mission": "tsx scripts/run-mission.ts"
+    "mission": "tsx scripts/run-mission.ts",
+    "serve": "tsx scripts/serve.ts"
   },
   "dependencies": {
     "pixi.js": "^8.22.0",

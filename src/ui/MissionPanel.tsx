@@ -16,6 +16,7 @@ interface Props {
   onSeat: (seat: Seat) => void;
   oneConsole: boolean; // duel: both sides in one console, lines prefixed blue> or red>
   onOneConsole: (on: boolean) => void;
+  server?: { url: string; turn: number; turnMin: number; waitingFor: PlayerSide[]; status: string }; // watching a game server
   onToggleTimeline: () => void;
   onNewMission: () => void;
   onExit: () => void;
@@ -23,7 +24,7 @@ interface Props {
 
 const short = (name: string) => name.replace(/^(Blue|Red) /, '');
 
-export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSeat, oneConsole, onOneConsole, onToggleTimeline, onNewMission, onExit }: Props) {
+export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSeat, oneConsole, onOneConsole, server, onToggleTimeline, onNewMission, onExit }: Props) {
   const tracks = view.tracks;
   const fixed = realFixes(m);
   const uavMission = m.mission === 'uav';
@@ -67,6 +68,11 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
         <div className="sub">
           {title} · seed {m.seed} <button onClick={onNewMission}>New mission</button> <button onClick={onExit}>Sandbox</button>
         </div>
+        {server && (
+          <div className="sub">
+            <b>Server</b> {server.url} · {server.status === 'running' ? `turn ${server.turn + 1}, ${server.turnMin} min each · waiting for ${server.waitingFor.length ? server.waitingFor.join(' and ') : 'the clock'}` : server.status}
+          </div>
+        )}
         {duel && (
           <div className="sub seg">
             {(['blue', 'red', 'umpire'] as Seat[]).map((x) => (

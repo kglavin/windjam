@@ -35,6 +35,38 @@ export function App() {
   const [seat, setSeat] = useState<PlayerSide | 'umpire'>('blue');
   // Duel: one console for both sides, lines prefixed blue> or red>, so a whole script can be pasted at once.
   const [oneConsole, setOneConsole] = useState(false);
+  // Watching a game server (?server=http://localhost:8787): the state lives there, this page renders it once a
+  // second and relays console lines. Once the mission is over the copy here is frozen so the replay works locally.
+  const [server] = useState(() => new URLSearchParams(window.location.search).get('server') ?? undefined);
+  const [serverInfo, setServerInfo] = useState<{ turn: number; turnMin: number; waitingFor: PlayerSide[]; status: string }>();
+  useEffect(() => {
+    if (!server) return;
+    let stop = false;
+    let mapSeed = -1;
+    let map: ReturnType<typeof createScenario>['map'] | undefined;
+    const poll = async () => {
+      try {
+        const j = await (await fetch(`${server}/full`)).json();
+        if (stop) return;
+        if (j.state.seed !== mapSeed) {
+          map = createScenario(j.state.seed).map; // the server leaves the map out; the seed gives it
+          mapSeed = j.state.seed;
+        }
+        setServerInfo({ turn: j.turn, turnMin: j.turnMin, waitingFor: j.waitingFor, status: j.status });
+        setMission((prev) => (prev && prev.status !== 'running' && prev.seed === j.state.seed && j.status !== 'running' ? prev : { ...j.state, world: { ...j.state.world, map } }));
+        setMode('mission');
+      } catch {
+        setServerInfo((prev) => (prev ? { ...prev, status: 'unreachable' } : { turn: 0, turnMin: 0, waitingFor: [], status: 'unreachable' }));
+      }
+    };
+    setSeat('umpire');
+    poll();
+    const id = setInterval(poll, 1000);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, [server]);
   // Replay transport: auto-step the debrief one minute per interval so a person can watch it unfold.
   const [replayPlaying, setReplayPlaying] = useState(false);
   const [replaySpeed, setReplaySpeed] = useState(1);
@@ -250,6 +282,13 @@ export function App() {
 
   // Mission console: parse a line, apply it, and log parse errors in the console itself.
   const onConsole = (line: string, as?: PlayerSide) => {
+    // Watching a server while its game runs: the line goes to the server's console for that side.
+    if (server && mission && mission.status === 'running') {
+      const pre = /^(blue|red)>\s*/i.exec(line.trim());
+      const side = pre && mission.humans.includes(pre[1].toLowerCase() as PlayerSide) ? (pre[1].toLowerCase() as PlayerSide) : (as ?? seatSide);
+      void fetch(`${server}/${side}`, { method: 'POST', body: pre ? line.trim().slice(pre[0].length) : line });
+      return;
+    }
     // Functional update: a pasted script delivers many lines in one event, each must build on the last.
     setMission((prev) => {
       if (!prev) return prev;
@@ -375,6 +414,7 @@ export function App() {
           onSeat={setSeat}
           oneConsole={oneConsole}
           onOneConsole={setOneConsole}
+          server={server ? { url: server, ...(serverInfo ?? { turn: 0, turnMin: 0, waitingFor: [], status: 'connecting' }) } : undefined}
           onNewMission={() => startMission(mission.mission)}
           onExit={() => setMode('sandbox')}
         />
