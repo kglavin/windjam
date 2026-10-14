@@ -1,12 +1,13 @@
 # Mission 5, UAV hunt. Each side has an HQ and a UAV, 68 km apart. A UAV must report to its HQ every 5 minutes, and
 # every report is a burst the other side can hear. The first UAV to hear the other's report from within 3 km wins.
-# Both fly toward the middle here; Red turns its power down and loses its reports before it loses the game.
+# Both fly toward the middle here, two minutes apart so their reporting clocks differ; Red turns its power down.
 mission hunt
 seed 1234
-expect blue
+expect red
 blue> status
 blue> uav: route 120,80; 150,70; 170,90
 blue> uav: launch
+blue> wait 2
 red> uav: route 130,80; 100,90; 80,70
 red> uav: power 0.3
 red> uav: launch

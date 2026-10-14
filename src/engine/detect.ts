@@ -179,7 +179,9 @@ export const DF_MIN_PD = 0.5;
 export function sensorLook(map: HexMap, emitter: Unit, sensor: Unit, em: Emission, opts: DetectOptions): SensorLook {
   const limiterDb = opts.limiter ? LIMITER_LOSS_DB : 0;
   const path = analyzePath(map, emitter.pos, emitter.radio.antennaHeightM, sensor.pos, sensor.radio.antennaHeightM, em.freqMHz);
-  const rx = em.powerDbm + patternGainDbi(emitter, sensor.pos, map) + patternGainDbi(sensor, emitter.pos, map) - path.totalLossDb;
+  // The emitter's directional link antenna shapes what leaks sideways; the sensor's DF array is its own omni
+  // antenna, so a unit that points its link at HQ does not go deaf in other directions.
+  const rx = em.powerDbm + patternGainDbi(emitter, sensor.pos, map) + sensor.radio.gainDbi - path.totalLossDb;
   const snrDb = rx - noiseFloorDbm(ES_CHANNEL_KHZ, sensor.radio.noiseFigureDb, manMadeNoiseFigureDb(em.freqMHz, opts.noiseEnv)) - limiterDb;
   return { sensorId: sensor.id, snrDb, pd: em.intercept * detectionProbability(snrDb, opts.pfa), lineOfSight: path.lineOfSight, emission: em.label };
 }

@@ -56,7 +56,7 @@ describe('mission 5: UAV hunt', () => {
     const after = run(s, ['blue> uav: route 120,80; 150,70; 170,90', 'blue> uav: launch', 'red> uav: route 130,80; 100,90; 80,70', 'red> uav: power 0.3', 'red> uav: launch', 'blue> wait 60']);
     expect(after.found).toBeDefined();
     expect(after.found!.km).toBeLessThanOrEqual(H.interceptKm);
-    expect(after.winner).toBe(after.found!.by);
+    expect(after.winner).toBe(after.found!.mutual ? 'draw' : after.found!.by); // same-minute reports find each other
     expect(after.status).not.toBe('running');
   });
   it('draws at the limit when neither finds the other', () => {

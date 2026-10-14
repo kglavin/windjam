@@ -34,6 +34,9 @@ status · picture · help
 - Your own report gives you away. A UAV that reaches the other quietly, and lets the other transmit first, wins. `burst` early before closing in, then stay quiet for the approach, or hold short of the last bearing and wait for the other's forced report.
 - Low power keeps you quiet but the report has to reach HQ: Red at 0.3 W loses its reports beyond about 25 km from its HQ on seed 1234 (lost reports do not lose the game here, but each one is a bearing-free five minutes for your own HQ picture).
 - HQ's bearing and the UAV's bearing on the same burst make a fix; both arrive late and loose at long range, so the picture is a direction to fly, not a point.
+- The UAV's DF array is its own omni antenna: pointing the link antenna at HQ makes the UAV quieter sideways but not deaf.
+- If both UAVs report inside 3 km in the same minute, each finds the other and the game is a draw.
+- The reporting clocks are the game within the game. Each side's reports fall every 5 minutes from its last burst, and the other side can read that clock from the minutes of its bearings. The side that arrives inside 3 km just before the enemy's report and just after its own wins.
 
 ## Script
 

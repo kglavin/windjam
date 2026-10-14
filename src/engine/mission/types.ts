@@ -188,7 +188,7 @@ export interface MissionState {
   // Mission 4.
   uav?: UavState; // Red's UAV (missions 4 and 5)
   blueUav?: UavState; // Blue's UAV (mission 5)
-  found?: { by: PlayerSide; minute: number; km: number; sensorId: string }; // mission 5: who heard the other UAV from close by, first
+  found?: { by: PlayerSide; minute: number; km: number; sensorId: string; mutual?: boolean }; // mission 5: who heard the other UAV from close by, first (mutual: both in the same minute, a draw)
   actor?: PlayerSide; // transient: which side's console current log lines belong to
 }
 

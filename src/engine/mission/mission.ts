@@ -870,13 +870,18 @@ function tick(s: MissionState): MissionState {
       const before = s.events.length;
       uav.heard = listen(s, drone, 0, 180, uav.heard, m, rng, opts);
       for (const e of s.events.slice(before)) {
-        if (e.kind !== 'capture' || s.found) continue;
+        if (e.kind !== 'capture') continue;
         const target = unitById(s.world, e.emitterId);
         if (!target || target.kind !== 'drone') continue;
         const km = hexDistanceKm(s.world.map, drone.pos, target.pos);
-        if (km <= H.interceptKm) {
+        if (km > H.interceptKm) continue;
+        if (!s.found) {
           s.found = { by: side, minute: m, km, sensorId: drone.id };
           log(s, 'hq', `${drone.name} heard ${target.name}'s report from ${km.toFixed(1)} km: found.`, 'both');
+        } else if (s.found.minute === m && s.found.by !== side) {
+          // Both reported inside 3 km in the same minute: each found the other.
+          s.found.mutual = true;
+          log(s, 'hq', `${drone.name} heard ${target.name}'s report from ${km.toFixed(1)} km in the same minute: both found each other.`, 'both');
         }
       }
     }
@@ -932,8 +937,8 @@ function resolve(s: MissionState) {
   }
   if (s.mission === 'hunt') {
     if (s.found) {
-      s.winner = s.found.by;
-      end(s, s.found.by === 'blue' ? 'won' : 'lost');
+      s.winner = s.found.mutual ? 'draw' : s.found.by;
+      end(s, s.found.mutual ? 'draw' : s.found.by === 'blue' ? 'won' : 'lost');
     } else if (s.minute >= s.limitMin) {
       s.winner = 'draw';
       end(s, 'draw');
@@ -1205,9 +1210,11 @@ function end(s: MissionState, status: 'won' | 'lost' | 'draw' | 'ended') {
       'hq',
       status === 'ended'
         ? `Mission ended at T+${s.minute} for the debrief: neither UAV found the other.`
-        : f
-          ? `${f.by === 'blue' ? 'Blue' : 'Red'} wins at T+${f.minute}: ${unitById(s.world, f.sensorId)?.name ?? 'its UAV'} heard the other UAV's report from ${f.km.toFixed(1)} km.`
-          : `Draw at T+${s.minute}: neither UAV found the other.`,
+        : f?.mutual
+          ? `Draw at T+${f.minute}: both UAVs reported inside ${H.interceptKm} km in the same minute and found each other.`
+          : f
+            ? `${f.by === 'blue' ? 'Blue' : 'Red'} wins at T+${f.minute}: ${unitById(s.world, f.sensorId)?.name ?? 'its UAV'} heard the other UAV's report from ${f.km.toFixed(1)} km.`
+            : `Draw at T+${s.minute}: neither UAV found the other.`,
       'both',
     );
   } else if (s.mission === 'uav') {
@@ -1487,8 +1494,13 @@ export function pictureLines(s: MissionState, side: PlayerSide = s.side): string
       const { col, row } = axialToOffset({ q: Math.round(t.fix.q), r: Math.round(t.fix.r) });
       return `${t.id} · ${t.signature} · fixed near ${col},${row}, CEP ${t.fix.cepKm.toFixed(2)} km, ${t.bearings.length} bearings`;
     }
-    const b = t.bearings[0];
-    return `${t.id} · ${t.signature} · 1 bearing (${unitById(s.world, b.sensorId)?.name ?? b.sensorId}, ${stamp(b.bearingDeg)} ± ${b.sigmaDeg.toFixed(1)}°)`;
+    // No fix: the latest bearings, newest first, with when and from where they were taken.
+    const recent = t.bearings.slice(-4).reverse();
+    const show = (b: ReportedBearing) => {
+      const { col, row } = axialToOffset(b.sensorPos);
+      return `${unitById(s.world, b.sensorId)?.name ?? b.sensorId} at ${col},${row}: ${stamp(b.bearingDeg)} ± ${b.sigmaDeg.toFixed(1)}° at T+${b.heardMin ?? b.minute}`;
+    };
+    return `${t.id} · ${t.signature} · ${t.bearings.length} bearing${t.bearings.length === 1 ? '' : 's'}, no fix${t.bearings.length > 4 ? ', latest' : ''}: ${recent.map(show).join('; ')}`;
   });
 }
 

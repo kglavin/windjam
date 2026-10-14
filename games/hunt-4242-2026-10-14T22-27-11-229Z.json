@@ -1,0 +1,173 @@
+{
+  "mission": "hunt",
+  "seed": 4242,
+  "turnMin": 10,
+  "turns": 4,
+  "endedAt": 36,
+  "status": "won",
+  "winner": "blue",
+  "finishedAt": "2026-10-14T22:27:11.229Z",
+  "orders": [
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "uav: route 110,78",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "uav: launch",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: route 146,76",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: launch",
+      "minute": 0
+    },
+    {
+      "turn": 1,
+      "side": "red",
+      "line": "uav: route 126,76",
+      "minute": 10
+    },
+    {
+      "turn": 2,
+      "side": "blue",
+      "line": "uav: route 130,78",
+      "minute": 20
+    },
+    {
+      "turn": 3,
+      "side": "red",
+      "line": "uav: antenna toward hq",
+      "minute": 30
+    },
+    {
+      "turn": 3,
+      "side": "red",
+      "line": "uavlink: waveform dsss",
+      "minute": 30
+    },
+    {
+      "turn": 3,
+      "side": "red",
+      "line": "uav: power 1",
+      "minute": 30
+    },
+    {
+      "turn": 3,
+      "side": "red",
+      "line": "uav: burst",
+      "minute": 30
+    },
+    {
+      "turn": 3,
+      "side": "red",
+      "line": "uav: route 133,76",
+      "minute": 30
+    },
+    {
+      "turn": 3,
+      "side": "red",
+      "line": "uav: hold",
+      "minute": 30
+    },
+    {
+      "turn": 3,
+      "side": "blue",
+      "line": "uav: route 150,78",
+      "minute": 30
+    }
+  ],
+  "console": {
+    "blue": [
+      "[T+00] Mission: UAV hunt. Each side has an HQ and a UAV. A UAV must report to its HQ every 5 minutes; every report is a burst the other side can hear.",
+      "[T+00] Win: your UAV hears the other UAV's report from within 3 km. Draw at T+180. HQ and the UAV both listen all round; the UAV's bearings reach HQ with its next report.",
+      "[T+00] uav: route <col>,<row>; ... sets the search; uav: launch flies it; uav: burst reports now; uav: hold pauses. uav: power, uavlink: waveform and uav: antenna toward hq shape the burst. Type help and status.",
+      "[T+00] Blue UAV: new route, 1 waypoint: 110,78. Launch to fly it.",
+      "[T+00] Blue UAV: launched at T+0, 1 waypoints: 110,78. It must report to HQ every 5 min.",
+      "[T+01] Blue UAV: to waypoint 1/1 at 110,78, about 25 min.",
+      "[T+06] Blue UAV: report (forced) at T+5 from 72,78 received by HQ (good, SNR 54 dB).",
+      "[T+11] Blue UAV: report (forced) at T+10 from 82,78 received by HQ (good, SNR 50 dB).",
+      "[T+16] Blue UAV: report (forced) at T+15 from 92,78 received by HQ (good, SNR 42 dB).",
+      "[T+16] Blue UAV: 1 bearing came down with the report.",
+      "[T+16] HQ: new track E1 (65 MHz UAV link).",
+      "[T+20] Blue UAV: new route, 1 waypoint: 130,78.",
+      "[T+21] Blue UAV: to waypoint 1/1 at 130,78, about 15 min.",
+      "[T+21] Blue UAV: report (forced) at T+20 from 102,78 received by HQ (good, SNR 26 dB).",
+      "[T+21] Blue UAV: 1 bearing came down with the report.",
+      "[T+26] Blue UAV: report (forced) at T+25 from 112,78 received by HQ (good, SNR 52 dB).",
+      "[T+26] Blue UAV: 1 bearing came down with the report.",
+      "[T+30] Blue UAV: new route, 1 waypoint: 150,78.",
+      "[T+31] Blue UAV: to waypoint 1/1 at 150,78, about 15 min.",
+      "[T+31] Blue UAV: report (forced) at T+30 from 122,78 lost: link denied (SNR 1 dB).",
+      "[T+36] Blue UAV: report (forced) at T+35 from 132,78 lost: link denied (SNR -0 dB).",
+      "[T+36] Blue UAV heard Red UAV's report from 1.3 km: found.",
+      "[T+36] Blue wins at T+35: Blue UAV heard the other UAV's report from 1.3 km.",
+      "[T+36] Type reveal to see the truth and step through how the picture built up."
+    ],
+    "red": [
+      "[T+00] Mission: UAV hunt. Each side has an HQ and a UAV. A UAV must report to its HQ every 5 minutes; every report is a burst the other side can hear.",
+      "[T+00] Win: your UAV hears the other UAV's report from within 3 km. Draw at T+180. HQ and the UAV both listen all round; the UAV's bearings reach HQ with its next report.",
+      "[T+00] uav: route <col>,<row>; ... sets the search; uav: launch flies it; uav: burst reports now; uav: hold pauses. uav: power, uavlink: waveform and uav: antenna toward hq shape the burst. Type help and status.",
+      "[T+00] Red UAV: new route, 1 waypoint: 146,76. Launch to fly it.",
+      "[T+00] Red UAV: launched at T+0, 1 waypoints: 146,76. It must report to HQ every 5 min.",
+      "[T+01] Red UAV: to waypoint 1/1 at 146,76, about 24 min.",
+      "[T+06] Red UAV: report (forced) at T+5 from 182,76 received by HQ (good, SNR 54 dB).",
+      "[T+06] HQ: new track B1 (62 MHz UAV link).",
+      "[T+10] Red UAV: new route, 1 waypoint: 126,76.",
+      "[T+11] Red UAV: to waypoint 1/1 at 126,76, about 24 min.",
+      "[T+11] Red UAV: report (forced) at T+10 from 172,76 received by HQ (good, SNR 51 dB).",
+      "[T+16] Red UAV: report (forced) at T+15 from 162,76 received by HQ (good, SNR 49 dB).",
+      "[T+16] Red UAV: 1 bearing came down with the report.",
+      "[T+21] Red UAV: report (forced) at T+20 from 152,76 received by HQ (good, SNR 47 dB).",
+      "[T+21] Red UAV: 1 bearing came down with the report.",
+      "[T+26] Red UAV: report (forced) at T+25 from 142,76 received by HQ (good, SNR 46 dB).",
+      "[T+26] Red UAV: 1 bearing came down with the report.",
+      "[T+30] Red UAV: antenna pointed at Red HQ: +6 dBi within 30°, 20 dB down everywhere else, including towards anything off that line.",
+      "[T+30] Red UAV Link: waveform DSSS 5 Mcps.",
+      "[T+30] Red UAV: transmit power 1 W.",
+      "[T+30] Red UAV: reporting to HQ this minute. The next forced report moves to T+35.",
+      "[T+30] Red UAV: new route, 1 waypoint: 133,76.",
+      "[T+30] Red UAV: will hold at waypoint 1 until resumed. Reports continue.",
+      "[T+31] Red UAV: report at T+30 from 134,76 received by HQ (good, SNR 30 dB).",
+      "[T+31] Red UAV: 1 bearing came down with the report.",
+      "[T+36] Red UAV: report (forced) at T+35 from 134,76 received by HQ (good, SNR 30 dB).",
+      "[T+36] Red UAV: 1 bearing came down with the report.",
+      "[T+36] Blue UAV heard Red UAV's report from 1.3 km: found.",
+      "[T+36] Blue wins at T+35: Blue UAV heard the other UAV's report from 1.3 km.",
+      "[T+36] Type reveal to see the truth and step through how the picture built up."
+    ]
+  },
+  "reveal": [
+    "Reveal: Red UAV launched T+0, ended at 134,76. Reports (* forced): T+5*, T+10*, T+15*, T+20*, T+25*, T+30, T+35*.",
+    "Reveal: Red on the other UAV: B1, 12 bearings, 1 fixes.",
+    "Reveal: Blue UAV launched T+0, ended at 132,78. Reports (* forced): T+5*, T+10*, T+15*, T+20*, T+25*, T+30* lost, T+35* lost.",
+    "Reveal: Blue on the other UAV: E1, 3 bearings, 0 fixes.",
+    "Reveal: found at T+35 by Blue UAV from 1.3 km."
+  ],
+  "summary": {
+    "blue": [
+      "T+36 of 180 min. Blue UAV airborne since T+0, at 132,78, 0 waypoints to go. Reports: 5 received, 2 lost. Next forced report T+40. Bearings waiting for the next report: 3.",
+      "Enemy UAV: track E1, 3 bearings, last 81° from Blue UAV at T+20.",
+      "net uavlink Blue UAV Link    62 MHz · fixed",
+      "hq    Blue HQ       at 60,79 · idle · link to HQ: ok (at HQ) · 50 W",
+      "uav   Blue UAV      at 132,78 · moving, 17 hexes to go · link to HQ: ok (via Blue HQ, at HQ)"
+    ],
+    "red": [
+      "T+36 of 180 min. Red UAV airborne since T+0, at 134,76, 1 waypoint to go, holding. Reports: 7 received, 0 lost. Next forced report T+40. Bearings waiting for the next report: 1.",
+      "Enemy UAV: track B1, 12 bearings, last 268° from Red HQ at T+35; latest fix CEP 4.8 km.",
+      "net uavlink Red UAV Link     65 MHz · DSSS 5 Mcps",
+      "hq    Red HQ        at 194,77 · idle · link to HQ: ok (at HQ) · 50 W",
+      "uav   Red UAV       at 134,76 · idle · link to HQ: ok (via Red HQ, at HQ) · antenna → Red HQ"
+    ]
+  }
+}
