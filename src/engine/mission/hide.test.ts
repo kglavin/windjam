@@ -28,9 +28,9 @@ describe('mission 2: setup', () => {
     for (const line of ['send', 'emcon cmd 5', 'hq: power 5', 'cmd: waveform dsss', 'hq: antenna toward relay', 'relay: antenna omni', 'ew: decoy cmd', 'ew: decoy off', 'ew: jam cmd', 'ew: jam off', 'hq: move 150,80']) {
       expect(parseCommand(line, 'red').ok, line).toBe(true);
     }
-    for (const line of ['uav: df e 5', 'emcon cmd 50', 'sq1: antenna toward hq', 'ew: jam squad']) {
+    for (const line of ['b-uav: df e 5', 'emcon cmd 50', 'sq1: antenna toward hq', 'ew: jam squad']) {
       const p = parseCommand(line, 'red');
-      // uav is not a Red unit; 50% is out of range; squads have no directional kit (rejected at issue); 'squad' is not a Blue net.
+      // b-uav is not an alias; 50% is out of range; squads have no directional kit (rejected at issue); 'squad' is not a Blue net.
       if (line === 'sq1: antenna toward hq') expect(p.ok).toBe(true);
       else expect(p.ok, line).toBe(false);
     }

@@ -21,6 +21,8 @@ const EMIT_COLOURS: Record<string, string> = {
   decoy: '#f472b6',
   jamming: '#c084fc',
   'UAV link': '#22d3ee',
+  telemetry: '#fb923c',
+  'telemetry (forced)': '#fb923c',
   'DF report': '#22c55e',
   'report acknowledged': '#22c55e',
 };

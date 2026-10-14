@@ -1,6 +1,6 @@
 import { aliasOf } from '../engine/mission/commands';
 import { deliveredOrders, realFixes, routeToHq, viewOf } from '../engine/mission/mission';
-import { MISSION_RULES as R, type MissionState, type PlayerSide } from '../engine/mission/types';
+import { MISSION_RULES as R, UAV_RULES as UR, type MissionState, type PlayerSide } from '../engine/mission/types';
 import { axialToOffset } from '../engine/hex';
 import { type LinkView, unitById } from '../engine/world';
 import { SIDE_COLORS, dfColorOf, toCss } from './colors';
@@ -26,18 +26,29 @@ const short = (name: string) => name.replace(/^(Blue|Red) /, '');
 export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSeat, oneConsole, onOneConsole, onToggleTimeline, onNewMission, onExit }: Props) {
   const tracks = view.tracks;
   const fixed = realFixes(m);
-  const duel = m.mission === 'duel';
+  const uavMission = m.mission === 'uav';
+  const duel = m.humans.length > 1; // two consoles: mission 3 and 4
   const side: PlayerSide = seat === 'umpire' ? 'blue' : seat; // the picture shown
   const red = m.mission === 'hide' || (duel && seat === 'red');
+  const uav = m.uav;
+  const uavTrack = uav && m.tracks.find((t) => t.emitterId === uav.unitId);
+  const uavFixed = uavTrack?.fixes?.filter((f) => f.fix.cepKm < UR.winCepKm).length ?? 0;
+  const uavLost = uav?.telemetry.filter((t) => !t.delivered).length ?? 0;
   const current = m.redOrders.find((o) => o.status === 'pending' && o.windowStart <= m.minute && m.minute < o.windowEnd);
   const over = m.status !== 'running';
-  const title = duel ? 'Duel' : red ? 'Stay hidden' : 'Find the enemy';
+  const title = uavMission ? 'Track the UAV' : duel ? 'Duel' : red ? 'Stay hidden' : 'Find the enemy';
   const result = duel
     ? m.status === 'ended'
-      ? 'Duel ended for the debrief.'
+      ? 'Mission ended for the debrief.'
       : m.winner === 'draw'
-        ? 'Draw: Red hidden, but not commanding.'
-        : `${m.winner === 'blue' ? 'Blue' : 'Red'} wins.`
+        ? uavMission
+          ? 'Draw: Blue short of fixes, and Red lost reports or did not finish the route.'
+          : 'Draw: Red hidden, but not commanding.'
+        : uavMission
+          ? m.winner === 'blue'
+            ? 'Blue wins: the UAV was fixed.'
+            : 'Red wins: route flown, reports delivered.'
+          : `${m.winner === 'blue' ? 'Blue' : 'Red'} wins.`
     : m.status === 'won'
       ? red
         ? 'You stayed hidden.'
@@ -52,7 +63,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
   return (
     <aside className="panel">
       <header>
-        <h1>Windjam · Mission {duel ? 3 : red ? 2 : 1}</h1>
+        <h1>Windjam · Mission {uavMission ? 4 : duel ? 3 : red ? 2 : 1}</h1>
         <div className="sub">
           {title} · seed {m.seed} <button onClick={onNewMission}>New mission</button> <button onClick={onExit}>Sandbox</button>
         </div>
@@ -84,7 +95,13 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
 
       <section>
         <h2>Objective</h2>
-        {duel ? (
+        {uavMission ? (
+          <p className="help">
+            Red's UAV flies a {UR.waypoints}-waypoint route and must report to Red HQ at least every {UR.reportEveryMin} min; each report is a {UR.burstSec} s burst. Blue wins with{' '}
+            {UR.fixesToWin} position fixes under {UR.winCepKm} km (two sites hearing the same report). Red wins if the route is flown with at most {UR.maxGaps} report lost and Blue has fewer fixes.
+            Otherwise a draw at T+{R.limitMin}.
+          </p>
+        ) : duel ? (
           <p className="help">
             Blue hunts, Red hides, both from their own console. Blue wins with {R.fixesToWin} fixes under {R.winCepKm} km on real Red emitters. Red wins if Blue has fewer at T+
             {R.limitMin} and Red delivered {R.redOrdersToWin} of {R.redOrderCount} orders on time. wait from either console advances the clock for both.
@@ -107,14 +124,14 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
           </span>
         </div>
         <div className="row">
-          <span className="k">{duel ? `Blue fixes under ${R.winCepKm} km` : red ? 'Blue fixes on you (under 1 km)' : `Fixed under ${R.winCepKm} km`}</span>
+          <span className="k">{uavMission ? `Blue fixes on the UAV under ${UR.winCepKm} km` : duel ? `Blue fixes under ${R.winCepKm} km` : red ? 'Blue fixes on you (under 1 km)' : `Fixed under ${R.winCepKm} km`}</span>
           <span className="v">
             <b>
-              {fixed}/{R.fixesToWin}
+              {uavMission ? `${uavFixed}/${UR.fixesToWin}` : `${fixed}/${R.fixesToWin}`}
             </b>
           </span>
         </div>
-        {(red || duel) && (
+        {(red || duel) && !uavMission && (
           <div className="row">
             <span className="k">Orders on time</span>
             <span className="v">
@@ -140,7 +157,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
         )}
       </section>
 
-      {(red || duel) && (
+      {(red || duel) && !uavMission && (
         <section>
           <h2>Orders to pass</h2>
           {m.redOrders.map((o) => (
@@ -154,6 +171,47 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
             </div>
           ))}
           <p className="muted">{duel ? 'From the red console, ' : ''}send transmits the current order: a one-minute burst from HQ (and the relay if routed through it), then the squad's acknowledgement.</p>
+        </section>
+      )}
+
+      {uavMission && uav && (
+        <section>
+          <h2>Red UAV</h2>
+          {(seat !== 'blue' || over) && (
+            <>
+              <div className="row">
+                <span className="k">Route</span>
+                <span className="v">
+                  {uav.doneMin !== undefined ? `complete at T+${uav.doneMin}` : uav.launchedMin === undefined ? 'on the ground (uav: launch)' : `airborne since T+${uav.launchedMin} · waypoint ${uav.nextWp}/${uav.route.length}${uav.holding ? ' · holding' : ''}`}
+                </span>
+              </div>
+              <div className="row">
+                <span className="k">Reports received / lost</span>
+                <span className="v" style={{ color: uavLost > UR.maxGaps ? '#ef4444' : undefined }}>
+                  {uav.telemetry.length - uavLost} / {uavLost} ({UR.maxGaps} may be lost)
+                </span>
+              </div>
+              {uav.launchedMin !== undefined && uav.doneMin === undefined && (
+                <div className="row">
+                  <span className="k">Next forced report</span>
+                  <span className="v">T+{(uav.lastBurstMin ?? uav.launchedMin) + UR.reportEveryMin}</span>
+                </div>
+              )}
+            </>
+          )}
+          {(seat !== 'red' || over) && (
+            <div className="row">
+              <span className="k">Blue's position fixes</span>
+              <span className="v">
+                {uavTrack ? `${uavTrack.fixes?.length ?? 0} (${uavFixed} under ${UR.winCepKm} km) from ${uavTrack.bearings.length} bearings` : 'UAV not heard yet'}
+              </span>
+            </div>
+          )}
+          <p className="muted">
+            {seat === 'red'
+              ? 'uav: burst reports now and resets the 3-minute clock; uav: hold waits at the next waypoint; uav: power and uavlink: waveform shape the burst; uav: antenna toward hq points it home.'
+              : 'A fix needs two sites to hear the same burst. Short DF tasks report sooner; ew: jam uavlink makes Red lose reports.'}
+          </p>
         </section>
       )}
 

@@ -116,7 +116,7 @@ Each link's order is **on time**, **late** or **lost**. The panel header shows t
 
 ## Mission mode
 
-Three missions share one engine. Click **Mission 1: find the enemy**, **Mission 2: stay hidden** or **Mission 3: duel** in the sandbox header.
+Four missions share one engine. Click **Mission 1: find the enemy**, **Mission 2: stay hidden**, **Mission 3: duel** or **Mission 4: track the UAV** in the sandbox header.
 
 ### Mission 1: find the enemy
 
@@ -156,6 +156,16 @@ Two people at one screen, Blue on a `blue>` console and Red on a `red>` console 
 - **One console.** Tick **One console** in the panel for a single `duel>` console showing both sides' lines tagged by side. Paste a whole duel script there at once.
 
 This is the hot-seat step toward autonomous agents and networked play: the engine routes every command by the side that typed it, so a script or an agent can take either console.
+
+### Mission 4: track the UAV
+
+Two consoles, as in the duel. Red flies a reconnaissance UAV along a seeded ten-waypoint route and must get a report to Red HQ at least every three minutes; Blue tries to fix it. Full notes are in [docs/mission-track-the-uav.md](docs/mission-track-the-uav.md).
+
+- **Reports.** Each is a 6 s burst on the UAV link, forced when three minutes have passed, or sent early with `uav: burst`. It counts only if HQ receives it (the UAV-to-HQ direction of the link).
+- **Fixes.** A moving emitter is fixed one minute at a time: two sites must hear the same burst. Blue wins with 5 fixes under 1 km; Red wins by completing the route with at most one report lost while Blue is short; otherwise a draw.
+- **Red's levers.** `uav: launch|hold|resume|burst`, `uav: power <W>`, `uavlink: waveform dsss`, `uav: antenna toward hq`.
+- **Blue's levers.** Short DF tasks, moving squads into the UAV's beam toward HQ, and `ew: jam uavlink`, which costs Red reports unless it turns the power up.
+- **Script.** [missions/09-uav-track.txt](missions/09-uav-track.txt).
 
 ### Replay bar (all missions)
 

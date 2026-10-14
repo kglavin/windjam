@@ -18,3 +18,5 @@ Grid positions below are for seed 1234 (Blue HQ 102,80; Squads at 114,68, 116,80
 Mission 2 scripts start with `mission hide` and use the Red grammar (`send`, `emcon`, `power`, `waveform`, `antenna`, `decoy`, `jam`). See `07-red-stay-hidden.txt`.
 
 Mission 3 scripts start with `mission duel` and prefix every console line with `blue> ` or `red> `. `expect blue|red|draw` checks the winner. See `08-duel-hot-seat.txt`. Pasted into either in-app console, a prefixed line runs on the console it names, and the `mission`, `expect` and `rejects` directives are skipped.
+
+Mission 4 scripts start with `mission uav` and use the same `blue> ` / `red> ` prefixes as a duel. Red's extra orders are `uav: launch`, `uav: burst`, `uav: hold`, `uav: resume`, `uav: power <W>`, `uavlink: waveform ...` and `uav: antenna toward hq`; Blue can `ew: jam uavlink`. See `09-uav-track.txt`.

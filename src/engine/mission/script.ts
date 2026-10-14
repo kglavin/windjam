@@ -28,7 +28,7 @@ export function parseScript(text: string): Script {
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.replace(/#.*$/, '').trim();
     if (!line) continue;
-    const mission = /^mission\s+(find|hide|duel)$/i.exec(line);
+    const mission = /^mission\s+(find|hide|duel|uav)$/i.exec(line);
     if (mission) {
       script.mission = mission[1].toLowerCase() as MissionKind;
       continue;
@@ -86,4 +86,4 @@ export const formatLog = (state: MissionState): string =>
     .join('\n');
 
 // What `expect` is checked against: the winner in a duel, the status otherwise.
-export const outcomeOf = (state: MissionState): string => (state.mission === 'duel' ? (state.winner ?? state.status) : state.status);
+export const outcomeOf = (state: MissionState): string => (state.humans.length > 1 ? (state.winner ?? state.status) : state.status);

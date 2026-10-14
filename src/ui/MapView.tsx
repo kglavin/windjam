@@ -584,7 +584,17 @@ export function MapView({
           continue;
         }
         const c = hexToPixel(layout, { q: t.fix.q, r: t.fix.r });
-        for (const b of t.bearings.length <= 4 ? t.bearings : []) {
+        // Moving emitter: the history of per-minute fixes as a dotted line of crosses, newest brightest.
+        if (t.moving && t.fixes && t.fixes.length > 1) {
+          const hist = t.fixes.map((f) => hexToPixel(layout, { q: f.fix.q, r: f.fix.r }));
+          for (let i = 0; i < hist.length - 1; i++) {
+            const age = (i + 1) / hist.length;
+            const k = px(3);
+            scene.linkLayer.moveTo(hist[i].x - k, hist[i].y - k).lineTo(hist[i].x + k, hist[i].y + k).moveTo(hist[i].x - k, hist[i].y + k).lineTo(hist[i].x + k, hist[i].y - k).stroke({ width: px(1.5), color: dfColorOf(t.id), alpha: 0.3 + 0.6 * age });
+            scene.linkLayer.moveTo(hist[i].x, hist[i].y).lineTo(hist[i + 1].x, hist[i + 1].y).stroke({ width: px(1), color: dfColorOf(t.id), alpha: 0.25 + 0.5 * age });
+          }
+        }
+        for (const b of (t.moving ? t.bearings.filter((x) => x.heardMin === t.fixes?.[t.fixes.length - 1]?.minute) : t.bearings.length <= 4 ? t.bearings : [])) {
           const s = hexToPixel(layout, b.sensorPos);
           const len = Math.hypot(c.x - s.x, c.y - s.y) * 1.1;
           scene.linkLayer.moveTo(s.x, s.y).lineTo(s.x + Math.sin(rad(b.bearingDeg)) * len, s.y - Math.cos(rad(b.bearingDeg)) * len).stroke({ width: px(1), color: dfColorOf(t.id), alpha: 0.5 });

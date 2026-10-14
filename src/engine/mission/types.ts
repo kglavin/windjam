@@ -5,7 +5,8 @@ import type { OrderStatus } from '../timeliness';
 import type { World } from '../world';
 
 export type PlayerSide = 'blue' | 'red';
-export type MissionKind = 'find' | 'hide' | 'duel'; // duel: both sides human, hide-mission rules
+// duel: both sides human, hide-mission rules. uav: both sides human; Red flies a UAV that must report, Blue tracks it.
+export type MissionKind = 'find' | 'hide' | 'duel' | 'uav';
 
 // One leg of a drone sortie: fly to a point, then listen there (minutes 0 = transit only).
 export interface SortieLeg {
@@ -33,7 +34,9 @@ export type MissionCommand =
   | { type: 'waveform'; netId: string; waveform: Waveform }
   | { type: 'antenna'; unitId: string; towardId?: string } // undefined = omni
   | { type: 'decoy'; unitId: string; netId?: string } // undefined = off
-  | { type: 'jam'; unitId: string; netId?: string }; // undefined = off
+  | { type: 'jam'; unitId: string; netId?: string } // undefined = off
+  // Mission 4 (Red): the reconnaissance UAV.
+  | { type: 'uav'; unitId: string; action: 'launch' | 'burst' | 'hold' | 'resume' };
 
 // What a DF task has heard so far from one emitter. Weighted so that averaged error is 1/sqrt(weight).
 export interface DfAccumulator {
@@ -43,6 +46,8 @@ export interface DfAccumulator {
   weight: number; // sum of n / sigma² over every minute it was heard
   measurements: number;
   samples: { minute: number; what: string }[]; // what was heard each minute: chatter, order n, decoy, DF report...
+  heardMin?: number; // moving emitters: the single minute this bearing belongs to (one accumulator per minute)
+  emitterPos?: Hex; // moving emitters: where it was that minute (truth, for scoring only)
 }
 
 export type Order =
@@ -72,7 +77,9 @@ export interface ReportedBearing {
   sigmaDeg: number;
   measurements: number;
   samples: { minute: number; what: string }[];
-  minute: number;
+  minute: number; // when it reached HQ (the report's minute)
+  heardMin?: number; // moving emitters: the minute the bearing was taken
+  emitterPos?: Hex; // moving emitters: truth that minute, for scoring only
 }
 
 export interface Report {
@@ -88,7 +95,10 @@ export interface Track {
   emitterId: string;
   signature: string;
   bearings: ReportedBearing[];
-  fix?: Fix;
+  fix?: Fix; // static emitter: from every bearing; moving emitter: the latest minute's fix
+  // Moving emitter (a UAV): one fix per minute that had bearings from two sites, oldest first.
+  moving?: boolean;
+  fixes?: { minute: number; fix: Fix }[];
 }
 
 export type LogKind = 'order' | 'report' | 'hq' | 'error' | 'info' | 'replay';
@@ -173,8 +183,36 @@ export interface MissionState {
   // Mission 2.
   playbook?: Playbook;
   redOrders: RedOrder[];
+  // Mission 4.
+  uav?: UavState;
   actor?: PlayerSide; // transient: which side's console current log lines belong to
 }
+
+// Mission 4: Red's reconnaissance UAV flies a fixed route and must report to its controller every few minutes.
+export interface UavState {
+  unitId: string;
+  netId: string; // the telemetry link
+  route: Hex[]; // waypoints, in order
+  nextWp: number; // index of the waypoint being flown to; route.length when the route is done
+  launchedMin?: number;
+  doneMin?: number; // route complete
+  holding: boolean; // ordered to hold at the next waypoint
+  lastBurstMin?: number; // the UAV counts from launch until it first reports
+  telemetry: { minute: number; delivered: boolean; forced: boolean }[]; // every report burst and whether HQ got it
+}
+
+export const UAV_RULES = {
+  reportEveryMin: 3, // a report is forced when this long has passed since the last one
+  burstSec: 6, // a report is a short burst: an ES sweep (2.3 s) catches it only if it is on the channel at the time
+  fixesToWin: 5, // Blue: position fixes on the UAV under the CEP limit
+  winCepKm: 1,
+  maxGaps: 1, // Red: reports HQ never received, at most
+  speedKmh: 60,
+  enduranceMin: 90,
+  linkW: 2, // telemetry transmit power at launch
+  maxW: 10,
+  waypoints: 10,
+} as const;
 
 export const MISSION_RULES = {
   limitMin: 60,

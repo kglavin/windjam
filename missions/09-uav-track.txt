@@ -1,0 +1,59 @@
+# Mission 4, track the UAV. Red's UAV must fly its route and report to Red HQ every 3 minutes; Blue tries to fix it.
+# Red goes low power, spreads the link and points the UAV's antenna home. Blue sweeps, then jams the link when
+# bearings run dry. Prefix each line with its console, or paste the whole file into the one-console view.
+mission uav
+seed 1234
+expect draw
+red> status
+red> uav: power 0.3
+red> uavlink: waveform dsss
+red> uav: antenna toward hq
+blue> sq1: df e 3
+blue> sq2: df e 3
+blue> sq3: df e 3
+blue> uav: df e 3
+red> uav: launch
+blue> wait 3
+blue> sq1: df e 3
+blue> sq2: df e 3
+blue> sq3: df e 3
+blue> uav: df e 3
+blue> wait 3
+blue> sq1: df e 3
+blue> sq2: df e 3
+blue> sq3: df e 3
+blue> uav: df e 3
+blue> wait 3
+blue> picture
+blue> sq1: df e 3
+blue> sq2: df e 3
+blue> sq3: df e 3
+blue> uav: df e 3
+blue> wait 3
+blue> picture
+blue> status
+red> status
+# Nothing usable: deny the link instead, and push a squad towards the UAV's line home.
+blue> ew: jam uavlink
+blue> sq1: move 130,70
+blue> sq2: df e 5
+blue> sq3: df ne 5
+blue> uav: df e 5
+blue> wait 5
+red> status
+blue> sq2: df e 5
+blue> sq3: df ne 5
+blue> uav: df e 5
+blue> wait 5
+blue> sq1: df e 5
+blue> sq2: df e 5
+blue> sq3: df ne 5
+blue> uav: df e 5
+blue> wait 5
+red> uav: burst
+blue> wait 10
+blue> status
+red> status
+blue> reveal
+blue> next
+blue> exit

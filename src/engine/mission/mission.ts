@@ -3,13 +3,14 @@
 //   Mission 2, "Stay hidden":    Red passes its orders while a scripted Blue hunts it.   docs/mission-stay-hidden.md
 // Both run on the same engine: ground truth in `world`, one set of unit orders, a picture per side.
 
-import { type DetectOptions, type Emission, bearingDeg, bearingSigmaDeg, emissions, fixFromBearings, gaussian, sensorLook } from '../detect';
-import { type Hex, axialToOffset, hexEquals, hexLine } from '../hex';
+import { type DetectOptions, type Emission, type Fix, bearingDeg, bearingSigmaDeg, emissions, fixFromBearings, gaussian, sensorLook } from '../detect';
+import { type Hex, axialToOffset, hexEquals, hexKey, hexLine } from '../hex';
 import { hexDistanceKm } from '../rf';
 import { createRng } from '../rng';
-import { createScenario } from '../scenario';
+import { createScenario, refToHex } from '../scenario';
 import { RADIO_PRESETS, type Net, type Unit } from '../units';
-import { type LinkView, type World, allLinkBudgets, step, unitById } from '../world';
+import { type LinkView, type World, allLinkBudgets, jammers, nearestFreeHex, step, unitById } from '../world';
+import { linkBudget } from '../budget';
 import { HELP, aliasOf, netAliasOf, parseCommand } from './commands';
 import { PLAYBOOKS } from './playbooks';
 import {
@@ -27,6 +28,7 @@ import {
   type ReportedBearing,
   type Snapshot,
   type Track,
+  UAV_RULES as U,
 } from './types';
 
 export function createMission(seed: number, mission: MissionKind = 'find'): MissionState {
@@ -38,7 +40,7 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
     world,
     mission,
     side,
-    humans: mission === 'duel' ? ['blue', 'red'] : [side],
+    humans: mission === 'duel' || mission === 'uav' ? ['blue', 'red'] : [side],
     seed,
     minute: 0,
     limitMin: R.limitMin,
@@ -65,6 +67,12 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
     log(state, 'info', `Red wins if Blue has fewer at T+${R.limitMin} and Red delivered ${R.redOrdersToWin} of ${R.redOrderCount} orders on time. Otherwise a draw. wait from either console advances the clock.`, 'both');
     log(state, 'info', 'Red is hidden. Your squads and the UAV can take bearings (df). Type help.', 'blue');
     log(state, 'info', `Every transmission is a bearing for Blue. Type help for your electronic-protection measures; send passes the current order. Order 1 is for ${unitById(world, state.redOrders[0].toId)!.name}, window T+0-${R.redOrderWindowMin}.`, 'red');
+  } else if (mission === 'uav') {
+    addRedUav(state);
+    log(state, 'info', `Mission: track the UAV. Red's UAV flies a ${U.waypoints}-waypoint route and must report to Red HQ at least every ${U.reportEveryMin} minutes.`, 'both');
+    log(state, 'info', `Blue wins with ${U.fixesToWin} position fixes under ${U.winCepKm} km on the UAV. Red wins if the route is flown with at most ${U.maxGaps} report lost and Blue has fewer fixes. Otherwise a draw at T+${R.limitMin}.`, 'both');
+    log(state, 'info', 'The UAV reports only when it transmits. Take bearings from two sites in the same minute to fix where it was. ew: jam uavlink costs Red reports. Type help.', 'blue');
+    log(state, 'info', 'uav: launch starts the route; uav: burst reports now (and resets the clock); uav: hold pauses at the next waypoint. Lower uav power and a DSSS uavlink are harder to hear, and harder for HQ to receive. Type help.', 'red');
   } else {
     state.playbook = buildPlaybook(seed);
     state.redOrders = redOrderSchedule(world);
@@ -74,6 +82,44 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
   }
   state.history = [snapshot(state)];
   return state;
+}
+
+// Mission 4: Red's reconnaissance UAV, its telemetry net, and a seeded route over the contested middle.
+const UAV_ROUTE_REF: [number, number][] = [
+  [24, 8], [21, 6], [18, 5], [16, 8], [15, 12], [16, 16], [19, 15], [21, 12], [24, 14], [26, 10],
+];
+function addRedUav(state: MissionState) {
+  const hq = unitById(state.world, 'r-hq')!;
+  const occupied = new Set(state.world.units.map((u) => hexKey(u.pos)));
+  const pos = nearestFreeHex(state.world.map, occupied, hq.pos, () => true, 6);
+  const uav: Unit = {
+    id: 'r-uav',
+    name: 'Red UAV',
+    side: 'red',
+    kind: 'drone',
+    pos,
+    radio: { ...RADIO_PRESETS.drone, powerW: U.linkW },
+    parentId: hq.id,
+    drone: { speedKmh: U.speedKmh, enduranceMin: U.enduranceMin },
+  };
+  const net: Net = {
+    id: 'red-uav',
+    name: 'Red UAV Link',
+    side: 'red',
+    topology: 'hub',
+    hubId: hq.id,
+    memberIds: [hq.id, uav.id],
+    freqMHz: 65,
+    bandwidthKHz: 25,
+    dataRateKbps: 16,
+    waveform: { kind: 'fixed' },
+  };
+  state.world = { ...state.world, units: [...state.world.units, uav], nets: [...state.world.nets, net] };
+  state.emcon[net.id] = 0; // the controller's uplink is silent: only the UAV's reports radiate
+  const rng = createRng(state.seed ^ 0x5eed);
+  const jitter = () => Math.round((rng() - 0.5) * 2); // up to a kilometre either way
+  const route = UAV_ROUTE_REF.map(([c, r]) => refToHex(c + jitter(), r + jitter()));
+  state.uav = { unitId: uav.id, netId: net.id, route, nextWp: 0, holding: false, telemetry: [] };
 }
 
 // Which Blue plan this seed draws, as a minute-stamped timetable.
@@ -141,6 +187,7 @@ function clone(s: MissionState): MissionState {
     emcon: { ...s.emcon },
     events: [...s.events],
     redOrders: s.redOrders.map((o) => ({ ...o })),
+    uav: s.uav ? { ...s.uav, telemetry: [...s.uav.telemetry] } : undefined,
     actor: undefined,
   };
 }
@@ -209,8 +256,12 @@ export function issue(state: MissionState, cmd: MissionCommand, as: PlayerSide =
     log(s, 'error', `${unit.name} is not yours to command.`);
     return s;
   }
+  if (cmd.type === 'uav') {
+    uavCommand(s, cmd.action, unit);
+    return s;
+  }
   if (cmd.type === 'power') {
-    const max = RADIO_PRESETS[unit.kind].powerW;
+    const max = unit.kind === 'drone' ? U.maxW : RADIO_PRESETS[unit.kind].powerW;
     if (max <= 0) {
       log(s, 'error', `${unit.name} has no transmitter.`);
       return s;
@@ -221,8 +272,8 @@ export function issue(state: MissionState, cmd: MissionCommand, as: PlayerSide =
     return s;
   }
   if (cmd.type === 'antenna') {
-    if (unit.kind !== 'hq' && unit.kind !== 'relay') {
-      log(s, 'error', 'Only HQ and the relay carry a directional antenna.');
+    if (unit.kind !== 'hq' && unit.kind !== 'relay' && unit.id !== s.uav?.unitId) {
+      log(s, 'error', `Only HQ and the relay${s.uav ? ' and the UAV' : ''} carry a directional antenna.`);
       return s;
     }
     if (!cmd.towardId) {
@@ -289,6 +340,115 @@ export function issue(state: MissionState, cmd: MissionCommand, as: PlayerSide =
   unitCommand(s, cmd, unit);
   return s;
 }
+
+// Mission 4: Red's UAV orders. Launch flies the route; burst reports now; hold pauses at the next waypoint.
+function uavCommand(s: MissionState, action: 'launch' | 'burst' | 'hold' | 'resume', unit: Unit) {
+  const uav = s.uav;
+  if (!uav || uav.unitId !== unit.id) {
+    log(s, 'error', `${unit.name} has no route to fly in this mission.`);
+    return;
+  }
+  if (uav.doneMin !== undefined) {
+    log(s, 'error', `${unit.name} has completed its route and landed.`);
+    return;
+  }
+  if (action === 'launch') {
+    if (uav.launchedMin !== undefined) {
+      log(s, 'error', `${unit.name} is already airborne.`);
+      return;
+    }
+    uav.launchedMin = s.minute;
+    uav.lastBurstMin = s.minute;
+    uav.holding = false;
+    const legs = uav.route.map((h) => {
+      const { col, row } = axialToOffset(h);
+      return `${col},${row}`;
+    });
+    log(s, 'order', `${unit.name}: launched at T+${s.minute}, ${uav.route.length} waypoints: ${legs.join('; ')}. It must report to HQ every ${U.reportEveryMin} min.`);
+    return;
+  }
+  if (uav.launchedMin === undefined) {
+    log(s, 'error', `${unit.name} is not airborne. uav: launch first.`);
+    return;
+  }
+  if (action === 'burst') {
+    if (s.bursts.some((b) => b.minute === s.minute && b.unitId === unit.id)) {
+      log(s, 'info', `${unit.name} is already reporting this minute.`);
+      return;
+    }
+    s.bursts.push({ minute: s.minute, unitId: unit.id, netId: uav.netId, what: 'telemetry' });
+    log(s, 'order', `${unit.name}: reporting to HQ this minute. The next forced report moves to T+${s.minute + U.reportEveryMin}.`);
+    return;
+  }
+  if (action === 'hold') {
+    uav.holding = true;
+    log(s, 'order', `${unit.name}: will hold at waypoint ${Math.min(uav.nextWp + 1, uav.route.length)} until resumed. Reports continue.`);
+    return;
+  }
+  uav.holding = false;
+  log(s, 'order', `${unit.name}: resuming the route.`);
+}
+
+// Mission 4: start the next leg when the UAV is airborne and idle; retire it when the route is done.
+function flyUav(s: MissionState) {
+  const uav = s.uav;
+  if (!uav || uav.launchedMin === undefined || uav.doneMin !== undefined) return;
+  const unit = unitById(s.world, uav.unitId)!;
+  if (s.orders[unit.id]) return; // still flying a leg
+  if (uav.nextWp >= uav.route.length) {
+    uav.doneMin = s.minute;
+    log(s, 'order', `${unit.name}: route complete at T+${s.minute}, landing. No more reports.`);
+    return;
+  }
+  if (uav.holding) return;
+  const wp = uav.route[uav.nextWp];
+  const path = pathTo(unit, wp);
+  uav.nextWp += 1;
+  if (path.length === 0) return; // already there: next tick takes the following waypoint
+  const perHex = minutesPerHex(s, unit);
+  s.orders[unit.id] = { kind: 'move', path, minutesPerHex: perHex, progress: 0 };
+  const { col, row } = axialToOffset(wp);
+  log(s, 'order', `${unit.name}: to waypoint ${uav.nextWp}/${uav.route.length} at ${col},${row}, about ${Math.ceil(path.length * perHex)} min.`);
+}
+
+// Mission 4: a report is forced when the interval has run out. Afterwards, did HQ receive what was sent this minute?
+function uavReports(s: MissionState, m: number, phase: 'before' | 'after', links: LinkView[]) {
+  const uav = s.uav;
+  if (!uav || uav.launchedMin === undefined || uav.doneMin !== undefined) return;
+  if (phase === 'before') {
+    const due = (uav.lastBurstMin ?? uav.launchedMin) + U.reportEveryMin;
+    if (m >= due && !s.bursts.some((b) => b.minute === m && b.unitId === uav.unitId)) {
+      s.bursts.push({ minute: m, unitId: uav.unitId, netId: uav.netId, what: 'telemetry (forced)' });
+    }
+    return;
+  }
+  const burst = s.bursts.find((b) => b.minute === m && b.unitId === uav.unitId);
+  if (!burst) return;
+  uav.lastBurstMin = m;
+  // Only the UAV-to-HQ direction carries the report, so the uplink's state (and jamming at the UAV) does not count.
+  const unit = unitById(s.world, uav.unitId)!;
+  const net = s.world.nets.find((n) => n.id === uav.netId)!;
+  const hq = unitById(s.world, net.hubId!)!;
+  const down = linkBudget(s.world.map, net, hq, unit, { jammers: jammers(s.world), nets: s.world.nets, noiseEnv: s.world.noiseEnv }).reverse;
+  const delivered = down.quality !== 'denied';
+  const forced = /forced/.test(burst.what);
+  uav.telemetry.push({ minute: m, delivered, forced });
+  const gaps = uav.telemetry.filter((t) => !t.delivered).length;
+  void links;
+  log(
+    s,
+    delivered ? 'report' : 'hq', // a lost report is an event, not a rejected order
+    `${unit.name}: report${forced ? ' (forced)' : ''} at T+${m} ${delivered ? `received by HQ (${down.quality}, SNR ${down.snrDb.toFixed(0)} dB${down.jamFraction > 0 ? ', jammed in part' : ''}).` : `lost: link denied (J/S ${down.jsDb.toFixed(0)} dB, SNR ${down.snrDb.toFixed(0)} dB). ${gaps} of ${U.maxGaps} allowed.`}`,
+    'red',
+  );
+}
+
+// Mission 4 scores.
+export const uavFixes = (s: MissionState): number => {
+  const t = s.uav && s.tracks.find((x) => x.emitterId === s.uav!.unitId);
+  return t?.fixes?.filter((f) => f.fix.cepKm < U.winCepKm).length ?? 0;
+};
+export const uavGaps = (s: MissionState): number => s.uav?.telemetry.filter((t) => !t.delivered).length ?? 0;
 
 // Orders shared by both sides: df, move, sortie, stop. The caller has checked ownership.
 function unitCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 'df' | 'move' | 'sortie' | 'stop' }>, unit: Unit) {
@@ -384,7 +544,7 @@ function unitCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 'df' 
 
 // Mission 2: transmit the current order.
 function send(s: MissionState) {
-  if (s.mission === 'find' || s.actor !== 'red') {
+  if (s.mission === 'find' || s.mission === 'uav' || s.actor !== 'red') {
     log(s, 'error', s.mission === 'duel' ? 'Only the red console sends orders.' : 'There is nothing to send in this mission.');
     return;
   }
@@ -455,8 +615,9 @@ export function signatureOf(net: Net): string {
 }
 
 // What a unit is radiating during minute m: chatter, scheduled bursts, a decoy, a jammer, a UAV's control link.
-export function emissionsAt(s: MissionState, u: Unit, m: number): { em: Emission; signature: string; what: string }[] {
-  const out: { em: Emission; signature: string; what: string }[] = [];
+// `sweeps` is how many of the minute's ES sweeps can catch it: a short burst is on the air for only a few.
+export function emissionsAt(s: MissionState, u: Unit, m: number): { em: Emission; signature: string; what: string; sweeps?: number }[] {
+  const out: { em: Emission; signature: string; what: string; sweeps?: number }[] = [];
   const nets = s.world.nets;
   if (u.jammer && u.jammer.mode !== 'off') {
     for (const em of emissions(u, nets)) out.push({ em, signature: em.label, what: 'jamming' });
@@ -471,6 +632,14 @@ export function emissionsAt(s: MissionState, u: Unit, m: number): { em: Emission
     return out;
   }
   if (u.kind === 'drone') {
+    // Mission 4: the reconnaissance UAV radiates only when it reports to its controller.
+    const burst = s.bursts.find((b) => b.minute === m && b.unitId === u.id);
+    if (burst) {
+      const net = nets.find((n) => n.id === burst.netId);
+      const sweeps = Math.max(1, Math.ceil((R.sweepsPerMinute * U.burstSec) / 60));
+      if (net && u.radio.powerW > 0) for (const em of emissions(u, [net])) out.push({ em, signature: `${net.freqMHz} MHz UAV link`, what: burst.what, sweeps });
+      return out;
+    }
     // Linked DF: the control and video downlink is up. A sortie is silent.
     const parent = unitById(s.world, u.parentId ?? '');
     const hub = nets.find((n) => n.side === u.side && n.topology === 'hub');
@@ -513,6 +682,14 @@ function tick(s: MissionState): MissionState {
 
   // Held reports retry first: a link may have come back.
   s.held = s.held.filter((r) => !deliver(s, r, links));
+
+  // Mission 4: the UAV takes its next leg, and a report is forced if the interval has run out.
+  if (s.uav) {
+    s.actor = 'red';
+    flyUav(s);
+    uavReports(s, m, 'before', links);
+    s.actor = undefined;
+  }
 
   for (const [unitId, order] of Object.entries(s.orders)) {
     const unit = unitById(s.world, unitId)!;
@@ -598,6 +775,9 @@ function tick(s: MissionState): MissionState {
   }
   s.actor = undefined;
 
+  // Mission 4: did this minute's UAV report reach HQ from where the UAV now is?
+  if (s.uav) uavReports(s, m, 'after', allLinkBudgets(s.world));
+
   // Record what every unit radiated and did during the minute, for the sequence chart.
   for (const u of s.world.units) {
     for (const e of emissionsAt(s, u, m)) s.events.push({ kind: 'emit', minute: m, unitId: u.id, what: e.what, signature: e.signature });
@@ -646,6 +826,18 @@ function resolve(s: MissionState) {
     else if (s.minute >= s.limitMin) end(s, 'lost');
     return;
   }
+  if (s.mission === 'uav') {
+    // Blue wins on fixes; Red wins when the route is flown with its reports delivered; the clock makes a draw.
+    const done = s.uav?.doneMin !== undefined;
+    if (uavFixes(s) >= U.fixesToWin) {
+      s.winner = 'blue';
+      end(s, 'won');
+    } else if (done || s.minute >= s.limitMin) {
+      s.winner = done && uavGaps(s) <= U.maxGaps ? 'red' : 'draw';
+      end(s, s.winner === 'red' ? 'lost' : 'draw');
+    }
+    return;
+  }
   if (s.mission === 'duel') {
     // Status is from Blue's seat (the primary console); the winner field is what the panel shows.
     if (fixes >= R.fixesToWin) {
@@ -681,8 +873,17 @@ function fly(s: MissionState, unitId: string, path: Hex[], progress: number): { 
   let stopped: string | undefined;
   while (progress >= 1 && path.length > 0 && !stopped) {
     const result = step(s.world, [{ type: 'moveUnit', unitId, to: path[0] }]);
-    if (result.rejected.length > 0) stopped = result.rejected[0].reason;
-    else {
+    if (result.rejected.length > 0) {
+      // A drone flies over an occupied hex; if that hex is the destination, it stops next to it.
+      const flyer = unitById(s.world, unitId)?.kind === 'drone' && /occupied/i.test(result.rejected[0].reason);
+      if (flyer) {
+        path = path.slice(1);
+        progress -= 1; // the overflown hex still takes its time
+        if (path.length === 0) break;
+        continue;
+      }
+      stopped = result.rejected[0].reason;
+    } else {
       s.world = result.world;
       path = path.slice(1);
       progress -= 1;
@@ -718,22 +919,27 @@ function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: 
   for (const emitter of s.world.units.filter((u) => u.side === enemy)) {
     const trueDeg = bearingDeg(s.world.map, sensor.pos, emitter.pos);
     if (halfWidthDeg < 180 && Math.abs(angleDiff(trueDeg, centreDeg)) > halfWidthDeg) continue;
-    for (const { em, signature, what } of emissionsAt(s, emitter, m)) {
+    for (const { em, signature, what, sweeps = R.sweepsPerMinute } of emissionsAt(s, emitter, m)) {
       const look = sensorLook(s.world.map, emitter, sensor, em, opts);
       if (look.pd < R.minPd) continue; // too weak for a usable bearing
-      const heardProb = 1 - (1 - look.pd) ** R.sweepsPerMinute;
+      const heardProb = 1 - (1 - look.pd) ** sweeps;
       if (rng() >= heardProb) continue;
       s.events.push({ kind: 'capture', minute: m, sensorId: sensor.id, emitterId: emitter.id, what, snrDb: look.snrDb });
-      const n = Math.max(1, Math.round(R.sweepsPerMinute * look.pd));
+      const n = Math.max(1, Math.round(sweeps * look.pd));
       const sigma = bearingSigmaDeg(look.snrDb);
-      const prev = heard[emitter.id];
-      heard[emitter.id] = {
+      // A moving emitter gets one accumulator per minute: averaging across minutes would smear its track.
+      const moving = emitter.kind === 'drone';
+      const key = moving ? `${emitter.id}@${m}` : emitter.id;
+      const prev = heard[key];
+      heard[key] = {
         emitterId: emitter.id,
         signature: prev?.signature ?? signature,
         trueBearingDeg: trueDeg,
         weight: (prev?.weight ?? 0) + n / (sigma * sigma),
         measurements: (prev?.measurements ?? 0) + n,
         samples: [...(prev?.samples ?? []), { minute: m, what: what }].filter((x, i, a) => a.findIndex((y) => y.minute === x.minute && y.what === x.what) === i),
+        heardMin: moving ? m : undefined,
+        emitterPos: moving ? emitter.pos : undefined,
       };
     }
   }
@@ -775,6 +981,8 @@ function writeReport(s: MissionState, sensor: Unit, sensorPos: Hex, heard: DfAcc
       measurements: h.measurements,
       samples: h.samples,
       minute: s.minute,
+      heardMin: h.heardMin,
+      emitterPos: h.emitterPos,
     };
   });
   return { side: sensor.side as PlayerSide, unitId: sensor.id, minute: s.minute, bearings };
@@ -823,6 +1031,28 @@ function merge(s: MissionState, report: Report) {
     }
     track.bearings = [...track.bearings, b];
     const before = track.fix;
+    if (b.heardMin !== undefined) {
+      // Moving emitter: a fix needs bearings from two sites in the same minute. Each minute's fix stands on its own.
+      track.moving = true;
+      const minutes = [...new Set(track.bearings.map((x) => x.heardMin).filter((x): x is number => x !== undefined))].sort((x, y) => x - y);
+      const fixes: { minute: number; fix: Fix }[] = [];
+      for (const minute of minutes) {
+        const same = track.bearings.filter((x) => x.heardMin === minute);
+        const fix = fixFromBearings(s.world.map, same, same[0].emitterPos);
+        if (fix) fixes.push({ minute, fix });
+      }
+      const had = new Set((track.fixes ?? []).map((f) => f.minute));
+      track.fixes = fixes;
+      track.fix = fixes.length ? fixes[fixes.length - 1].fix : undefined;
+      // Only the mission's target UAV is narrated minute by minute; other moving tracks just update quietly.
+      const target = b.emitterId === s.uav?.unitId;
+      for (const f of fixes.filter((x) => !had.has(x.minute))) {
+        const { col, row } = axialToOffset({ q: Math.round(f.fix.q), r: Math.round(f.fix.r) });
+        if (target) log(s, 'hq', `HQ: ${track.id} was near ${col},${row} at T+${f.minute}: CEP ${f.fix.cepKm.toFixed(2)} km (${f.fix.cepKm < U.winCepKm ? 'counts' : 'too loose'}).`);
+        s.events.push({ kind: 'track', minute: Math.max(0, s.minute - 1), side, trackId: track.id, emitterId: b.emitterId, cepKm: f.fix.cepKm, first: false });
+      }
+      continue;
+    }
     track.fix = fixFromBearings(s.world.map, track.bearings, unitById(s.world, b.emitterId)?.pos);
     if (track.fix) {
       // Say so when a fix appears, crosses the win threshold, or improves by a fifth. Minute-by-minute nudges stay quiet.
@@ -851,6 +1081,22 @@ function end(s: MissionState, status: 'won' | 'lost' | 'draw' | 'ended') {
         : status === 'lost'
           ? `Time is up at T+${s.minute}: ${fixes} of ${R.fixesToWin} emitters fixed.`
           : `Mission ended at T+${s.minute} for the debrief: ${fixes} of ${R.fixesToWin} emitters fixed.`,
+      'both',
+    );
+  } else if (s.mission === 'uav') {
+    const f = uavFixes(s);
+    const g = uavGaps(s);
+    const flown = s.uav?.doneMin !== undefined ? `route complete at T+${s.uav!.doneMin}` : s.uav?.launchedMin === undefined ? 'UAV never launched' : `${s.uav!.nextWp} of ${s.uav!.route.length} waypoints`;
+    log(
+      s,
+      'hq',
+      status === 'ended'
+        ? `Mission ended at T+${s.minute} for the debrief: Blue has ${f} of ${U.fixesToWin} fixes on the UAV; ${flown}, ${g} report${g === 1 ? '' : 's'} lost.`
+        : s.winner === 'blue'
+          ? `Blue wins at T+${s.minute}: ${f} position fixes on the UAV under ${U.winCepKm} km.`
+          : s.winner === 'red'
+            ? `Red wins at T+${s.minute}: ${flown} with ${g} report${g === 1 ? '' : 's'} lost; Blue fixed it ${f} time${f === 1 ? '' : 's'}.`
+            : `Draw at T+${s.minute}: Blue has ${f} of ${U.fixesToWin} fixes; ${flown}, ${g} report${g === 1 ? '' : 's'} lost (${U.maxGaps} allowed).`,
       'both',
     );
   } else if (s.mission === 'duel') {
@@ -898,6 +1144,28 @@ export function revealLines(s: MissionState): string[] {
       const { col, row } = axialToOffset(e.pos);
       lines.push(`Reveal: ${e.name} at ${col},${row}: ${describe(s.tracks, e)}.`);
       if (s.tracks.some((t) => t.emitterId === e.id)) lines.push(`  Blue ${heardTimeline(s, s.tracks, e.id)}.`);
+    }
+    return lines;
+  }
+  if (s.mission === 'uav' && s.uav) {
+    const uav = s.uav;
+    const wp = uav.route.map((h, i) => {
+      const { col, row } = axialToOffset(h);
+      return `${i + 1}: ${col},${row}`;
+    });
+    lines.push(`Reveal: Red UAV route ${wp.join('; ')}. ${uav.launchedMin === undefined ? 'Never launched.' : `Launched T+${uav.launchedMin}${uav.doneMin !== undefined ? `, complete T+${uav.doneMin}` : `, reached ${uav.nextWp} waypoints`}.`}`);
+    const rep = uav.telemetry.map((t) => `T+${t.minute}${t.forced ? '*' : ''}${t.delivered ? '' : ' lost'}`);
+    lines.push(`Reveal: UAV reports (* forced): ${rep.length ? rep.join(', ') : 'none'}.`);
+    const t = s.tracks.find((x) => x.emitterId === uav.unitId);
+    if (!t) lines.push('Reveal: Blue never heard the UAV.');
+    else {
+      lines.push(`Reveal: Blue track ${t.id} on the UAV: ${t.bearings.length} bearings, ${t.fixes?.length ?? 0} position fixes, ${uavFixes(s)} under ${U.winCepKm} km.`);
+      for (const f of t.fixes ?? []) lines.push(`  T+${f.minute}: CEP ${f.fix.cepKm.toFixed(2)} km, actually ${f.fix.missKm.toFixed(2)} km off.`);
+      lines.push(`  Blue ${heardTimeline(s, s.tracks, uav.unitId)}.`);
+    }
+    for (const e of s.world.units.filter((u) => u.side === 'blue')) {
+      const { col, row } = axialToOffset(e.pos);
+      lines.push(`Reveal: ${e.name} at ${col},${row}: Red ${describe(s.redTracks, e)}.`);
     }
     return lines;
   }
@@ -988,19 +1256,33 @@ function replayCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 're
   const summary =
     s.mission === 'find'
       ? `T+${to}: ${said.length === 0 ? 'quiet. ' : ''}${blueHeard} of ${redEmitters} Red emitters heard, ${blueFixed} fixed.`
-      : s.mission === 'duel'
+      : s.humans.length > 1
         ? `T+${to}: ${said.length === 0 ? 'quiet. ' : ''}Blue has heard ${blueHeard} of ${redEmitters} Red emitters, ${blueFixed} fixed; Red has ${snap.redTracks.length} tracks on Blue.`
         : `T+${to}: ${said.length === 0 ? 'quiet. ' : ''}Blue has heard ${blueHeard} of your ${redEmitters} emitters, ${blueFixed} fixed; you have ${snap.redTracks.length} tracks on Blue.`;
   s.log = [...s.log, { minute: to, kind: 'replay', text: summary }];
   for (const e of cmd.move === 'back' ? said.reverse() : said) {
-    s.log = [...s.log, { minute: e.minute, kind: 'replay', text: `  ${e.side && (s.mission === 'duel' || e.side !== s.side) ? `[${e.side}] ` : ''}${e.text}` }];
+    s.log = [...s.log, { minute: e.minute, kind: 'replay', text: `  ${e.side && (s.humans.length > 1 || e.side !== s.side) ? `[${e.side}] ` : ''}${e.text}` }];
   }
 }
 
 export function statusLines(s: MissionState, side: PlayerSide = s.side): string[] {
   const links = allLinkBudgets(s.world);
   const lines: string[] = [];
-  if (side === 'blue') {
+  if (s.mission === 'uav' && s.uav) {
+    const uav = s.uav;
+    const t = s.tracks.find((x) => x.emitterId === uav.unitId);
+    if (side === 'blue') {
+      lines.push(`T+${s.minute} of ${s.limitMin} min. UAV position fixes under ${U.winCepKm} km: ${uavFixes(s)}/${U.fixesToWin}.${t ? ` Track ${t.id}: ${t.bearings.length} bearings, ${t.fixes?.length ?? 0} fixes.` : ' UAV not heard yet.'}`);
+    } else {
+      const flown = uav.doneMin !== undefined ? `route complete at T+${uav.doneMin}` : uav.launchedMin === undefined ? 'UAV on the ground: uav: launch' : `airborne since T+${uav.launchedMin}, waypoint ${uav.nextWp}/${uav.route.length}${uav.holding ? ', holding' : ''}`;
+      const due = uav.launchedMin === undefined || uav.doneMin !== undefined ? '' : ` Next forced report T+${(uav.lastBurstMin ?? uav.launchedMin) + U.reportEveryMin}.`;
+      lines.push(`T+${s.minute} of ${s.limitMin} min. ${flown}. Reports: ${uav.telemetry.filter((x) => x.delivered).length} received, ${uavGaps(s)} lost (${U.maxGaps} allowed).${due} Tracks on Blue: ${s.redTracks.length}.`);
+      for (const net of s.world.nets.filter((n) => n.side === 'red')) {
+        const w = net.waveform;
+        lines.push(`net ${netAliasOf(net.id).padEnd(7)} ${net.name.padEnd(16)} ${net.freqMHz} MHz · ${w.kind === 'fixed' ? 'fixed' : w.kind === 'fh' ? `hopping ${w.hopsPerSec}/s` : `DSSS ${w.chipRateMcps} Mcps`} · chatter ${Math.round(dutyOf(s, net) * 100)}%`);
+      }
+    }
+  } else if (side === 'blue') {
     lines.push(`T+${s.minute} of ${s.limitMin} min. Tracks: ${s.tracks.length}, fixed under ${R.winCepKm} km: ${realFixes(s)}/${R.fixesToWin}.`);
   } else {
     const cur = s.redOrders.find((o) => o.status === 'pending' && o.windowStart <= s.minute && s.minute < o.windowEnd);
@@ -1069,6 +1351,11 @@ export function activeSectors(s: MissionState, side?: PlayerSide): { pos: Hex; c
 // Remaining waypoints of each of the player's drones on a sortie, ending at its squad, for the map.
 export function flightPlans(s: MissionState, side?: PlayerSide): { unitId: string; from: Hex; points: Hex[] }[] {
   const out: { unitId: string; from: Hex; points: Hex[] }[] = [];
+  // Mission 4: the Red UAV's remaining route (the whole route before launch).
+  if (s.uav && s.uav.doneMin === undefined && (!side || side === 'red')) {
+    const drone = unitById(s.world, s.uav.unitId);
+    if (drone) out.push({ unitId: drone.id, from: drone.pos, points: s.uav.route.slice(s.uav.launchedMin === undefined ? 0 : Math.max(0, s.uav.nextWp - 1)) });
+  }
   for (const [id, o] of Object.entries(s.orders)) {
     if (o.kind !== 'sortie') continue;
     const drone = unitById(s.world, id)!;

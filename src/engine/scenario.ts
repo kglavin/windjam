@@ -148,3 +148,8 @@ export function createScenario(seed: number): World {
     nets: NETS.map((n) => ({ ...n, memberIds: [...n.memberIds] })),
   };
 }
+
+// A point on the 1 km reference grid (32 x 20 over the home area), as a hex. Missions use it to lay out routes.
+export function refToHex(col: number, row: number): Hex {
+  return offsetToAxial(HOME.col0 + Math.round(col * SCALE), HOME.row0 + Math.round(row * SCALE));
+}

@@ -1,7 +1,8 @@
 // Headless mission runner: npm run mission -- missions/01-two-squads-triangulate.txt
 import { readFileSync } from 'node:fs';
 import { MISSION_RULES } from '../src/engine/mission/types';
-import { deliveredOrders, realFixes } from '../src/engine/mission/mission';
+import { deliveredOrders, realFixes, uavFixes, uavGaps } from '../src/engine/mission/mission';
+import { UAV_RULES } from '../src/engine/mission/types';
 import { formatLog, outcomeOf, parseScript, runScript } from '../src/engine/mission/script';
 
 const file = process.argv[2];
@@ -16,7 +17,7 @@ const { state, parseErrors } = runScript(text);
 console.log(formatLog(state));
 console.log('');
 const fixed = realFixes(state);
-console.log(`Result: ${outcomeOf(state)} at T+${state.minute}. Blue tracks ${state.tracks.length}, real fixes under ${MISSION_RULES.winCepKm} km: ${fixed}/${MISSION_RULES.fixesToWin}.${state.mission !== 'find' ? ` Red orders on time: ${deliveredOrders(state)}/${MISSION_RULES.redOrderCount}. Red tracks on Blue: ${state.redTracks.length}.` : ''}`);
+console.log(`Result: ${outcomeOf(state)} at T+${state.minute}. Blue tracks ${state.tracks.length}, real fixes under ${MISSION_RULES.winCepKm} km: ${fixed}/${MISSION_RULES.fixesToWin}.${state.mission === 'hide' || state.mission === 'duel' ? ` Red orders on time: ${deliveredOrders(state)}/${MISSION_RULES.redOrderCount}.` : ''}${state.mission === 'uav' ? ` UAV fixes under ${UAV_RULES.winCepKm} km: ${uavFixes(state)}/${UAV_RULES.fixesToWin}, reports lost: ${uavGaps(state)}/${state.uav?.telemetry.length ?? 0}.` : ''}${state.mission !== 'find' ? ` Red tracks on Blue: ${state.redTracks.length}.` : ''}`);
 for (const t of [...state.tracks, ...state.redTracks]) {
   console.log(
     `  ${t.id} ${t.signature.padEnd(16)} ${t.bearings.length} bearing${t.bearings.length === 1 ? ' ' : 's'}` +

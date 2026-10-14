@@ -5,12 +5,12 @@ import type { MissionCommand, PlayerSide, SortieLeg } from './types';
 // Short names used at the prompt, per side.
 export const UNIT_ALIASES: Record<PlayerSide, Record<string, string>> = {
   blue: { hq: 'b-hq', relay: 'b-relay', sq1: 'b-sq1', sq2: 'b-sq2', sq3: 'b-sq3', uav: 'b-uav', ew: 'b-ew' },
-  red: { hq: 'r-hq', relay: 'r-relay', sq1: 'r-sq1', sq2: 'r-sq2', sq3: 'r-sq3', ew: 'r-ew' },
+  red: { hq: 'r-hq', relay: 'r-relay', sq1: 'r-sq1', sq2: 'r-sq2', sq3: 'r-sq3', ew: 'r-ew', uav: 'r-uav' },
 };
 
 export const NET_ALIASES: Record<PlayerSide, Record<string, string>> = {
   blue: { cmd: 'blue-cmd', retrans: 'blue-retrans' },
-  red: { cmd: 'red-cmd', retrans: 'red-retrans', squad: 'red-squad' },
+  red: { cmd: 'red-cmd', retrans: 'red-retrans', squad: 'red-squad', uavlink: 'red-uav' },
 };
 
 export const aliasOf = (unitId: string): string => {
@@ -63,6 +63,7 @@ export const HELP: Record<PlayerSide, string[]> = {
   blue: [
     '<unit>: df <direction> <minutes>   bearing sweep over a 90° sector; direction n ne e se s sw w nw, or degrees 0-359',
     'uav: sortie <col>,<row> <dir> <min>; ...   silent sortie: fly each leg, DF there, then home; all legs reported on return',
+    "ew: jam uavlink  ·  ew: jam off    mission 4: spot-jam the Red UAV's telemetry link (the jammer itself is loud)",
     ...COMMON_HELP,
     `units: ${Object.keys(UNIT_ALIASES.blue).join(' ')}`,
   ],
@@ -74,6 +75,7 @@ export const HELP: Record<PlayerSide, string[]> = {
     '<unit>: antenna toward <unit>      directional antenna, HQ and relay only; <unit>: antenna omni to undo',
     "ew: decoy <net>  ·  ew: decoy off  transmit a net's signature from where the EW team stands",
     "ew: jam cmd  ·  ew: jam off        spot-jam Blue's command net (holds Blue's reports; the jammer itself is loud)",
+    'uav: launch  ·  uav: hold  ·  uav: resume  ·  uav: burst   mission 4: fly the route, pause at the next waypoint, report to HQ now',
     ...COMMON_HELP,
     `units: ${Object.keys(UNIT_ALIASES.red).join(' ')} · nets: ${Object.keys(NET_ALIASES.red).join(' ')}`,
   ],
@@ -156,6 +158,7 @@ export function parseCommand(input: string, side: PlayerSide = 'blue'): ParseRes
     return { ok: true, command: { type: 'sortie', unitId, legs } };
   }
   if (verb === 'stop') return { ok: true, command: { type: 'stop', unitId } };
+  if (verb === 'launch' || verb === 'burst' || verb === 'hold' || verb === 'resume') return { ok: true, command: { type: 'uav', unitId, action: verb } };
   if (verb === 'power') {
     const watts = Number(rest[1]);
     if (!(watts > 0)) return { ok: false, error: 'power needs watts, e.g. hq: power 5' };
