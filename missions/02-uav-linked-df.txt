@@ -1,0 +1,10 @@
+# The UAV on its tether: move it east as far as the 5 km control range allows, then DF with the link up.
+seed 1234
+expect running
+uav: move 125,78
+wait 7
+status
+uav: df e 5
+sq2: df e 5
+wait 5
+picture

@@ -1,0 +1,14 @@
+# Silent sortie: two stations 6 km apart, both looking east, reported together on return.
+# The squad quad flies at 40 km/h with 30 minutes aloft, so plans have to be modest.
+# Nothing appears in the picture until the drone is home. Then end early and step through the debrief.
+seed 1234
+expect ended
+uav: sortie 125,72 e 3; 125,84 e 3
+wait 7
+status
+wait 25
+picture
+reveal
+next
+next
+exit

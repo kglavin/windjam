@@ -1,0 +1,14 @@
+# Orders replace each other; a sortie cannot be recalled; bad input is rejected with a hint.
+seed 1234
+expect running
+rejects 2
+sq1: df e 10
+sq1: df se 5
+sq1: stop
+sq1: df e 5
+uav: sortie 126,78 e 3
+uav: stop
+sq9: df e 5
+sq1: df up 5
+wait 5
+picture

@@ -1,0 +1,10 @@
+# Every sensor sweeps east for 15 minutes from where it stands.
+seed 1234
+expect won
+sq1: df e 15
+sq2: df e 15
+sq3: df e 15
+uav: df e 15
+wait 15
+picture
+status

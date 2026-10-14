@@ -1,0 +1,35 @@
+# Mission 2, playing Red. Blue hunts with a plan you cannot see.
+# Go quiet, spread the signal thin, point the backhaul, run a decoy, and send the orders when they fall due.
+mission hide
+seed 1234
+expect won
+status
+emcon cmd 0
+emcon retrans 0
+emcon squad 0
+cmd: waveform dsss
+retrans: waveform dsss
+hq: power 10
+hq: antenna toward relay
+ew: move 146,86
+send
+wait 5
+ew: decoy cmd
+wait 7
+send
+wait 10
+send
+wait 8
+picture
+wait 2
+send
+wait 10
+send
+wait 10
+send
+wait 10
+status
+reveal
+next
+next
+exit
