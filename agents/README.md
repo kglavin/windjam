@@ -25,10 +25,10 @@ Every response is JSON. Lines use the console grammar (`help` lists it).
 | `POST /red/end` | End the side's turn. When both sides have ended, the clock advances `turn` minutes; the reply says `advanced` and the new `minute` |
 | `POST /new` `{"mission":"uav","seed":1234,"turn":5}` | Start over |
 | `POST /end` | Umpire: stop the game and open the debrief |
-| `GET /full` | The whole state for the browser |
-| `GET /history` | Every line posted, with turn, side and minute |
+| `GET /full?key=K` | The whole state for the browser. Umpire only: `K` is the key the server prints at start (or `WINDJAM_UMPIRE_KEY`) |
+| `GET /history?key=K` | Every line posted, with turn, side and minute. Umpire only |
 
-In turn mode a side's `wait` is refused, and `reveal` is the umpire's (`POST /end`). After the mission ends, `status` and `picture` still work; the GUI handles the replay.
+In turn mode a side's `wait` is refused, and `reveal` is the umpire's (`POST /end`). After the mission ends, `status` and `picture` still work; the GUI handles the replay. `/full` and `/history` show both sides' truth, so they need the umpire key and a player is never given it.
 
 ## An agent's loop
 

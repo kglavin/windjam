@@ -270,7 +270,11 @@ export function fixFromBearings(map: HexMap, bearings: BearingLine[], truth?: He
     const d = Math.abs(a - b) % 180;
     return Math.min(d, 180 - d);
   };
-  const crosses = bearings.some((a, i) => bearings.some((b, j) => i !== j && between(a.bearingDeg, b.bearingDeg) >= MIN_CROSSING_DEG));
+  // The crossing must be wide against the bearing errors too: two lines a few degrees apart with 2° errors each can
+  // meet almost anywhere along them, and the weighted solve below would then trust a spurious point.
+  const crosses = bearings.some((a, i) =>
+    bearings.some((b, j) => i !== j && between(a.bearingDeg, b.bearingDeg) >= Math.max(MIN_CROSSING_DEG, 2 * (a.sigmaDeg + b.sigmaDeg))),
+  );
   if (!crosses) return undefined;
   const lines = bearings.map((b) => {
     const p = hexToKm(map, b.sensorPos);

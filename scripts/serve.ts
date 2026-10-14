@@ -53,6 +53,8 @@ interface Game {
 
 const GAMES_DIR = join(process.cwd(), 'games');
 const args = parseArgs(process.argv.slice(2));
+// The umpire's key: /full and /history show the whole truth, so a player must not be able to call them.
+const UMPIRE_KEY = process.env.WINDJAM_UMPIRE_KEY ?? Math.random().toString(36).slice(2, 10);
 let game = newGame(args.mission, args.seed, args.turn);
 
 function newGame(mission: MissionKind, seed: number, turnMin: number): Game {
@@ -211,6 +213,9 @@ const server = createServer(async (req, res) => {
       if (!side) return send(res, 400, { error: 'side=blue|red' });
       return send(res, 200, { help: HELP[side] });
     }
+    if (req.method === 'GET' && (url.pathname === '/full' || url.pathname === '/history') && q.get('key') !== UMPIRE_KEY) {
+      return send(res, 403, { error: 'umpire only: pass the key the server printed at start (?key=...)' });
+    }
     if (req.method === 'GET' && url.pathname === '/full') {
       // The map is large and fixed by the seed; the browser rebuilds it from createScenario(seed).
       const { world, ...rest } = game.state;
@@ -253,5 +258,6 @@ const server = createServer(async (req, res) => {
 
 server.listen(args.port, () => {
   console.log(`Windjam server on http://localhost:${args.port}  mission ${game.state.mission} seed ${game.state.seed} turn ${args.turn} min`);
-  console.log(`Watch it: http://localhost:5173/?server=http://localhost:${args.port}`);
+  console.log(`Umpire key ${UMPIRE_KEY} (set WINDJAM_UMPIRE_KEY to choose it). Players must not be given it.`);
+  console.log(`Watch it: http://localhost:5173/?server=http://localhost:${args.port}&key=${UMPIRE_KEY}`);
 });

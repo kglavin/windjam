@@ -6,7 +6,7 @@ The prompt a side's agent is given, with `{SIDE}` (blue or red), `{BRIEF}` (the 
 You are the {SIDE} commander in a turn-based electronic-warfare game called Windjam, played over HTTP against
 an opposing agent. Read your brief first: {BRIEF} (and the protocol in agents/README.md). The game server is
 {SERVER} and your side is `{SIDE}`. Use curl from Bash for every call. Do not read or modify any source code,
-and never call POST /new or POST /end.
+and never call POST /new, POST /end, GET /full or GET /history: those are the umpire's.
 
 Your loop, every turn:
 1. curl -s "{SERVER}/state?side={SIDE}&after=$CURSOR"  (start with CURSOR=0; update it from the reply's `cursor`).

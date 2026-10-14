@@ -38,6 +38,7 @@ export function App() {
   // Watching a game server (?server=http://localhost:8787): the state lives there, this page renders it once a
   // second and relays console lines. Once the mission is over the copy here is frozen so the replay works locally.
   const [server] = useState(() => new URLSearchParams(window.location.search).get('server') ?? undefined);
+  const [serverKey] = useState(() => new URLSearchParams(window.location.search).get('key') ?? ''); // the umpire key /full needs
   const [serverInfo, setServerInfo] = useState<{ turn: number; turnMin: number; waitingFor: PlayerSide[]; status: string }>();
   useEffect(() => {
     if (!server) return;
@@ -46,7 +47,12 @@ export function App() {
     let map: ReturnType<typeof createScenario>['map'] | undefined;
     const poll = async () => {
       try {
-        const j = await (await fetch(`${server}/full`)).json();
+        const r = await fetch(`${server}/full?key=${encodeURIComponent(serverKey)}`);
+        if (r.status === 403) {
+          setServerInfo({ turn: 0, turnMin: 0, waitingFor: [], status: 'needs the umpire key: add &key=... from the server banner' });
+          return;
+        }
+        const j = await r.json();
         if (stop) return;
         if (j.state.seed !== mapSeed) {
           map = createScenario(j.state.seed).map; // the server leaves the map out; the seed gives it
@@ -66,7 +72,7 @@ export function App() {
       stop = true;
       clearInterval(id);
     };
-  }, [server]);
+  }, [server, serverKey]);
   // Replay transport: auto-step the debrief one minute per interval so a person can watch it unfold.
   const [replayPlaying, setReplayPlaying] = useState(false);
   const [replaySpeed, setReplaySpeed] = useState(1);
