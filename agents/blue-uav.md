@@ -14,7 +14,7 @@ You command Blue. Red is flying a reconnaissance UAV somewhere east of you along
 - A bearing is taken by a unit on a DF task: `sq1: df e 3` listens over a 90° sector centred east for 3 minutes. The bearings reach HQ when the task ends, so short tasks (3 minutes) give a fresher picture, and the task must be running during the minute the UAV transmits.
 - A fix on a moving emitter needs two different sites to hear the same burst in the same minute. One site, however many minutes, is only wedges.
 - The UAV reports at least every 3 minutes. Red can report early. Each report is a 6 s burst: only a few of a minute's sweeps can catch it, so a weak burst is missed more often than a static chatterer.
-- If Red runs low power with a directional antenna pointed at Red HQ (east of the route), sensors off that line hear little. Get a sensor near the line from the UAV's area to Red HQ: move a squad east (`sq1: move 130,70`, 20 km/h) or fly the UAV on a silent sortie (`uav: sortie 128,76 e 6; 132,84 e 6`, 40 km/h, 30 min endurance, reports on return).
+- If Red runs low power with a directional antenna pointed at Red HQ (east of the route), sensors off that line hear little. Get a sensor near the line from the UAV's area to Red HQ: move a squad east (`sq1: move 130,70`, 20 km/h) or fly the UAV on a silent sortie (`uav: sortie 126,76 e 5`: one leg, 5 min on station, back in about 12 min; 40 km/h, 30 min endurance including the flight home, so keep legs within 6 km of sq2 and the total under 25 min; reports on return).
 
 ## Each turn
 
@@ -36,3 +36,7 @@ status · picture · help
 ```
 
 Do not type `wait`; the server advances the clock when both sides have ended their turn.
+
+## Opening that works
+
+Turn 1, before anything else: `sq1: move 130,70` and `sq3: move 130,90` (about 25 min of driving, so they are on the UAV's line to Red HQ by T+25), `sq2: df e 5`, `uav: sortie 126,76 e 5`. Turn 3 (T+10): `ew: jam uavlink` unless you already have two sites hearing the UAV; jamming costs Red reports and pushes it to raise power. Every later turn: every sensor on a 5-minute DF task toward the last bearing, and the UAV on another short sortie when it is home. Waiting to see the UAV before moving is too late: by the time you hear it, it is halfway through its route.

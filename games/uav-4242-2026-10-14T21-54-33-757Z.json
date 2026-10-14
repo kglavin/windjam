@@ -1,0 +1,385 @@
+{
+  "mission": "uav",
+  "seed": 4242,
+  "turnMin": 5,
+  "turns": 8,
+  "endedAt": 38,
+  "status": "lost",
+  "winner": "red",
+  "finishedAt": "2026-10-14T21:54:33.757Z",
+  "orders": [
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "sq1: df e 3",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "sq2: df e 3",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "sq3: df ne 3",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "uav: df e 3",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: power 0.3",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uavlink: waveform dsss",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: antenna toward hq",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: launch",
+      "minute": 0
+    },
+    {
+      "turn": 1,
+      "side": "blue",
+      "line": "sq1: df e 5",
+      "minute": 5
+    },
+    {
+      "turn": 1,
+      "side": "blue",
+      "line": "sq2: df e 5",
+      "minute": 5
+    },
+    {
+      "turn": 1,
+      "side": "blue",
+      "line": "sq3: df e 5",
+      "minute": 5
+    },
+    {
+      "turn": 1,
+      "side": "blue",
+      "line": "uav: df e 5",
+      "minute": 5
+    },
+    {
+      "turn": 1,
+      "side": "red",
+      "line": "uav: power 0.1",
+      "minute": 5
+    },
+    {
+      "turn": 2,
+      "side": "blue",
+      "line": "sq1: move 130,70",
+      "minute": 10
+    },
+    {
+      "turn": 2,
+      "side": "blue",
+      "line": "sq2: df e 5",
+      "minute": 10
+    },
+    {
+      "turn": 2,
+      "side": "blue",
+      "line": "sq3: df e 5",
+      "minute": 10
+    },
+    {
+      "turn": 2,
+      "side": "blue",
+      "line": "uav: sortie 128,76 e 6; 132,84 e 6",
+      "minute": 10
+    },
+    {
+      "turn": 2,
+      "side": "red",
+      "line": "uav: power 0.5",
+      "minute": 10
+    },
+    {
+      "turn": 3,
+      "side": "red",
+      "line": "uav: power 0.3",
+      "minute": 15
+    },
+    {
+      "turn": 3,
+      "side": "blue",
+      "line": "sq2: df e 5",
+      "minute": 15
+    },
+    {
+      "turn": 3,
+      "side": "blue",
+      "line": "sq3: df ne 5",
+      "minute": 15
+    },
+    {
+      "turn": 3,
+      "side": "blue",
+      "line": "uav: sortie 128,76 e 4; 130,80 e 4",
+      "minute": 15
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "sq2: df e 5",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "sq3: df ne 5",
+      "minute": 20
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "sq2: df e 5",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "sq3: move 128,82",
+      "minute": 25
+    },
+    {
+      "turn": 6,
+      "side": "blue",
+      "line": "sq2: df e 5",
+      "minute": 30
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "sq1: df e 5",
+      "minute": 35
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "sq2: df e 5",
+      "minute": 35
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "ew: jam uavlink",
+      "minute": 35
+    }
+  ],
+  "console": {
+    "blue": [
+      "[T+00] Mission: track the UAV. Red's UAV flies a 10-waypoint route and must report to Red HQ at least every 3 minutes.",
+      "[T+00] Blue wins with 5 position fixes under 1 km on the UAV. Red wins if the route is flown with at most 1 report lost and Blue has fewer fixes. Otherwise a draw at T+60.",
+      "[T+00] The UAV reports only when it transmits. Take bearings from two sites in the same minute to fix where it was. ew: jam uavlink costs Red reports. Type help.",
+      "[T+00] Blue Squad 1: DF east (45°-135°) for 3 min.",
+      "[T+00] Blue Squad 2: DF east (45°-135°) for 3 min.",
+      "[T+00] Blue Squad 3: DF northeast (0°-90°) for 3 min.",
+      "[T+00] Blue UAV: DF east (45°-135°) for 3 min.",
+      "[T+03] Blue Squad 1: DF east (45°-135°) done. 2 emitters, 82 measurements. Reported to HQ.",
+      "[T+03] HQ: new track E1 (52 MHz fixed).",
+      "[T+03] HQ: new track E2 (45 MHz hopper).",
+      "[T+03] Blue Squad 2: DF east (45°-135°) done. 4 emitters, 164 measurements. Reported to HQ.",
+      "[T+03] HQ: new track E3 (45 MHz hopper).",
+      "[T+03] HQ: E1 fixed: CEP 0.66 km from 2 bearings.",
+      "[T+03] HQ: E2 fixed: CEP 1.64 km from 2 bearings.",
+      "[T+03] HQ: new track E4 (45 MHz hopper).",
+      "[T+03] Blue Squad 3: DF northeast (0°-90°) done. Nothing heard.",
+      "[T+03] Blue UAV: DF east (45°-135°) done. 4 emitters, 164 measurements. Reported to HQ.",
+      "[T+05] Blue Squad 1: DF east (45°-135°) for 5 min.",
+      "[T+05] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+05] Blue Squad 3: DF east (45°-135°) for 5 min.",
+      "[T+05] Blue UAV: DF east (45°-135°) for 5 min.",
+      "[T+10] Blue Squad 1: DF east (45°-135°) done. 3 emitters, 190 measurements. Reported to HQ.",
+      "[T+10] HQ: new track E5 (52 MHz fixed).",
+      "[T+10] HQ: E2 refined: CEP 1.05 km from 4 bearings.",
+      "[T+10] HQ: E1 refined: CEP 0.48 km from 4 bearings.",
+      "[T+10] Blue Squad 2: DF east (45°-135°) done. 4 emitters, 280 measurements. Reported to HQ.",
+      "[T+10] HQ: E5 fixed: CEP 2.10 km from 2 bearings.",
+      "[T+10] HQ: E2 refined: CEP 0.92 km from 5 bearings.",
+      "[T+10] Blue Squad 3: DF east (45°-135°) done. 1 emitter, 100 measurements. Reported to HQ.",
+      "[T+10] HQ: E5 refined: CEP 0.36 km from 3 bearings.",
+      "[T+10] Blue UAV: DF east (45°-135°) done. 4 emitters, 280 measurements. Reported to HQ.",
+      "[T+10] Blue Squad 1: moving to 130,70, 17 hexes, about 26 min.",
+      "[T+10] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+10] Blue Squad 3: DF east (45°-135°) for 5 min.",
+      "[T+10] Blue UAV: that plan needs about 39 min (27 flying, 12 on station); endurance is 30 min.",
+      "[T+15] Blue Squad 2: DF east (45°-135°) done. 6 emitters, 258 measurements. Reported to HQ.",
+      "[T+15] HQ: new track E6 (65 MHz UAV link).",
+      "[T+15] Blue Squad 3: DF east (45°-135°) done. 1 emitter, 50 measurements. Reported to HQ.",
+      "[T+15] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+15] Blue Squad 3: DF northeast (0°-90°) for 5 min.",
+      "[T+15] Blue UAV: silent sortie, 2 legs: 128,76 DF east (45°-135°) 4 min; 130,80 DF east (45°-135°) 4 min; then home. About 29 min, radio silent until it returns.",
+      "[T+20] Blue Squad 2: DF east (45°-135°) done. 5 emitters, 158 measurements. Reported to HQ.",
+      "[T+20] Blue Squad 3: DF northeast (0°-90°) done. 1 emitter, 25 measurements. Reported to HQ.",
+      "[T+20] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+20] Blue Squad 3: DF northeast (0°-90°) for 5 min.",
+      "[T+23] Blue UAV: leg 1/2 on station, DF east (45°-135°) for 4 min, radio silent.",
+      "[T+25] Blue Squad 2: DF east (45°-135°) done. 5 emitters, 296 measurements. Reported to HQ.",
+      "[T+25] Blue Squad 3: DF northeast (0°-90°) done. 1 emitter, 50 measurements. Reported to HQ.",
+      "[T+25] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+25] Blue Squad 3: moving to 128,82, 26 hexes, about 39 min.",
+      "[T+27] Blue UAV: leg 1 done, 4 emitters heard.",
+      "[T+27] Blue UAV: flying to leg 2 at 130,80.",
+      "[T+30] Blue Squad 2: DF east (45°-135°) done. 6 emitters, 217 measurements. Reported to HQ.",
+      "[T+30] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+31] Blue UAV: leg 2/2 on station, DF east (45°-135°) for 4 min, radio silent.",
+      "[T+35] Blue UAV: leg 2 done, 2 emitters heard.",
+      "[T+35] Blue UAV: plan complete, returning to Blue Squad 2, about 9 min.",
+      "[T+35] Blue Squad 2: DF east (45°-135°) done. 4 emitters, 246 measurements. Reported to HQ.",
+      "[T+35] Blue Squad 1: previous order replaced.",
+      "[T+35] Blue Squad 1: DF east (45°-135°) for 5 min.",
+      "[T+35] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+35] Blue EW Team: spot-jamming Red UAV Link. Their reports will be held while their links are down. You are now their loudest emitter.",
+      "[T+38] Red wins at T+38: route complete at T+38 with 0 reports lost; Blue fixed it 0 times.",
+      "[T+38] Type reveal to see the truth and step through how the picture built up."
+    ],
+    "red": [
+      "[T+00] Mission: track the UAV. Red's UAV flies a 10-waypoint route and must report to Red HQ at least every 3 minutes.",
+      "[T+00] Blue wins with 5 position fixes under 1 km on the UAV. Red wins if the route is flown with at most 1 report lost and Blue has fewer fixes. Otherwise a draw at T+60.",
+      "[T+00] uav: launch starts the route; uav: burst reports now (and resets the clock); uav: hold pauses at the next waypoint. Lower uav power and a DSSS uavlink are harder to hear, and harder for HQ to receive. Type help.",
+      "[T+00] Red UAV: transmit power 0.3 W.",
+      "[T+00] Red UAV Link: waveform DSSS 5 Mcps.",
+      "[T+00] Red UAV: antenna pointed at Red HQ: +6 dBi within 30°, 20 dB down everywhere else, including towards anything off that line.",
+      "[T+00] Red UAV: launched at T+0, 10 waypoints: 146,74; 138,74; 134,70; 128,76; 128,82; 128,92; 132,90; 138,86; 142,88; 148,80. It must report to HQ every 3 min.",
+      "[T+01] Red UAV: to waypoint 1/10 at 146,74, about 4 min.",
+      "[T+01] HQ: new track B1 (60 MHz UAV link).",
+      "[T+01] Intercepts: 60 MHz UAV link (4 sensors).",
+      "[T+02] HQ: new track B2 (60 MHz fixed).",
+      "[T+02] HQ: B2 fixed: CEP 0.39 km from 2 bearings.",
+      "[T+02] Intercepts: 60 MHz fixed (4 sensors), 60 MHz UAV link (4 sensors).",
+      "[T+03] HQ: new track B3 (60 MHz fixed).",
+      "[T+03] HQ: new track B4 (60 MHz fixed).",
+      "[T+03] HQ: B3 fixed: CEP 5.31 km from 2 bearings.",
+      "[T+03] HQ: B4 fixed: CEP 0.51 km from 2 bearings.",
+      "[T+03] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+04] Red UAV: arrived at 146,75.",
+      "[T+04] Red UAV: report (forced) at T+3 received by HQ (good, SNR 23 dB).",
+      "[T+05] Red UAV: to waypoint 2/10 at 138,74, about 4 min.",
+      "[T+05] Red UAV: transmit power 0.1 W.",
+      "[T+06] Intercepts: 60 MHz fixed (3 sensors), 60 MHz UAV link (4 sensors).",
+      "[T+07] Red UAV: report (forced) at T+6 received by HQ (good, SNR 7 dB).",
+      "[T+07] Intercepts: 60 MHz UAV link (4 sensors).",
+      "[T+08] Red UAV: arrived at 139,74.",
+      "[T+08] Intercepts: 60 MHz fixed (4 sensors), 60 MHz UAV link (4 sensors).",
+      "[T+09] Red UAV: to waypoint 3/10 at 134,70, about 3 min.",
+      "[T+09] Intercepts: 60 MHz UAV link (4 sensors).",
+      "[T+10] Red UAV: report (forced) at T+9 received by HQ (good, SNR -1 dB).",
+      "[T+10] HQ: new track B5 (60 MHz fixed).",
+      "[T+10] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+10] Red UAV: transmit power 0.5 W.",
+      "[T+11] Red UAV: arrived at 134,71.",
+      "[T+11] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+12] Red UAV: to waypoint 4/10 at 128,76, about 4 min.",
+      "[T+12] HQ: new track B6 (60 MHz fixed).",
+      "[T+12] HQ: B6 fixed: CEP 0.49 km from 2 bearings.",
+      "[T+12] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+13] Red UAV: report (forced) at T+12 received by HQ (good, SNR 15 dB).",
+      "[T+15] Red UAV: arrived at 128,75.",
+      "[T+15] HQ: B3 refined: CEP 3.59 km from 4 bearings.",
+      "[T+15] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+15] Red UAV: transmit power 0.3 W.",
+      "[T+16] Red UAV: to waypoint 5/10 at 128,82, about 3 min.",
+      "[T+16] Red UAV: report (forced) at T+15 received by HQ (good, SNR 2 dB).",
+      "[T+18] Red UAV: arrived at 128,81.",
+      "[T+18] Intercepts: 70 MHz fixed (3 sensors).",
+      "[T+19] Red UAV: to waypoint 6/10 at 128,92, about 5 min.",
+      "[T+19] Red UAV: report (forced) at T+18 received by HQ (good, SNR 10 dB).",
+      "[T+20] HQ: B3 refined: CEP 2.65 km from 6 bearings.",
+      "[T+20] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+21] Intercepts: 70 MHz fixed (1 sensor).",
+      "[T+22] Red UAV: report (forced) at T+21 received by HQ (good, SNR -9 dB).",
+      "[T+23] Red UAV: arrived at 128,91.",
+      "[T+24] Red UAV: to waypoint 7/10 at 132,90, about 2 min.",
+      "[T+25] Red UAV: arrived at 131,90.",
+      "[T+25] Red UAV: report (forced) at T+24 received by HQ (good, SNR 1 dB).",
+      "[T+25] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+26] Red UAV: to waypoint 8/10 at 138,86, about 4 min.",
+      "[T+28] Red UAV: report (forced) at T+27 received by HQ (good, SNR 23 dB).",
+      "[T+28] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+29] Red UAV: arrived at 137,86.",
+      "[T+29] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+30] Red UAV: to waypoint 9/10 at 142,88, about 3 min.",
+      "[T+30] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+31] Red UAV: report (forced) at T+30 received by HQ (good, SNR 27 dB).",
+      "[T+31] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+32] Red UAV: arrived at 141,88.",
+      "[T+32] HQ: B3 refined: CEP 1.60 km from 12 bearings.",
+      "[T+32] Intercepts: 60 MHz fixed (2 sensors).",
+      "[T+33] Red UAV: to waypoint 10/10 at 148,80, about 5 min.",
+      "[T+33] Intercepts: 70 MHz fixed (4 sensors).",
+      "[T+34] Red UAV: report (forced) at T+33 received by HQ (good, SNR 20 dB).",
+      "[T+35] Intercepts: 60 MHz fixed (4 sensors).",
+      "[T+36] HQ: new track B7 (jammer, spot).",
+      "[T+36] HQ: B7 fixed: CEP 0.36 km from 2 bearings.",
+      "[T+36] Intercepts: 70 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+37] Red UAV: arrived at 147,81.",
+      "[T+37] Red UAV: report (forced) at T+36 received by HQ (good, SNR 34 dB, jammed in part).",
+      "[T+37] Intercepts: jammer, spot (4 sensors).",
+      "[T+38] Red UAV: route complete at T+38, landing. No more reports.",
+      "[T+38] Intercepts: jammer, spot (4 sensors).",
+      "[T+38] Red wins at T+38: route complete at T+38 with 0 reports lost; Blue fixed it 0 times.",
+      "[T+38] Type reveal to see the truth and step through how the picture built up."
+    ]
+  },
+  "reveal": [
+    "Reveal: Red UAV route 1: 146,74; 2: 138,74; 3: 134,70; 4: 128,76; 5: 128,82; 6: 128,92; 7: 132,90; 8: 138,86; 9: 142,88; 10: 148,80. Launched T+0, complete T+38.",
+    "Reveal: UAV reports (* forced): T+3*, T+6*, T+9*, T+12*, T+15*, T+18*, T+21*, T+24*, T+27*, T+30*, T+33*, T+36*.",
+    "Reveal: Blue track E6 on the UAV: 3 bearings, 0 position fixes, 0 under 1 km.",
+    "Reveal: Blue HQ at 101,79: Red B3, fix 0.84 km off (CEP 1.54 km).",
+    "Reveal: Blue Relay at 111,76: Red B6, fix 0.32 km off (CEP 0.24 km).",
+    "Reveal: Blue Squad 1 at 129,70: Red B4, fix 3.49 km off (CEP 0.10 km).",
+    "Reveal: Blue Squad 2 at 118,77: Red B2, fix 0.06 km off (CEP 0.08 km).",
+    "Reveal: Blue Squad 3 at 115,92: Red B5, 5 bearing, no fix.",
+    "Reveal: Blue UAV at 127,79: Red B1, fix 0.08 km off (CEP 0.27 km).",
+    "Reveal: Blue EW Team at 117,77: Red B7, fix 0.09 km off (CEP 0.16 km)."
+  ],
+  "summary": {
+    "blue": [
+      "T+38 of 60 min. UAV position fixes under 1 km: 0/5. Track E6: 3 bearings, 0 fixes.",
+      "hq    Blue HQ       at 101,79 · idle · link to HQ: ok (at HQ) · 50 W",
+      "relay Blue Relay    at 111,76 · idle · link to HQ: ok (direct, on time) · 20 W",
+      "sq1   Blue Squad 1  at 129,70 · DF east (45°-135°) until T+40 · link to HQ: ok (direct, on time) · 5 W",
+      "sq2   Blue Squad 2  at 118,77 · DF east (45°-135°) until T+40 · link to HQ: LOST (direct, lost) · 5 W",
+      "sq3   Blue Squad 3  at 115,92 · moving, 18 hexes to go · link to HQ: LOST (relay, lost) · 5 W",
+      "uav   Blue UAV      at 127,79 · sortie leg 2/2, returning (9 hexes), radio silent · link to HQ: LOST (via Blue Squad 2, direct, lost)",
+      "ew    Blue EW Team  at 117,77 · idle · link to HQ: no radio net · 200 W, jamming red-uav"
+    ],
+    "red": [
+      "T+38 of 60 min. route complete at T+38. Reports: 12 received, 0 lost (1 allowed). Tracks on Blue: 7.",
+      "net cmd     Red Command Net  45 MHz · hopping 100/s · chatter 20%",
+      "net retrans Red Retrans      48 MHz · fixed · chatter 20%",
+      "net squad   Red Squad Net    52 MHz · fixed · chatter 20%",
+      "net uavlink Red UAV Link     65 MHz · DSSS 5 Mcps · chatter 0%",
+      "hq    Red HQ        at 152,80 · idle · link to HQ: ok (at HQ) · 50 W",
+      "relay Red Relay     at 142,88 · idle · link to HQ: ok (direct, on time) · 20 W",
+      "ew    Red EW Team   at 138,87 · idle · link to HQ: no radio net · 200 W",
+      "sq1   Red Squad 1   at 140,68 · idle · link to HQ: ok (relay, on time) · 5 W",
+      "sq2   Red Squad 2   at 138,80 · idle · link to HQ: ok (relay, on time) · 5 W",
+      "sq3   Red Squad 3   at 140,92 · idle · link to HQ: ok (direct, on time) · 5 W",
+      "uav   Red UAV       at 147,81 · idle · link to HQ: ok (via Red HQ, at HQ) · antenna → Red HQ"
+    ]
+  }
+}
