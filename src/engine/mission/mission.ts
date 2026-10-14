@@ -1369,7 +1369,11 @@ export function flightPlans(s: MissionState, side?: PlayerSide): { unitId: strin
 }
 
 // Enemy units the player has a track on (heard and reported at least once).
-export const foundRedIds = (s: MissionState, side: PlayerSide = s.side): Set<string> => new Set(pictureOf(s, side).map((t) => t.emitterId));
+// A static emitter counts as found once heard; a moving one (a drone) only once the picture has a fix on it, since a
+// lone bearing says nothing about where it is now.
+const foundIn = (s: MissionState, picture: Track[]): Set<string> =>
+  new Set(picture.filter((t) => unitById(s.world, t.emitterId)?.kind !== 'drone' || t.fix || (t.fixes?.length ?? 0) > 0).map((t) => t.emitterId));
+export const foundRedIds = (s: MissionState, side: PlayerSide = s.side): Set<string> => foundIn(s, pictureOf(s, side));
 
 // Enemy units never found, for greying out at the reveal.
 export const unfoundRedIds = (s: MissionState, side: PlayerSide = s.side): Set<string> => {
@@ -1396,7 +1400,7 @@ export function viewOf(s: MissionState, side: PlayerSide = s.side, umpire = fals
     const snap = s.history[Math.min(s.replay.minute, s.history.length - 1)];
     const world = { ...s.world, units: s.world.units.map((u) => ({ ...u, pos: snap.positions[u.id] ?? u.pos })) };
     const picture = umpire ? [...snap.tracks, ...snap.redTracks] : side === 'blue' ? snap.tracks : snap.redTracks;
-    const found = new Set(picture.map((t) => t.emitterId));
+    const found = foundIn(s, picture);
     const dim = umpire ? undefined : new Set(s.world.units.filter((u) => u.side === enemy && !found.has(u.id)).map((u) => u.id));
     const umpireTrails = () => [...trails(s, snap.minute, 'blue'), ...trails(s, snap.minute, 'red')];
     // The snapshot keeps both sides' sectors and plans; a side sees only its own.

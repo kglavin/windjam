@@ -221,6 +221,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
           <span><span className="sym sym-wedge" /> pink wedge: one bearing, emitter somewhere along it</span>
           <span><span className="sym sym-ellipse" /> pink ellipse and ×: HQ's fix and its error</span>
           {duel && <span><span className="sym sym-ellipse-red" /> amber wedge or ellipse: Red's picture of Blue (Umpire and Red view)</span>}
+          <span><span className="sym sym-jam" /> purple line: a jammer to a receiver it is hitting (purple halo: jammer on)</span>
           <span><span className="sym sym-sector" /> blue dashed sector: a unit listening now</span>
           <span><span className="sym sym-plan" /> cyan dashed line: the UAV's remaining plan</span>
           <span><span className="sym sym-trail" /> solid fading line with dots: where a unit has been (cyan UAV, blue ground)</span>
