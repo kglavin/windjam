@@ -133,14 +133,14 @@ The agents so far play by rules of thumb from the brief ("2 to 3 degrees wide", 
 
 ### 13. Staff roles
 
-Four roles cover the engine. A game can run with any subset; the commander's brief lists who is on the staff.
+The staff has two cells under the commander. The **intelligence cell** processes the known state of the environment: what has been heard, what it is, where it is and where it will be. The **EW cell** applies the EW tactics and science: electronic attack, electronic protection and the side's own communications. The commander controls both, states intent, and is the only one who transmits. Four roles cover the engine, two per cell; the operations planner is optional and sits with the commander. A game can run with any subset; the commander's brief lists who is on the staff.
 
 | Role | Works from | Produces |
 |---|---|---|
-| ES analyst (signals) | HQ's picture: tracks, bearings, fixes, intercept lines, signatures; the reveal is never available | Emitter identification and order of battle (which signature is which net, hub or member, static or moving); pattern of life (reporting intervals, chatter duty, next expected transmission); predicted position of moving tracks; sensor tasking that would improve the picture (which unit, which sector, when) |
-| EW planner | Own jammer positions and modes; enemy nets as the ES analyst has characterised them (frequency, waveform, likely receiver positions); terrain | Jamming options with predicted J/S at the victim receivers, mode choice (spot, barrage, follower, sync) against the waveform, cost in own exposure; decoy plans; when to stop |
-| Signals officer (own comms) | Own nets, units, links, link budgets, timeliness, receipts of orders | Net health and what each order's delivery odds are; emcon and waveform recommendations; relay and antenna placement; which of the side's transmissions are most exposed to enemy DF and what to do about it |
-| Operations planner | The other three's outputs and the commander's intent | A tasking table for the next turns: per unit, orders in the unit grammar, with the reason and the transmission cost; alternatives when the net is degraded |
+| ES analyst (intelligence cell) | HQ's picture: tracks, bearings, fixes, intercept lines, signatures; the reveal is never available | Emitter identification and order of battle (which signature is which net, hub or member, static or moving); pattern of life (reporting intervals, chatter duty, next expected transmission); predicted position of moving tracks; sensor tasking that would improve the picture (which unit, which sector, when) |
+| EW officer, electronic attack (EW cell) | Own jammer positions and modes; enemy nets as the ES analyst has characterised them (frequency, waveform, likely receiver positions); terrain | Jamming options with predicted J/S at the victim receivers, mode choice (spot, barrage, follower, sync) against the waveform, cost in own exposure; decoy plans; when to stop |
+| EW officer, electronic protection and own comms (EW cell) | Own nets, units, links, link budgets, timeliness, receipts of orders | Net health and what each order's delivery odds are; emcon and waveform recommendations; relay and antenna placement; which of the side's transmissions are most exposed to enemy DF and what to do about it |
+| Operations planner (with the commander, optional) | The other three's outputs and the commander's intent | A tasking table for the next turns: per unit, orders in the unit grammar, with the reason and the transmission cost; alternatives when the net is degraded |
 
 Each analyst answers a tasking in a fixed shape: assessment (what is known, with confidence), recommendation (orders in the unit grammar, ready to `send`), and what would change the assessment. The commander may accept, edit or ignore.
 
