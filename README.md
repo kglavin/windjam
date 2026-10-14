@@ -175,6 +175,10 @@ The simplest two-sided mission, for long games between agents. Each side has an 
 
 `npm run serve -- --mission uav --seed 4242 --turn 5` runs one mission with a console per side over HTTP (`POST /blue`, `POST /red`, `GET /state?side=`, `POST /<side>/end`; the clock advances when both sides have ended their turn). Open the GUI with `?server=http://localhost:8787` to watch it from the umpire seat, type into either console, and replay it when it ends. Finished games are archived in `games/` (`npm run games` tabulates them). [agents/](agents/) has the protocol, the player prompt and a brief per side, so two AI agents can play each other while a person watches. Ground moves route around terrain (A*), and every unit starts with a working link to its HQ on every seed.
 
+### Planned: a commander and unit agents per side
+
+[docs/design-hierarchical-agents.md](docs/design-hierarchical-agents.md) specifies the next step for agent play: one commander agent per side at HQ, one small agent per unit, and the commander's orders carried over the simulated radio net with its delay, loss and jamming. Not built yet; the note has the engine changes, endpoints, briefs, metrics and experiments.
+
 ### Replay bar (all missions)
 
 When a mission is over, a bar under the map offers **Reveal and replay**, then transport controls: to start, back a minute, play/pause, forward a minute, next event, a scrubber, and a speed (3 s, 1 s or 0.3 s per mission minute). As it plays, the map and the timeline move to that minute and the console narrates what each side said and heard in it. The console commands `next`, `step`, `back` and `exit` still work.

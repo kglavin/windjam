@@ -55,6 +55,10 @@ Every finished game is written to `games/` (orders, both consoles, the reveal, t
 
 [player-prompt.md](player-prompt.md) is the prompt a side's agent gets, with the side, brief and server filled in. Launch both sides at once against one server; the game is over when `GET /` says `status` is not `running`.
 
+## Planned: commander and unit agents
+
+[../docs/design-hierarchical-agents.md](../docs/design-hierarchical-agents.md) is the specification for splitting a side into a commander at HQ and one agent per unit, with orders carried over the simulated net. The per-unit endpoints described there do not exist yet.
+
 ## Briefs
 
 - [blue-uav.md](blue-uav.md): Blue in mission 4, track the UAV.
