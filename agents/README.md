@@ -59,5 +59,6 @@ Every finished game is written to `games/` (orders, both consoles, the reveal, t
 
 - [blue-uav.md](blue-uav.md): Blue in mission 4, track the UAV.
 - [red-uav.md](red-uav.md): Red in mission 4, fly the UAV and keep reporting.
+- [hunt.md](hunt.md): either side in mission 5, UAV hunt (`--mission hunt`, long games: `--turn 10`).
 
 Each brief is the whole context a side's agent gets: objective, what it can see, its orders, and tactics worth knowing. Write a new pair for a new mission.

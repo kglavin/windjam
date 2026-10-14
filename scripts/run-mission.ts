@@ -17,7 +17,7 @@ const { state, parseErrors } = runScript(text);
 console.log(formatLog(state));
 console.log('');
 const fixed = realFixes(state);
-console.log(`Result: ${outcomeOf(state)} at T+${state.minute}. Blue tracks ${state.tracks.length}, real fixes under ${MISSION_RULES.winCepKm} km: ${fixed}/${MISSION_RULES.fixesToWin}.${state.mission === 'hide' || state.mission === 'duel' ? ` Red orders on time: ${deliveredOrders(state)}/${MISSION_RULES.redOrderCount}.` : ''}${state.mission === 'uav' ? ` UAV fixes under ${UAV_RULES.winCepKm} km: ${uavFixes(state)}/${UAV_RULES.fixesToWin}, reports lost: ${uavGaps(state)}/${state.uav?.telemetry.length ?? 0}.` : ''}${state.mission !== 'find' ? ` Red tracks on Blue: ${state.redTracks.length}.` : ''}`);
+console.log(`Result: ${outcomeOf(state)} at T+${state.minute}. Blue tracks ${state.tracks.length}, real fixes under ${MISSION_RULES.winCepKm} km: ${fixed}/${MISSION_RULES.fixesToWin}.${state.mission === 'hide' || state.mission === 'duel' ? ` Red orders on time: ${deliveredOrders(state)}/${MISSION_RULES.redOrderCount}.` : ''}${state.mission === 'hunt' ? ` Found: ${state.found ? `${state.found.by} at T+${state.found.minute} from ${state.found.km.toFixed(1)} km` : 'no'}.` : ''}${state.mission === 'uav' ? ` UAV fixes under ${UAV_RULES.winCepKm} km: ${uavFixes(state)}/${UAV_RULES.fixesToWin}, reports lost: ${uavGaps(state)}/${state.uav?.telemetry.length ?? 0}.` : ''}${state.mission !== 'find' ? ` Red tracks on Blue: ${state.redTracks.length}.` : ''}`);
 for (const t of [...state.tracks, ...state.redTracks]) {
   console.log(
     `  ${t.id} ${t.signature.padEnd(16)} ${t.bearings.length} bearing${t.bearings.length === 1 ? ' ' : 's'}` +

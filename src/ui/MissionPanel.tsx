@@ -1,6 +1,6 @@
 import { aliasOf } from '../engine/mission/commands';
 import { deliveredOrders, realFixes, routeToHq, viewOf } from '../engine/mission/mission';
-import { MISSION_RULES as R, UAV_RULES as UR, type MissionState, type PlayerSide } from '../engine/mission/types';
+import { HUNT_RULES as HR, MISSION_RULES as R, UAV_RULES as UR, type MissionState, type PlayerSide } from '../engine/mission/types';
 import { axialToOffset } from '../engine/hex';
 import { type LinkView, unitById } from '../engine/world';
 import { SIDE_COLORS, dfColorOf, toCss } from './colors';
@@ -28,6 +28,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
   const tracks = view.tracks;
   const fixed = realFixes(m);
   const uavMission = m.mission === 'uav';
+  const hunt = m.mission === 'hunt';
   const duel = m.humans.length > 1; // two consoles: mission 3 and 4
   const side: PlayerSide = seat === 'umpire' ? 'blue' : seat; // the picture shown
   const red = m.mission === 'hide' || (duel && seat === 'red');
@@ -37,7 +38,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
   const uavLost = uav?.telemetry.filter((t) => !t.delivered).length ?? 0;
   const current = m.redOrders.find((o) => o.status === 'pending' && o.windowStart <= m.minute && m.minute < o.windowEnd);
   const over = m.status !== 'running';
-  const title = uavMission ? 'Track the UAV' : duel ? 'Duel' : red ? 'Stay hidden' : 'Find the enemy';
+  const title = hunt ? 'UAV hunt' : uavMission ? 'Track the UAV' : duel ? 'Duel' : red ? 'Stay hidden' : 'Find the enemy';
   const result = duel
     ? m.status === 'ended'
       ? 'Mission ended for the debrief.'
@@ -49,7 +50,9 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
           ? m.winner === 'blue'
             ? 'Blue wins: the UAV was fixed.'
             : 'Red wins: route flown, reports delivered.'
-          : `${m.winner === 'blue' ? 'Blue' : 'Red'} wins.`
+          : hunt && m.found
+            ? `${m.found.by === 'blue' ? 'Blue' : 'Red'} wins: its UAV heard the other from ${m.found.km.toFixed(1)} km at T+${m.found.minute}.`
+            : `${m.winner === 'blue' ? 'Blue' : 'Red'} wins.`
     : m.status === 'won'
       ? red
         ? 'You stayed hidden.'
@@ -64,7 +67,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
   return (
     <aside className="panel">
       <header>
-        <h1>Windjam · Mission {uavMission ? 4 : duel ? 3 : red ? 2 : 1}</h1>
+        <h1>Windjam · Mission {hunt ? 5 : uavMission ? 4 : duel ? 3 : red ? 2 : 1}</h1>
         <div className="sub">
           {title} · seed {m.seed} <button onClick={onNewMission}>New mission</button> <button onClick={onExit}>Sandbox</button>
         </div>
@@ -101,7 +104,12 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
 
       <section>
         <h2>Objective</h2>
-        {uavMission ? (
+        {hunt ? (
+          <p className="help">
+            Each side has an HQ and a UAV. A UAV must report to its HQ every {HR.reportEveryMin} min; every report is a burst the other side can hear. HQ and the UAV listen all round;
+            the UAV's bearings reach HQ with its next report. The first UAV to hear the other's report from within {HR.interceptKm} km finds it and wins. Draw at T+{HR.limitMin}.
+          </p>
+        ) : uavMission ? (
           <p className="help">
             Red's UAV flies a {UR.waypoints}-waypoint route and must report to Red HQ at least every {UR.reportEveryMin} min; each report is a {UR.burstSec} s burst. Blue wins with{' '}
             {UR.fixesToWin} position fixes under {UR.winCepKm} km (two sites hearing the same report). Red wins if the route is flown with at most {UR.maxGaps} report lost and Blue has fewer fixes.
@@ -130,14 +138,14 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
           </span>
         </div>
         <div className="row">
-          <span className="k">{uavMission ? `Blue fixes on the UAV under ${UR.winCepKm} km` : duel ? `Blue fixes under ${R.winCepKm} km` : red ? 'Blue fixes on you (under 1 km)' : `Fixed under ${R.winCepKm} km`}</span>
+          <span className="k">{hunt ? `Found (a report heard from within ${HR.interceptKm} km)` : uavMission ? `Blue fixes on the UAV under ${UR.winCepKm} km` : duel ? `Blue fixes under ${R.winCepKm} km` : red ? 'Blue fixes on you (under 1 km)' : `Fixed under ${R.winCepKm} km`}</span>
           <span className="v">
             <b>
-              {uavMission ? `${uavFixed}/${UR.fixesToWin}` : `${fixed}/${R.fixesToWin}`}
+              {hunt ? (m.found ? `${m.found.by} at T+${m.found.minute}` : 'not yet') : uavMission ? `${uavFixed}/${UR.fixesToWin}` : `${fixed}/${R.fixesToWin}`}
             </b>
           </span>
         </div>
-        {(red || duel) && !uavMission && (
+        {(red || duel) && !uavMission && !hunt && (
           <div className="row">
             <span className="k">Orders on time</span>
             <span className="v">
@@ -163,7 +171,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
         )}
       </section>
 
-      {(red || duel) && !uavMission && (
+      {(red || duel) && !uavMission && !hunt && (
         <section>
           <h2>Orders to pass</h2>
           {m.redOrders.map((o) => (
@@ -179,6 +187,40 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
           <p className="muted">{duel ? 'From the red console, ' : ''}send transmits the current order: a one-minute burst from HQ (and the relay if routed through it), then the squad's acknowledgement.</p>
         </section>
       )}
+
+      {hunt &&
+        (['blue', 'red'] as PlayerSide[])
+          .filter((x) => seat === 'umpire' || over || x === seat)
+          .map((x) => {
+            const st = x === 'blue' ? m.blueUav : m.uav;
+            const unit = st && unitById(m.world, st.unitId);
+            const enemy = x === 'blue' ? m.uav : m.blueUav;
+            const t = enemy && (x === 'blue' ? m.tracks : m.redTracks).find((tr) => tr.emitterId === enemy.unitId);
+            if (!st || !unit) return null;
+            const { col, row } = axialToOffset(unit.pos);
+            return (
+              <section key={x}>
+                <h2>{unit.name}</h2>
+                <div className="row">
+                  <span className="k">Flight</span>
+                  <span className="v">
+                    {st.launchedMin === undefined ? 'on the ground' : `airborne since T+${st.launchedMin} · at ${col},${row} · ${Math.max(0, st.route.length - st.nextWp)} waypoints to go${st.holding ? ' · holding' : ''}`}
+                  </span>
+                </div>
+                <div className="row">
+                  <span className="k">Reports received / lost</span>
+                  <span className="v">
+                    {st.telemetry.filter((r) => r.delivered).length} / {st.telemetry.filter((r) => !r.delivered).length}
+                    {st.launchedMin !== undefined ? ` · next forced T+${(st.lastBurstMin ?? st.launchedMin) + st.reportEveryMin}` : ''}
+                  </span>
+                </div>
+                <div className="row">
+                  <span className="k">Enemy UAV</span>
+                  <span className="v">{t ? `${t.id} · ${t.bearings.length} bearings${t.fix ? ` · fix CEP ${t.fix.cepKm.toFixed(1)} km` : ''}` : 'not heard yet'}</span>
+                </div>
+              </section>
+            );
+          })}
 
       {uavMission && uav && (
         <section>

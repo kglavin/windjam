@@ -1,4 +1,4 @@
-import { offsetToAxial } from '../hex';
+import { type Hex, offsetToAxial } from '../hex';
 import type { Waveform } from '../units';
 import type { MissionCommand, PlayerSide, SortieLeg } from './types';
 
@@ -9,7 +9,7 @@ export const UNIT_ALIASES: Record<PlayerSide, Record<string, string>> = {
 };
 
 export const NET_ALIASES: Record<PlayerSide, Record<string, string>> = {
-  blue: { cmd: 'blue-cmd', retrans: 'blue-retrans' },
+  blue: { cmd: 'blue-cmd', retrans: 'blue-retrans', uavlink: 'blue-uav' },
   red: { cmd: 'red-cmd', retrans: 'red-retrans', squad: 'red-squad', uavlink: 'red-uav' },
 };
 
@@ -64,6 +64,8 @@ export const HELP: Record<PlayerSide, string[]> = {
     '<unit>: df <direction> <minutes>   bearing sweep over a 90° sector; direction n ne e se s sw w nw, or degrees 0-359',
     'uav: sortie <col>,<row> <dir> <min>; ...   silent sortie: fly each leg, DF there, then home; all legs reported on return',
     "ew: jam uavlink  ·  ew: jam off    mission 4: spot-jam the Red UAV's telemetry link (the jammer itself is loud)",
+    'uav: launch  ·  uav: route <col>,<row>; ...  ·  uav: hold  ·  uav: resume  ·  uav: burst   mission 5: fly, re-route, pause, report now',
+    'uav: power <W>  ·  uavlink: waveform fixed|dsss  ·  uav: antenna toward hq  ·  uav: antenna omni   mission 5: shape the report burst',
     ...COMMON_HELP,
     `units: ${Object.keys(UNIT_ALIASES.blue).join(' ')}`,
   ],
@@ -75,7 +77,8 @@ export const HELP: Record<PlayerSide, string[]> = {
     '<unit>: antenna toward <unit>      directional antenna, HQ and relay only; <unit>: antenna omni to undo',
     "ew: decoy <net>  ·  ew: decoy off  transmit a net's signature from where the EW team stands",
     "ew: jam cmd  ·  ew: jam off        spot-jam Blue's command net (holds Blue's reports; the jammer itself is loud)",
-    'uav: launch  ·  uav: hold  ·  uav: resume  ·  uav: burst   mission 4: fly the route, pause at the next waypoint, report to HQ now',
+    'uav: launch  ·  uav: hold  ·  uav: resume  ·  uav: burst   missions 4-5: fly the route, pause at the next waypoint, report to HQ now',
+    'uav: route <col>,<row>; <col>,<row>; ...   mission 5: replace the UAV route (it flies on from where it is)',
     ...COMMON_HELP,
     `units: ${Object.keys(UNIT_ALIASES.red).join(' ')} · nets: ${Object.keys(NET_ALIASES.red).join(' ')}`,
   ],
@@ -159,6 +162,16 @@ export function parseCommand(input: string, side: PlayerSide = 'blue'): ParseRes
   }
   if (verb === 'stop') return { ok: true, command: { type: 'stop', unitId } };
   if (verb === 'launch' || verb === 'burst' || verb === 'hold' || verb === 'resume') return { ok: true, command: { type: 'uav', unitId, action: verb } };
+  if (verb === 'route') {
+    const legs: Hex[] = [];
+    for (const t of rest.slice(1).join(' ').split(';').map((x) => x.trim()).filter(Boolean)) {
+      const m = /^(\d+)\s*,\s*(\d+)$/.exec(t);
+      if (!m) return { ok: false, error: `Bad waypoint "${t}". route takes col,row pairs separated by ;, e.g. uav: route 60,80; 70,90` };
+      legs.push(offsetToAxial(Number(m[1]), Number(m[2])));
+    }
+    if (legs.length === 0) return { ok: false, error: 'route needs at least one waypoint, e.g. uav: route 60,80; 70,90' };
+    return { ok: true, command: { type: 'uav', unitId, action: 'route', legs } };
+  }
   if (verb === 'power') {
     const watts = Number(rest[1]);
     if (!(watts > 0)) return { ok: false, error: 'power needs watts, e.g. hq: power 5' };

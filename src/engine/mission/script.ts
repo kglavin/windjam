@@ -28,7 +28,7 @@ export function parseScript(text: string): Script {
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.replace(/#.*$/, '').trim();
     if (!line) continue;
-    const mission = /^mission\s+(find|hide|duel|uav)$/i.exec(line);
+    const mission = /^mission\s+(find|hide|duel|uav|hunt)$/i.exec(line);
     if (mission) {
       script.mission = mission[1].toLowerCase() as MissionKind;
       continue;

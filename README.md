@@ -167,6 +167,10 @@ Two consoles, as in the duel. Red flies a reconnaissance UAV along a seeded ten-
 - **Blue's levers.** Short DF tasks, moving squads into the UAV's beam toward HQ, and `ew: jam uavlink`, which costs Red reports unless it turns the power up.
 - **Script.** [missions/09-uav-track.txt](missions/09-uav-track.txt).
 
+### Mission 5: UAV hunt
+
+The simplest two-sided mission, for long games between agents. Each side has an HQ and one UAV, 68 km apart, and nothing else. A UAV must report to its HQ every 5 minutes; every report is a burst the other side can hear. HQ and the UAV listen all round, the UAV's bearings come down with its next report, and the first UAV to hear the other's report from within 3 km wins. Draw at T+180. Orders: `uav: route <col>,<row>; ...`, `launch`, `hold`, `resume`, `burst`, `power`, `uavlink: waveform`, `antenna toward hq`. Notes in [docs/mission-uav-hunt.md](docs/mission-uav-hunt.md), script in [missions/10-uav-hunt.txt](missions/10-uav-hunt.txt), agent brief in [agents/hunt.md](agents/hunt.md).
+
 ### Game server and agents
 
 `npm run serve -- --mission uav --seed 4242 --turn 5` runs one mission with a console per side over HTTP (`POST /blue`, `POST /red`, `GET /state?side=`, `POST /<side>/end`; the clock advances when both sides have ended their turn). Open the GUI with `?server=http://localhost:8787` to watch it from the umpire seat, type into either console, and replay it when it ends. Finished games are archived in `games/` (`npm run games` tabulates them). [agents/](agents/) has the protocol, the player prompt and a brief per side, so two AI agents can play each other while a person watches. Ground moves route around terrain (A*), and every unit starts with a working link to its HQ on every seed.

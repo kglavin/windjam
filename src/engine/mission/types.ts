@@ -6,7 +6,8 @@ import type { World } from '../world';
 
 export type PlayerSide = 'blue' | 'red';
 // duel: both sides human, hide-mission rules. uav: both sides human; Red flies a UAV that must report, Blue tracks it.
-export type MissionKind = 'find' | 'hide' | 'duel' | 'uav';
+// hunt: both sides human; each has an HQ and a UAV, and each UAV hunts the other by its reports.
+export type MissionKind = 'find' | 'hide' | 'duel' | 'uav' | 'hunt';
 
 // One leg of a drone sortie: fly to a point, then listen there (minutes 0 = transit only).
 export interface SortieLeg {
@@ -36,7 +37,7 @@ export type MissionCommand =
   | { type: 'decoy'; unitId: string; netId?: string } // undefined = off
   | { type: 'jam'; unitId: string; netId?: string } // undefined = off
   // Mission 4 (Red): the reconnaissance UAV.
-  | { type: 'uav'; unitId: string; action: 'launch' | 'burst' | 'hold' | 'resume' };
+  | { type: 'uav'; unitId: string; action: 'launch' | 'burst' | 'hold' | 'resume' | 'route'; legs?: Hex[] }; // route: replace the waypoints
 
 // What a DF task has heard so far from one emitter. Weighted so that averaged error is 1/sqrt(weight).
 export interface DfAccumulator {
@@ -48,6 +49,7 @@ export interface DfAccumulator {
   samples: { minute: number; what: string }[]; // what was heard each minute: chatter, order n, decoy, DF report...
   heardMin?: number; // moving emitters: the single minute this bearing belongs to (one accumulator per minute)
   emitterPos?: Hex; // moving emitters: where it was that minute (truth, for scoring only)
+  sensorPos?: Hex; // moving sensors: where the sensor was that minute
 }
 
 export type Order =
@@ -184,13 +186,19 @@ export interface MissionState {
   playbook?: Playbook;
   redOrders: RedOrder[];
   // Mission 4.
-  uav?: UavState;
+  uav?: UavState; // Red's UAV (missions 4 and 5)
+  blueUav?: UavState; // Blue's UAV (mission 5)
+  found?: { by: PlayerSide; minute: number; km: number; sensorId: string }; // mission 5: who heard the other UAV from close by, first
   actor?: PlayerSide; // transient: which side's console current log lines belong to
 }
 
 // Mission 4: Red's reconnaissance UAV flies a fixed route and must report to its controller every few minutes.
 export interface UavState {
   unitId: string;
+  side: PlayerSide;
+  reportEveryMin: number;
+  landsWhenDone: boolean; // mission 4: the route ends the flight; mission 5: the UAV loiters and waits for a new route
+  heard: Record<string, DfAccumulator>; // bearings the UAV has taken since its last delivered report
   netId: string; // the telemetry link
   route: Hex[]; // waypoints, in order
   nextWp: number; // index of the waypoint being flown to; route.length when the route is done
@@ -239,3 +247,14 @@ export const MISSION_RULES = {
 } as const;
 
 export const enemyOf = (side: Side): PlayerSide => (side === 'blue' ? 'red' : 'blue');
+
+// Mission 5: two HQs far apart, one UAV each. The first UAV to hear the other's report from close by finds it.
+export const HUNT_RULES = {
+  limitMin: 180,
+  reportEveryMin: 5,
+  interceptKm: 3, // a report heard by a UAV from within this distance is a find
+  speedKmh: 60,
+  enduranceMin: 240,
+  linkW: 2,
+  hqRef: { blue: [-18, 10], red: [50, 10] } as Record<PlayerSide, [number, number]>, // on the 1 km reference grid
+} as const;
