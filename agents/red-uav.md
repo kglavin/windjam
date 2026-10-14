@@ -5,7 +5,7 @@ You command Red. Your reconnaissance UAV (`uav`, at Red HQ, 152,80) must fly a t
 ## What you have
 
 - The UAV: 60 km/h, 150 m up, route shown in your console at launch (about 30 minutes). Its telemetry link is `uavlink` (65 MHz).
-- Your squads, relay and EW team listen all round and report Blue's transmissions to you as tracks `B1`, `B2`, ... on your picture. Blue's squads start around 114,68, 116,80 and 114,92; its UAV near 120,78; its EW team on high ground near 123,72.
+- Your squads, relay and EW team listen all round and report Blue's transmissions to you as tracks `B1`, `B2`, ... on your picture. Blue starts west of you; `picture` shows where your intercepts place its units.
 - Red HQ, relay and squads chatter on your command nets. That chatter gives Blue bearings on them, not on the UAV; it is not the objective.
 
 ## The trade-offs
@@ -13,7 +13,7 @@ You command Red. Your reconnaissance UAV (`uav`, at Red HQ, 152,80) must fly a t
 - Every report is a bearing for any Blue sensor that hears it. A report is a 6 s burst, so a weak one is often missed.
 - `uav: power 0.3` (down to 0.1, up to 10 W): quieter for Blue, but HQ must still receive it.
 - `uavlink: waveform dsss`: spreads the burst thin across a search channel (hard to detect) and resists jamming.
-- `uav: antenna toward hq`: +6 dBi toward Red HQ, 20 dB down everywhere else. Blue sensors off the UAV-to-HQ line hear little. On seed 1234, 0.3 W, DSSS and the antenna toward HQ gave Blue no usable fix from its starting line.
+- `uav: antenna toward hq`: +6 dBi toward Red HQ, 20 dB down everywhere else. Blue sensors off the UAV-to-HQ line hear little. In test games, 0.3 W, DSSS and the antenna toward HQ gave Blue no usable fix from its starting line, but the report SNR at HQ fell to a few dB at the far end of the route; watch the SNR in each report line and raise power only where it is needed.
 - If Blue jams `uavlink`, your reports are lost unless you raise power, which makes the UAV easy to fix. Watch your console: `report ... lost: link denied` means jamming or range. `uav: hold` lets you wait at the next waypoint, for instance until a jammer is off or a Blue sensor has moved away; reports continue while holding.
 - `uav: burst` reports now and restarts the 3-minute clock. Use it to choose the moment: when the UAV is far from Blue's sensors, or pointed away from them.
 

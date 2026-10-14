@@ -16,6 +16,8 @@
 // Every response is JSON. CORS is open so the Vite dev server's page can poll it.
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { HELP, parseCommand } from '../src/engine/mission/commands';
 import { createMission, issue, pictureLines, statusLines, visibleLog } from '../src/engine/mission/mission';
 import type { LogEntry, MissionKind, MissionState, PlayerSide } from '../src/engine/mission/types';
@@ -46,8 +48,10 @@ interface Game {
   turn: number; // turns completed
   ended: Record<PlayerSide, boolean>; // sides that have ended the current turn
   history: { turn: number; side: PlayerSide; line: string; minute: number }[]; // every line posted, for the record
+  archived?: boolean;
 }
 
+const GAMES_DIR = join(process.cwd(), 'games');
 const args = parseArgs(process.argv.slice(2));
 let game = newGame(args.mission, args.seed, args.turn);
 
@@ -138,7 +142,35 @@ function endTurn(g: Game, side: PlayerSide): { advanced: boolean; minute: number
   g.state = issue(g.state, { type: 'wait', minutes: g.turnMin }, g.state.side);
   g.turn += 1;
   g.ended = { blue: false, red: false };
+  if (g.state.status !== 'running') archive(g);
   return { advanced: true, minute: g.state.minute };
+}
+
+// A finished game is written to games/<mission>-<seed>-<time>.json: the orders each side gave, the full console
+// of each side, the reveal, and the outcome. `npm run games` tabulates the folder.
+function archive(g: Game) {
+  if (g.archived) return;
+  g.archived = true;
+  const s = g.state;
+  const revealed = issue(s, { type: 'reveal' }, s.side);
+  const record = {
+    mission: s.mission,
+    seed: s.seed,
+    turnMin: g.turnMin,
+    turns: g.turn,
+    endedAt: s.minute,
+    status: s.status,
+    winner: s.winner ?? s.status,
+    finishedAt: new Date().toISOString(),
+    orders: g.history,
+    console: { blue: consoleSince(g, 'blue', 0).lines, red: consoleSince(g, 'red', 0).lines },
+    reveal: revealed.log.filter((e) => e.kind === 'info' && /^Reveal:/.test(e.text)).map((e) => e.text),
+    summary: { blue: statusLines(s, 'blue'), red: statusLines(s, 'red') },
+  };
+  mkdirSync(GAMES_DIR, { recursive: true });
+  const file = join(GAMES_DIR, `${s.mission}-${s.seed}-${record.finishedAt.replace(/[:.]/g, '-')}.json`);
+  writeFileSync(file, JSON.stringify(record, null, 2));
+  console.log(`archived ${file}: ${record.winner} at T+${s.minute}`);
 }
 
 function readBody(req: IncomingMessage): Promise<string> {
@@ -210,6 +242,7 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/end') {
       // Umpire: stop the game and open the debrief.
       if (game.state.status === 'running') game.state = issue(game.state, { type: 'reveal' }, game.state.side);
+      archive(game);
       return send(res, 200, summary(game));
     }
     return send(res, 404, { error: 'no such endpoint' });

@@ -9,8 +9,11 @@ import { hexDistanceKm } from '../rf';
 import { createRng } from '../rng';
 import { createScenario, refToHex } from '../scenario';
 import { RADIO_PRESETS, type Net, type Unit } from '../units';
-import { type LinkView, type World, allLinkBudgets, jammers, nearestFreeHex, step, unitById } from '../world';
+import { type LinkView, type World, allLinkBudgets, jammers, nearestFreeHex, step, unitAt, unitById } from '../world';
 import { linkBudget } from '../budget';
+import { findPath } from '../path';
+import { getTile } from '../map';
+import { accessLabel, canEnter } from '../terrain';
 import { HELP, aliasOf, netAliasOf, parseCommand } from './commands';
 import { PLAYBOOKS } from './playbooks';
 import {
@@ -531,9 +534,16 @@ function unitCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 'df' 
     log(s, 'error', `${name} does not move in this mission.`);
     return;
   }
-  const path = hexLine(unit.pos, cmd.to).slice(1);
-  if (path.length === 0) {
+  if (hexEquals(unit.pos, cmd.to)) {
     log(s, 'info', `${name} is already there.`);
+    return;
+  }
+  // Drones fly straight; ground units route around terrain they cannot enter and around other units.
+  const path = unit.kind === 'drone' ? hexLine(unit.pos, cmd.to).slice(1) : findPath(s.world, unit.id, cmd.to);
+  if (!path || path.length === 0) {
+    const tile = getTile(s.world.map, cmd.to);
+    const { col, row } = axialToOffset(cmd.to);
+    log(s, 'error', `${name}: no route to ${col},${row}${tile && !canEnter(tile.terrain, unit.kind) ? ` (${tile.terrain}: ${accessLabel(tile.terrain)})` : unitAt(s.world, cmd.to) ? ' (occupied)' : ''}.`);
     return;
   }
   const perHex = minutesPerHex(s, unit);

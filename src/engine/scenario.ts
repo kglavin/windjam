@@ -1,8 +1,10 @@
-import { type Hex, hexKey, offsetToAxial } from './hex';
-import { generateMap } from './map';
-import { TERRAIN, type TerrainType } from './terrain';
+import { type Hex, hexDistance, hexKey, offsetToAxial } from './hex';
+import { type HexMap, generateMap, getTile, inBounds } from './map';
+import { TERRAIN, type TerrainType, canEnter } from './terrain';
 import { RADIO_PRESETS, type Net, type Side, type Unit, type UnitKind } from './units';
 import { type GridArea, type World, highestFreeHex, nearestFreeHex } from './world';
+import { linkBudget } from './budget';
+import { orderDelivery } from './timeliness';
 
 interface UnitSpec {
   id: string;
@@ -136,7 +138,7 @@ export function createScenario(seed: number): World {
     }
     return unit;
   });
-  return {
+  const world: World = {
     seed,
     tick: 0,
     map,
@@ -147,6 +149,69 @@ export function createScenario(seed: number): World {
     units,
     nets: NETS.map((n) => ({ ...n, memberIds: [...n.memberIds] })),
   };
+  return ensureLinks(world);
+}
+
+// Is this member's route to its hub (direct, or through the net's relay) usable from where it stands?
+function linkedToHub(world: World, net: Net, unit: Unit): boolean {
+  const hub = world.units.find((u) => u.id === net.hubId);
+  if (!hub) return true;
+  // The same test the mission uses for "link to HQ": an order would get through (delivery probability over a half).
+  const jam = { jammers: [], nets: world.nets, noiseEnv: world.noiseEnv };
+  const direct = linkBudget(world.map, net, hub, unit, jam);
+  if (orderDelivery([direct], net).status !== 'lost') return true;
+  const relayUnit = net.relay && world.units.find((u) => u.id === net.relay!.relayId);
+  const retrans = net.relay && world.nets.find((n) => n.id === net.relay!.retransNetId);
+  if (!relayUnit || !retrans || relayUnit.id === unit.id) return false;
+  const memberHop = linkBudget(world.map, retrans, unit, relayUnit, jam);
+  const hubHop = linkBudget(world.map, net, hub, relayUnit, jam);
+  return orderDelivery([memberHop, hubHop], net).status !== 'lost';
+}
+
+// Every unit starts able to reach its HQ. Terrain varies with the seed, so a squad or relay that lands behind a
+// ridge is nudged to the nearest hex it can stand on that has a working link. Relays go first, since squads
+// may depend on them. A drone follows its squad so it stays inside control range.
+function ensureLinks(world: World): World {
+  const w: World = { ...world, units: world.units.map((u) => ({ ...u })) };
+  const byKind = (k: UnitKind) => w.units.filter((u) => u.kind === k);
+  for (const unit of [...byKind('relay'), ...byKind('squad')]) {
+    const net = w.nets.find((n) => n.topology === 'hub' && n.side === unit.side && n.memberIds.includes(unit.id));
+    if (!net || unit.id === net.hubId || linkedToHub(w, net, unit)) continue;
+    const occupied = new Set(w.units.filter((u) => u.id !== unit.id).map((u) => hexKey(u.pos)));
+    const allowed = (t: TerrainType) => canEnter(t, unit.kind) && (unit.kind === 'relay' || openGround(t));
+    const from = unit.pos;
+    let best: Hex | undefined;
+    for (let radius = 1; radius <= 12 && !best; radius++) {
+      const ring = ringHexes(w.map, from, radius).filter((h) => !occupied.has(hexKey(h)) && allowed(getTile(w.map, h)!.terrain));
+      // Relays prefer height within the ring; squads the nearest hex, as listed.
+      if (unit.kind === 'relay') ring.sort((a, b) => getTile(w.map, b)!.elevationM - getTile(w.map, a)!.elevationM);
+      for (const h of ring) {
+        unit.pos = h;
+        if (linkedToHub(w, net, unit)) {
+          best = h;
+          break;
+        }
+      }
+      if (!best) unit.pos = from;
+    }
+    if (!best) continue;
+    for (const drone of w.units.filter((u) => u.parentId === unit.id && u.controlRangeKm !== undefined)) {
+      const taken = new Set(w.units.filter((u) => u.id !== drone.id).map((u) => hexKey(u.pos)));
+      drone.pos = nearestFreeHex(w.map, taken, best, () => true, 4);
+    }
+  }
+  return w;
+}
+
+function ringHexes(map: HexMap, centre: Hex, radius: number): Hex[] {
+  const out: Hex[] = [];
+  for (let dq = -radius; dq <= radius; dq++) {
+    for (let dr = Math.max(-radius, -dq - radius); dr <= Math.min(radius, -dq + radius); dr++) {
+      const h = { q: centre.q + dq, r: centre.r + dr };
+      if (hexDistance(centre, h) === radius && inBounds(map, h) && getTile(map, h)) out.push(h);
+    }
+  }
+  return out;
 }
 
 // A point on the 1 km reference grid (32 x 20 over the home area), as a hex. Missions use it to lay out routes.

@@ -47,6 +47,14 @@ loop:
 
 Keep orders short and concrete. The reply to `POST /X` tells you exactly what was accepted and why anything was refused, so one correction round per turn is enough.
 
+## Archive
+
+Every finished game is written to `games/` (orders, both consoles, the reveal, the outcome). `npm run games` tabulates them. Play the same seeds with different briefs or models and compare.
+
+## Running agents
+
+[player-prompt.md](player-prompt.md) is the prompt a side's agent gets, with the side, brief and server filled in. Launch both sides at once against one server; the game is over when `GET /` says `status` is not `running`.
+
 ## Briefs
 
 - [blue-uav.md](blue-uav.md): Blue in mission 4, track the UAV.

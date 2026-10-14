@@ -4,8 +4,9 @@ You command Blue. Red is flying a reconnaissance UAV somewhere east of you along
 
 ## What you have
 
-- Three squads (`sq1` at 114,68, `sq2` at 116,80, `sq3` at 114,92) and a UAV (`uav` at 120,78, tethered within 5 km of sq2 on a linked DF, free on a silent sortie). Only squads and the UAV can take bearings.
-- An EW team (`ew` at 123,72) that can spot-jam the UAV's telemetry link: `ew: jam uavlink`. Jamming makes Red lose reports (Red loses if more than one is lost), but it does not help your own fixes, and Red can answer by turning its power up, which makes the UAV easy to hear.
+- Three squads (`sq1`, `sq2`, `sq3`) and a UAV (`uav`, tethered within 5 km of sq2 on a linked DF, free on a silent sortie). `status` lists every unit's grid position and its link to HQ. Only squads and the UAV can take bearings.
+- Turn 1: read `status_lines`. A unit whose line says `link to HQ: LOST` cannot deliver its bearings; its reports are held until the link works. Move it a few hexes (`sq3: move <col>,<row>`, routes go around mountains) toward the relay or HQ, or rely on the units that are linked.
+- An EW team (`ew`) that can spot-jam the UAV's telemetry link: `ew: jam uavlink`. Jamming makes Red lose reports (Red loses if more than one is lost), but it does not help your own fixes, and Red can answer by turning its power up, which makes the UAV easy to hear.
 - Red's other emitters (HQ, relay, squads) chatter. You will hear and fix them; they are not the objective. The UAV's signature is `65 MHz UAV link` (or `65 MHz DSSS` if Red spreads it).
 
 ## How fixes work here

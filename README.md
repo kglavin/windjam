@@ -167,6 +167,10 @@ Two consoles, as in the duel. Red flies a reconnaissance UAV along a seeded ten-
 - **Blue's levers.** Short DF tasks, moving squads into the UAV's beam toward HQ, and `ew: jam uavlink`, which costs Red reports unless it turns the power up.
 - **Script.** [missions/09-uav-track.txt](missions/09-uav-track.txt).
 
+### Game server and agents
+
+`npm run serve -- --mission uav --seed 4242 --turn 5` runs one mission with a console per side over HTTP (`POST /blue`, `POST /red`, `GET /state?side=`, `POST /<side>/end`; the clock advances when both sides have ended their turn). Open the GUI with `?server=http://localhost:8787` to watch it from the umpire seat, type into either console, and replay it when it ends. Finished games are archived in `games/` (`npm run games` tabulates them). [agents/](agents/) has the protocol, the player prompt and a brief per side, so two AI agents can play each other while a person watches. Ground moves route around terrain (A*), and every unit starts with a working link to its HQ on every seed.
+
 ### Replay bar (all missions)
 
 When a mission is over, a bar under the map offers **Reveal and replay**, then transport controls: to start, back a minute, play/pause, forward a minute, next event, a scrubber, and a speed (3 s, 1 s or 0.3 s per mission minute). As it plays, the map and the timeline move to that minute and the console narrates what each side said and heard in it. The console commands `next`, `step`, `back` and `exit` still work.
