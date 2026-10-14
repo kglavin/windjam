@@ -9,13 +9,15 @@ interface Props {
   mission: MissionState;
   view: ReturnType<typeof viewOf>;
   linkViews: LinkView[]; // the player's links, for the route column
+  timeline: boolean; // sequence chart shown instead of the map
+  onToggleTimeline: () => void;
   onNewMission: () => void;
   onExit: () => void;
 }
 
 const short = (name: string) => name.replace(/^(Blue|Red) /, '');
 
-export function MissionPanel({ mission: m, view, linkViews, onNewMission, onExit }: Props) {
+export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTimeline, onNewMission, onExit }: Props) {
   const tracks = view.tracks;
   const fixed = realFixes(m);
   const red = m.mission === 'hide';
@@ -27,6 +29,12 @@ export function MissionPanel({ mission: m, view, linkViews, onNewMission, onExit
         <h1>Windjam · Mission {red ? 2 : 1}</h1>
         <div className="sub">
           {red ? 'Stay hidden' : 'Find the enemy'} · seed {m.seed} <button onClick={onNewMission}>New mission</button> <button onClick={onExit}>Sandbox</button>
+        </div>
+        <div className="sub">
+          <button className={timeline ? 'active' : ''} onClick={onToggleTimeline}>
+            {timeline ? 'Map' : 'Timeline'}
+          </button>{' '}
+          <span className="muted">{timeline ? 'Back to the map.' : 'Sequence chart: who transmitted, who heard it, what HQ made of it.'}</span>
         </div>
       </header>
 

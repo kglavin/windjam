@@ -715,3 +715,64 @@ select {
 .sym-grey { background: #6b7280; opacity: 0.5; border-radius: 50%; }
 .sym-red { background: #ef4444; border-radius: 50%; }
 .sym-trail { height: 0; border-top: 2px solid #22d3ee; opacity: 0.8; }
+
+/* Sequence chart */
+.seq {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: #0b1220;
+}
+
+.seq-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.seq-scroll {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.seq-svg {
+  display: block;
+  font: 11px system-ui, sans-serif;
+}
+
+.seq-axis {
+  fill: #9ca3af;
+}
+
+.seq-head {
+  fill: #fff;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.seq-head-sub {
+  fill: #e5e7eb;
+  font-size: 10px;
+}
+
+.seq-label {
+  font-size: 10px;
+}
+
+.seq-tip {
+  position: fixed;
+  z-index: 5;
+  background: rgba(17, 24, 39, 0.96);
+  border: 1px solid #374151;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  pointer-events: none;
+  max-width: 360px;
+}

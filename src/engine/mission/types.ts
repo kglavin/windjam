@@ -127,6 +127,16 @@ export interface Playbook {
   schedule: { minute: number; command: MissionCommand }[];
 }
 
+// Structured record of what happened, for the sequence chart and analysis. One minute can hold many.
+export type MissionEvent =
+  | { kind: 'emit'; minute: number; unitId: string; what: string; signature: string } // a transmission during the minute
+  | { kind: 'capture'; minute: number; sensorId: string; emitterId: string; what: string; snrDb: number } // sensor heard emitter
+  | { kind: 'report'; minute: number; unitId: string; side: PlayerSide; bearings: number; delivered: boolean } // DF report sent (or held)
+  | { kind: 'release'; minute: number; unitId: string; side: PlayerSide } // a held report finally reached HQ
+  | { kind: 'track'; minute: number; side: PlayerSide; trackId: string; emitterId: string; cepKm?: number; first: boolean } // picture changed
+  | { kind: 'send'; minute: number; orderN: number; fromId: string; toId: string; status: string } // Red order transmitted
+  | { kind: 'busy'; minute: number; unitId: string; task: 'df' | 'sortie' | 'move'; detail: string }; // what a unit was doing this minute
+
 // The picture at the end of one minute, kept for the replay.
 export interface Snapshot {
   minute: number;
@@ -149,6 +159,7 @@ export interface MissionState {
   tracks: Track[]; // Blue's picture of Red
   redTracks: Track[]; // Red's picture of Blue
   log: LogEntry[];
+  events: MissionEvent[];
   status: MissionStatus;
   nextTrackNo: number;
   nextRedTrackNo: number;

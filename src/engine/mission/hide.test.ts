@@ -142,3 +142,22 @@ describe('mission 2: decoy, jamming and orders', () => {
     expect(['lost', 'draw', 'won']).toContain(loud.status);
   });
 });
+
+describe('mission 2: event record for the sequence chart', () => {
+  it('records emissions, captures, reports, tracks, sends and tasks', () => {
+    const s = run(createMission(1234, 'hide'), ['emcon cmd 0', 'emcon retrans 0', 'emcon squad 0', 'send', 'wait 14']);
+    const kinds = new Set(s.events.map((e) => e.kind));
+    for (const k of ['emit', 'capture', 'report', 'track', 'send', 'busy']) expect(kinds.has(k as never), k).toBe(true);
+    const sent = s.events.find((e) => e.kind === 'send');
+    expect(sent).toMatchObject({ minute: 0, orderN: 1, fromId: 'r-hq' });
+    // The order burst is an emission at T+0 and a capture by at least one Blue sensor.
+    expect(s.events.some((e) => e.kind === 'emit' && e.minute === 0 && e.unitId === 'r-hq' && e.what === 'order 1')).toBe(true);
+    expect(s.events.some((e) => e.kind === 'capture' && e.emitterId === 'r-hq' && e.what === 'order 1')).toBe(true);
+    // Busy records cover Blue's DF tasks from the playbook.
+    expect(s.events.some((e) => e.kind === 'busy' && e.unitId === 'b-sq1' && e.task === 'df')).toBe(true);
+    // Events are per state: an earlier state is not changed by a later turn.
+    const before = run(createMission(1234, 'hide'), ['wait 2']);
+    const after = run(before, ['wait 2']);
+    expect(after.events.length).toBeGreaterThan(before.events.length);
+  });
+});

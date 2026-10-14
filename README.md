@@ -143,7 +143,11 @@ You command Red from a `red>` console while a scripted Blue, running one of thre
 - **Orders.** One every ten minutes, each to a named squad. `send` transmits it: a one-minute burst from HQ (and the relay if routed through it), then the squad's acknowledgement. Every send is a bearing for Blue.
 - **Electronic protection.** `emcon <net> <pct>` cuts background chatter; `<unit>: power <W>`; `<net>: waveform fixed|slow|fast|dsss`; `hq: antenna toward relay` (+6 dBi on axis, −14 dBi off, HQ and relay only); `ew: decoy cmd` makes the EW team transmit the net's signature so Blue fixes the wrong thing; `ew: jam cmd` holds Blue's reports at the cost of being the loudest emitter on the map.
 - **Red's picture.** Your squads, relay and EW team listen all round. Blue is heard when it reports, acknowledges, or flies the UAV on a linked DF; a silent sortie is invisible.
-- **Debrief.** `reveal` shows Blue's plan, what Blue got on each of your emitters, where Blue's units were, and the fate of each order.
+- **Debrief.** `reveal` shows Blue's plan, what Blue got on each of your emitters and when (which transmission gave it away, heard by whom), where Blue's units were, and the fate of each order.
+
+### Timeline (both missions)
+
+The **Timeline** button in the mission panel swaps the map for a sequence chart: one lifeline per unit on both sides, minutes down the page. Task windows are bars, transmissions are dots coloured by kind (amber orders, green reports, pink decoy, purple jamming, cyan UAV link, grey chatter), captures are arrows from emitter to sensor, reports are arrows to HQ, and fixes are diamonds on the HQ lifeline. Hover for detail; after the mission, click a minute to move the replay there. The chart is built from a structured event record the engine keeps alongside the console log.
 
 ## Map display
 

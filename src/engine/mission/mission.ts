@@ -46,6 +46,7 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
     tracks: [],
     redTracks: [],
     log: [],
+    events: [],
     status: 'running',
     nextTrackNo: 1,
     nextRedTrackNo: 1,
@@ -131,6 +132,7 @@ function clone(s: MissionState): MissionState {
     redTracks: s.redTracks.map((t) => ({ ...t, bearings: [...t.bearings] })),
     bursts: [...s.bursts],
     emcon: { ...s.emcon },
+    events: [...s.events],
     redOrders: s.redOrders.map((o) => ({ ...o })),
     actor: undefined,
   };
@@ -399,6 +401,7 @@ function send(s: MissionState) {
   const status = view.order.status;
   order.sentMin = s.minute;
   order.status = status;
+  s.events.push({ kind: 'send', minute: s.minute, orderN: order.n, fromId: hq.id, toId: to.id, status });
   // Who transmits: HQ, the relay on the way if the route goes through it, and the squad's acknowledgement.
   const what = `order ${order.n}`;
   s.bursts.push({ minute: s.minute, unitId: hq.id, netId: hubNet.id, what });
@@ -587,6 +590,16 @@ function tick(s: MissionState): MissionState {
   }
   s.actor = undefined;
 
+  // Record what every unit radiated and did during the minute, for the sequence chart.
+  for (const u of s.world.units) {
+    for (const e of emissionsAt(s, u, m)) s.events.push({ kind: 'emit', minute: m, unitId: u.id, what: e.what, signature: e.signature });
+    const o = s.orders[u.id];
+    if (o) {
+      const detail = o.kind === 'df' ? sectorLabel(o.centreDeg) : o.kind === 'move' ? `${o.path.length} hexes to go` : `${o.phase}${o.phase === 'df' ? ' ' + sectorLabel(o.legs[o.legIndex].centreDeg!) : ''}`;
+      s.events.push({ kind: 'busy', minute: m, unitId: u.id, task: o.kind, detail });
+    }
+  }
+
   // Mission 2: Red's untasked ES listens all round and reports what it heard this minute, as one console line.
   if (s.mission === 'hide') {
     const heardBy: Record<string, Set<string>> = {};
@@ -691,6 +704,7 @@ function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: 
       if (look.pd < R.minPd) continue; // too weak for a usable bearing
       const heardProb = 1 - (1 - look.pd) ** R.sweepsPerMinute;
       if (rng() >= heardProb) continue;
+      s.events.push({ kind: 'capture', minute: m, sensorId: sensor.id, emitterId: emitter.id, what, snrDb: look.snrDb });
       const n = Math.max(1, Math.round(R.sweepsPerMinute * look.pd));
       const sigma = bearingSigmaDeg(look.snrDb);
       const prev = heard[emitter.id];
@@ -716,7 +730,9 @@ function file(s: MissionState, via: Unit, report: Report, what: string, links: L
   }
   const hub = s.world.nets.find((n) => n.side === via.side && n.topology === 'hub');
   if (hub && via.id !== hub.hubId) s.bursts.push({ minute: s.minute - 1, unitId: via.id, netId: hub.id, what: 'DF report' });
-  if (routeToHq(s, via.id, links).ok) {
+  const delivered = routeToHq(s, via.id, links).ok;
+  s.events.push({ kind: 'report', minute: s.minute - 1, unitId: via.id, side: via.side as PlayerSide, bearings: report.bearings.length, delivered });
+  if (delivered) {
     log(s, 'report', `${who}: ${what}. ${summary}. Reported to HQ.`);
     if (hub?.hubId) s.bursts.push({ minute: s.minute - 1, unitId: hub.hubId, netId: hub.id, what: 'report acknowledged' });
     merge(s, report);
@@ -764,6 +780,7 @@ export function routeToHq(s: MissionState, unitId: string, links: LinkView[]): {
 // Merge a report into its side's picture if the unit can reach HQ. Returns true when delivered.
 function deliver(s: MissionState, report: Report, links: LinkView[]): boolean {
   if (!routeToHq(s, report.unitId, links).ok) return false;
+  s.events.push({ kind: 'release', minute: s.minute - 1, unitId: report.unitId, side: report.side });
   merge(s, report);
   return true;
 }
@@ -783,6 +800,7 @@ function merge(s: MissionState, report: Report) {
       track = { id, emitterId: b.emitterId, signature: b.signature, bearings: [] };
       picture = [...picture, track];
       log(s, 'hq', `HQ: new track ${track.id} (${track.signature}).`);
+      s.events.push({ kind: 'track', minute: Math.max(0, s.minute - 1), side, trackId: track.id, emitterId: b.emitterId, first: true });
     }
     track.bearings = [...track.bearings, b];
     const before = track.fix;
@@ -791,7 +809,10 @@ function merge(s: MissionState, report: Report) {
       // Say so when a fix appears, crosses the win threshold, or improves by a fifth. Minute-by-minute nudges stay quiet.
       const crossed = before && before.cepKm >= R.winCepKm && track.fix.cepKm < R.winCepKm;
       const better = before && track.fix.cepKm < before.cepKm * 0.8;
-      if (!before || crossed || better) log(s, 'hq', `HQ: ${track.id} ${before ? 'refined' : 'fixed'}: CEP ${track.fix.cepKm.toFixed(2)} km from ${track.bearings.length} bearings.`);
+      if (!before || crossed || better) {
+        log(s, 'hq', `HQ: ${track.id} ${before ? 'refined' : 'fixed'}: CEP ${track.fix.cepKm.toFixed(2)} km from ${track.bearings.length} bearings.`);
+        s.events.push({ kind: 'track', minute: Math.max(0, s.minute - 1), side, trackId: track.id, emitterId: b.emitterId, cepKm: track.fix.cepKm, first: false });
+      }
     }
   }
   if (side === 'blue') s.tracks = picture;
@@ -1118,4 +1139,12 @@ export function heardTimeline(s: MissionState, picture: Track[], emitterId: stri
   })?.minute;
   const fix = t.fix ? `; fixed at T+${fixedAt ?? '?'}${goodAt !== undefined ? `, under ${R.winCepKm} km at T+${goodAt}` : ''}` : '; no fix';
   return `heard ${minutes.length} time${minutes.length === 1 ? '' : 's'}: ${items.join(', ')}${more}${fix}`;
+}
+
+// Move the replay to a minute (after the mission has ended). The sequence chart uses this.
+export function jumpReplay(state: MissionState, minute: number): MissionState {
+  if (state.status === 'running') return state;
+  const s = clone(state);
+  s.replay = { minute: Math.max(0, Math.min(s.history.length - 1, Math.round(minute))) };
+  return s;
 }

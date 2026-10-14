@@ -16,7 +16,8 @@ import { type CoverageCell, type JsCell, coverageMap, jsCoverageMap } from './en
 import { coverageColor, jsColor } from './ui/colors';
 import { manMadeNoiseFigureDb, noiseFloorDbm } from './engine/rf';
 import { type MissionKind, type MissionState } from './engine/mission/types';
-import { createMission, issue as issueMission, viewOf, visibleLog } from './engine/mission/mission';
+import { createMission, issue as issueMission, jumpReplay, viewOf, visibleLog } from './engine/mission/mission';
+import { SequenceChart } from './ui/SequenceChart';
 import { parseCommand } from './engine/mission/commands';
 import { Console } from './ui/Console';
 import { MissionPanel } from './ui/MissionPanel';
@@ -239,6 +240,9 @@ export function App() {
     setSelectedLinkId(undefined);
   };
 
+  // Mission timeline (sequence chart) in place of the map.
+  const [timeline, setTimeline] = useState(false);
+
   const losActive = tool === 'los';
   const coverageActive = tool === 'coverage';
   const scopeActive = tool === 'scope';
@@ -247,6 +251,9 @@ export function App() {
     <div className="app">
       <div className="map-col">
         <Toolbar tool={tool} onSelect={setTool} allowed={missionActive ? ['select', 'los'] : undefined} />
+        {missionActive && timeline ? (
+          <SequenceChart mission={mission} replayMinute={mission.replay?.minute} onJump={(minute) => setMission((prev) => (prev ? jumpReplay(prev, minute) : prev))} />
+        ) : (
         <MapView
           world={world}
           links={visibleLinks}
@@ -274,6 +281,7 @@ export function App() {
           }
           coverage={coverageActive && cov.origin && coverageCells ? { origin: cov.origin, cells: coverageCells, colorOf: coverageColorOf } : undefined}
         />
+        )}
         {losActive && <LosTool map={world.map} los={los} onChange={setLos} onPlotSpan={setPlotSpan} />}
         {scopeActive && !missionActive && <ScopeTool world={world} linkViews={linkViews} probeId={probeId} />}
         {missionActive && <Console log={visibleLog(mission)} prompt={`${mission.side}>`} onSubmit={onConsole} />}
@@ -291,7 +299,15 @@ export function App() {
         )}
       </div>
       {missionActive ? (
-        <MissionPanel mission={mission} view={view!} linkViews={linkViews} onNewMission={() => startMission(mission.mission)} onExit={() => setMode('sandbox')} />
+        <MissionPanel
+          mission={mission}
+          view={view!}
+          linkViews={linkViews}
+          timeline={timeline}
+          onToggleTimeline={() => setTimeline((t) => !t)}
+          onNewMission={() => startMission(mission.mission)}
+          onExit={() => setMode('sandbox')}
+        />
       ) : (
       <SidePanel
         world={world}
