@@ -5,7 +5,7 @@ import type { OrderStatus } from '../timeliness';
 import type { World } from '../world';
 
 export type PlayerSide = 'blue' | 'red';
-export type MissionKind = 'find' | 'hide';
+export type MissionKind = 'find' | 'hide' | 'duel'; // duel: both sides human, hide-mission rules
 
 // One leg of a drone sortie: fly to a point, then listen there (minutes 0 = transit only).
 export interface SortieLeg {
@@ -144,13 +144,15 @@ export interface Snapshot {
   tracks: Track[]; // Blue's picture
   redTracks: Track[]; // Red's picture
   sectors: { pos: Hex; centreDeg: number; halfWidthDeg: number; label: string }[];
-  plans: { from: Hex; points: Hex[] }[];
+  plans: { unitId: string; from: Hex; points: Hex[] }[];
 }
 
 export interface MissionState {
   world: World; // ground truth for both sides
   mission: MissionKind;
-  side: PlayerSide; // the player
+  side: PlayerSide; // the player (in a duel: the primary console; both sides are human)
+  humans: PlayerSide[]; // which sides take orders from a console
+  winner?: PlayerSide | 'draw'; // set when the mission resolves
   seed: number;
   minute: number;
   limitMin: number;

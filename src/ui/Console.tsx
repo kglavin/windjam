@@ -6,10 +6,11 @@ interface Props {
   prompt: string;
   disabled?: boolean;
   onSubmit: (line: string) => void; // called once per line; a pasted block is split into lines
+  showSide?: boolean; // one console for both sides: tag each line with its side
 }
 
 // Command console: the mission log above, a prompt below. Up and down arrows recall earlier commands.
-export function Console({ log, prompt, disabled, onSubmit }: Props) {
+export function Console({ log, prompt, disabled, onSubmit, showSide }: Props) {
   const [line, setLine] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [cursor, setCursor] = useState<number>(-1);
@@ -55,7 +56,7 @@ export function Console({ log, prompt, disabled, onSubmit }: Props) {
       <div ref={scrollRef} className="console-log">
         {log.map((e, i) => (
           <div key={i} className={`console-line ${e.kind}`}>
-            <span className="console-time">[T+{String(e.minute).padStart(2, '0')}]</span> {e.text}
+            <span className="console-time">[T+{String(e.minute).padStart(2, '0')}]</span>{showSide && e.side && <span className={`console-side ${e.side}`}> {e.side}</span>} {e.text}
           </div>
         ))}
       </div>
@@ -67,7 +68,7 @@ export function Console({ log, prompt, disabled, onSubmit }: Props) {
           disabled={disabled}
           autoFocus
           spellCheck={false}
-          placeholder="sq1: df e 5   ·   wait 5   ·   help   ·   paste a mission script"
+          placeholder={`${prompt.startsWith("duel") ? "blue> sq1: df e 5   ·   red> send" : prompt.startsWith("red") ? "send   ·   emcon cmd 0" : "sq1: df e 5"}   ·   wait 5   ·   help   ·   paste a mission script`}
           onPaste={(e) => {
             const text = e.clipboardData.getData('text');
             if (!text.includes('\n')) return; // single line: normal paste

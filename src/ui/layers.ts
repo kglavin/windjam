@@ -14,7 +14,7 @@ export interface Layers {
 }
 
 export const DEFAULT_LAYERS: Layers = {
-  terrain: 'colour',
+  terrain: 'elevation', // grey elevation shading by default; terrain colour and off are in the Layers menu
   grid: true,
   links: true,
   jamming: true,

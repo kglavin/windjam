@@ -30,7 +30,7 @@ interface Props {
   onSetLimiter: (side: 'blue' | 'red', on: boolean) => void;
   onSetNoiseEnv: (env: NoiseEnv) => void;
   onNewMap: () => void;
-  onStartMission: (kind: 'find' | 'hide') => void;
+  onStartMission: (kind: 'find' | 'hide' | 'duel') => void;
 }
 
 const QUALITIES: LinkQuality[] = ['good', 'degraded', 'denied'];
@@ -67,7 +67,8 @@ export function SidePanel(props: Props) {
         <div className="sub">
           Seed {world.seed} · Tick {world.tick}{' '}
           <button onClick={props.onNewMap}>New map</button> <button onClick={() => props.onStartMission('find')}>Mission 1: find the enemy</button>{' '}
-          <button onClick={() => props.onStartMission('hide')}>Mission 2: stay hidden</button>
+          <button onClick={() => props.onStartMission('hide')}>Mission 2: stay hidden</button>{' '}
+          <button onClick={() => props.onStartMission('duel')}>Mission 3: duel</button>
         </div>
         <p className="help">
           Link colour is BER: <QualityDot q="good" /> &lt; {BER_GOOD.toExponential(0)} <QualityDot q="degraded" /> degraded{' '}

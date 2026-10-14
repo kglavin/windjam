@@ -15,12 +15,13 @@ import { ScopeTool } from './ui/ScopeTool';
 import { type CoverageCell, type JsCell, coverageMap, jsCoverageMap } from './engine/coverage';
 import { coverageColor, jsColor } from './ui/colors';
 import { manMadeNoiseFigureDb, noiseFloorDbm } from './engine/rf';
-import { type MissionKind, type MissionState } from './engine/mission/types';
+import { type MissionKind, type MissionState, type PlayerSide } from './engine/mission/types';
 import { createMission, issue as issueMission, jumpReplay, viewOf, visibleLog } from './engine/mission/mission';
 import { SequenceChart } from './ui/SequenceChart';
 import { parseCommand } from './engine/mission/commands';
 import { Console } from './ui/Console';
 import { MissionPanel } from './ui/MissionPanel';
+import { REPLAY_SPEEDS, ReplayBar, type ReplayMove } from './ui/ReplayBar';
 
 const DEFAULT_SEED = 1234;
 
@@ -30,7 +31,37 @@ export function App() {
   const [mission, setMission] = useState<MissionState>();
   const [mode, setMode] = useState<'sandbox' | 'mission'>('sandbox');
   const missionActive = mode === 'mission' && !!mission;
-  const view = useMemo(() => (missionActive ? viewOf(mission) : undefined), [missionActive, mission]);
+  // Whose picture the map and panel show. In a duel the umpire seat sees everything; the consoles are always per side.
+  const [seat, setSeat] = useState<PlayerSide | 'umpire'>('blue');
+  // Duel: one console for both sides, lines prefixed blue> or red>, so a whole script can be pasted at once.
+  const [oneConsole, setOneConsole] = useState(false);
+  // Replay transport: auto-step the debrief one minute per interval so a person can watch it unfold.
+  const [replayPlaying, setReplayPlaying] = useState(false);
+  const [replaySpeed, setReplaySpeed] = useState(1);
+  useEffect(() => {
+    if (!replayPlaying) return;
+    const id = setInterval(() => {
+      setMission((prev) => {
+        if (!prev?.replay || prev.replay.minute >= prev.history.length - 1) {
+          setReplayPlaying(false);
+          return prev;
+        }
+        return issueMission(prev, { type: 'replay', move: 'step' });
+      });
+    }, REPLAY_SPEEDS[replaySpeed].msPerMinute);
+    return () => clearInterval(id);
+  }, [replayPlaying, replaySpeed]);
+  const replayMove = (move: ReplayMove) => {
+    setReplayPlaying(false);
+    setMission((prev) => {
+      if (!prev?.replay) return prev;
+      if (move === 'start') return jumpReplay(prev, 0);
+      if (move === 'end') return jumpReplay(prev, prev.history.length - 1);
+      return issueMission(prev, { type: 'replay', move });
+    });
+  };
+  const seatSide: PlayerSide = seat === 'umpire' ? 'blue' : seat;
+  const view = useMemo(() => (missionActive ? viewOf(mission, seatSide, seat === 'umpire') : undefined), [missionActive, mission, seatSide, seat]);
   // Ground truth for link budgets: in a replay, Blue stands where it stood at that minute.
   const truth = view ? view.truth : sandbox;
   // What the map and tools see: Red is hidden while a mission is running.
@@ -61,10 +92,10 @@ export function App() {
   const linkViews = useMemo(() => {
     if (!missionActive) return allViews;
     const sideOf = (netId: string) => truth.nets.find((n) => n.id === netId)?.side;
-    if (mission.status === 'running' && !mission.replay) return allViews.filter((v) => sideOf(v.link.netId) === mission.side);
+    if (mission.status === 'running' && !mission.replay && seat !== 'umpire') return allViews.filter((v) => sideOf(v.link.netId) === seatSide);
     // Reveal: Red links only where Blue found both ends.
-    return allViews.filter((v) => sideOf(v.link.netId) === mission.side || (!dimUnitIds?.has(v.link.aId) && !dimUnitIds?.has(v.link.bId)));
-  }, [allViews, missionActive, mission, truth, dimUnitIds]);
+    return allViews.filter((v) => sideOf(v.link.netId) === seatSide || (!dimUnitIds?.has(v.link.aId) && !dimUnitIds?.has(v.link.bId)));
+  }, [allViews, missionActive, mission, truth, dimUnitIds, seat, seatSide]);
 
   // Esc returns to the select tool.
   useEffect(() => {
@@ -218,7 +249,7 @@ export function App() {
   };
 
   // Mission console: parse a line, apply it, and log parse errors in the console itself.
-  const onConsole = (line: string) => {
+  const onConsole = (line: string, as?: PlayerSide) => {
     // Functional update: a pasted script delivers many lines in one event, each must build on the last.
     setMission((prev) => {
       if (!prev) return prev;
@@ -227,12 +258,22 @@ export function App() {
         const next = createMission(Number(seed[1]), prev.mission);
         return { ...next, log: [...next.log, { minute: 0, kind: 'info', text: `Mission restarted on seed ${seed[1]}.` }] };
       }
-      const p = parseCommand(line, prev.side);
-      return p.ok ? issueMission(prev, p.command) : { ...prev, log: [...prev.log, { minute: prev.minute, kind: 'error', text: p.error }] };
+      // Script lines may carry their console ('red> send'): strip the prefix, and route by it when it names a side
+      // this mission has a console for. Test directives (mission, expect, rejects) are skipped.
+      // No mutation here: React may run this updater twice, and both runs must see the same line.
+      const pre = /^(blue|red)>\s*/i.exec(line.trim());
+      const named = pre ? (pre[1].toLowerCase() as PlayerSide) : undefined;
+      const body = pre ? line.trim().slice(pre[0].length) : line;
+      if (/^(mission|expect|rejects)\s+\S+$/i.test(body.trim())) return prev;
+      const side = named && prev.humans.includes(named) ? named : (as ?? prev.side);
+      const p = parseCommand(body, side);
+      return p.ok ? issueMission(prev, p.command, side) : { ...prev, log: [...prev.log, { minute: prev.minute, kind: 'error', text: p.error, side }] };
     });
   };
   const startMission = (kind: MissionKind = 'find') => {
     setMission(createMission(Math.floor(Math.random() * 1_000_000), kind));
+    setSeat(kind === 'hide' ? 'red' : 'blue');
+    setReplayPlaying(false);
     setMode('mission');
     setTool('select');
     setSelectedHex(undefined);
@@ -284,7 +325,32 @@ export function App() {
         )}
         {losActive && <LosTool map={world.map} los={los} onChange={setLos} onPlotSpan={setPlotSpan} />}
         {scopeActive && !missionActive && <ScopeTool world={world} linkViews={linkViews} probeId={probeId} />}
-        {missionActive && <Console log={visibleLog(mission)} prompt={`${mission.side}>`} onSubmit={onConsole} />}
+        {missionActive && (
+          <ReplayBar
+            mission={mission}
+            playing={replayPlaying}
+            speed={replaySpeed}
+            onMove={replayMove}
+            onJump={(minute) => {
+              setReplayPlaying(false);
+              setMission((prev) => (prev ? jumpReplay(prev, minute) : prev));
+            }}
+            onPlay={setReplayPlaying}
+            onSpeed={setReplaySpeed}
+            onReveal={() => setMission((prev) => (prev ? issueMission(prev, { type: 'reveal' }) : prev))}
+          />
+        )}
+        {missionActive && (
+          <div className="consoles">
+            {oneConsole && mission.humans.length > 1 ? (
+              <Console log={mission.log} prompt="duel>" showSide onSubmit={(line) => onConsole(line, seatSide)} />
+            ) : (
+              mission.humans.map((side) => (
+                <Console key={side} log={visibleLog(mission, side)} prompt={`${side}>`} onSubmit={(line) => onConsole(line, side)} />
+              ))
+            )}
+          </div>
+        )}
         {coverageActive && !missionActive && (
           <CoverageTool
             state={cov}
@@ -305,6 +371,10 @@ export function App() {
           linkViews={linkViews}
           timeline={timeline}
           onToggleTimeline={() => setTimeline((t) => !t)}
+          seat={seat}
+          onSeat={setSeat}
+          oneConsole={oneConsole}
+          onOneConsole={setOneConsole}
           onNewMission={() => startMission(mission.mission)}
           onExit={() => setMode('sandbox')}
         />

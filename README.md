@@ -116,7 +116,7 @@ Each link's order is **on time**, **late** or **lost**. The panel header shows t
 
 ## Mission mode
 
-Two missions share one engine. Click **Mission 1: find the enemy** or **Mission 2: stay hidden** in the sandbox header.
+Three missions share one engine. Click **Mission 1: find the enemy**, **Mission 2: stay hidden** or **Mission 3: duel** in the sandbox header.
 
 ### Mission 1: find the enemy
 
@@ -145,7 +145,23 @@ You command Red from a `red>` console while a scripted Blue, running one of thre
 - **Red's picture.** Your squads, relay and EW team listen all round. Blue is heard when it reports, acknowledges, or flies the UAV on a linked DF; a silent sortie is invisible.
 - **Debrief.** `reveal` shows Blue's plan, what Blue got on each of your emitters and when (which transmission gave it away, heard by whom), where Blue's units were, and the fate of each order.
 
-### Timeline (both missions)
+### Mission 3: duel
+
+Two people at one screen, Blue on a `blue>` console and Red on a `red>` console side by side under the map, mission 2 rules, no scripted side. Full notes are in [docs/mission-duel.md](docs/mission-duel.md).
+
+- **Turns.** Each side types its orders into its own console; `wait <min>` from either advances the clock for both. Each console sees only its own side's lines.
+- **Seats.** **Blue view**, **Red view** and **Umpire** in the panel choose whose picture the map and panel show. Umpire shows the truth and both pictures: Blue's tracks on Red in pink (E1, E2, ...), Red's tracks on Blue in amber (B1, B2, ...).
+- **Result.** Blue wins with 3 fixes; Red wins by denying that and passing 4 of 6 orders on time; otherwise a draw. `reveal` from either console shows both sides' truth.
+- **Scripts.** Lines carry their console: `blue> sq1: df e 5`, `red> send`. `expect blue|red|draw` checks the winner. See [missions/08-duel-hot-seat.txt](missions/08-duel-hot-seat.txt). A prefixed line pasted into either console runs on the console it names.
+- **One console.** Tick **One console** in the panel for a single `duel>` console showing both sides' lines tagged by side. Paste a whole duel script there at once.
+
+This is the hot-seat step toward autonomous agents and networked play: the engine routes every command by the side that typed it, so a script or an agent can take either console.
+
+### Replay bar (all missions)
+
+When a mission is over, a bar under the map offers **Reveal and replay**, then transport controls: to start, back a minute, play/pause, forward a minute, next event, a scrubber, and a speed (3 s, 1 s or 0.3 s per mission minute). As it plays, the map and the timeline move to that minute and the console narrates what each side said and heard in it. The console commands `next`, `step`, `back` and `exit` still work.
+
+### Timeline (all missions)
 
 The **Timeline** button in the mission panel swaps the map for a sequence chart: one lifeline per unit on both sides, minutes down the page. Task windows are bars, transmissions are dots coloured by kind (amber orders, green reports, pink decoy, purple jamming, cyan UAV link, grey chatter), captures are arrows from emitter to sensor, reports are arrows to HQ, and fixes are diamonds on the HQ lifeline. Hover for detail; after the mission, click a minute to move the replay there. The chart is built from a structured event record the engine keeps alongside the console log.
 
@@ -153,7 +169,7 @@ The **Timeline** button in the mission panel swaps the map for a sequence chart:
 
 - **Navigation.** Scroll to zoom from 50% to 4,000%. Drag to pan. **Home** and **Fit** buttons.
 - **Layers ▾.**
-  - Terrain as colour, elevation (greyscale) or off.
+  - Terrain as elevation (greyscale, the default), colour or off.
   - Toggles for hex grid, radio links, jamming, detections, DF, units, coverage heatmap and legend.
 - **Hover tooltip.** Terrain, elevation, movement rule, grid position and unit. In the Coverage tool it also shows received power and J/S.
 - **Performance.** The map redraws only when something changes. Hex borders hide when hexes are tiny on screen.

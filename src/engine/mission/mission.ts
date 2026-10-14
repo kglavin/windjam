@@ -33,11 +33,12 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
   const base = createScenario(seed);
   // Jammers start off in both missions.
   const world: World = { ...base, units: base.units.map((u) => (u.jammer ? { ...u, jammer: { mode: 'off' } } : u)) };
-  const side: PlayerSide = mission === 'find' ? 'blue' : 'red';
+  const side: PlayerSide = mission === 'hide' ? 'red' : 'blue';
   const state: MissionState = {
     world,
     mission,
     side,
+    humans: mission === 'duel' ? ['blue', 'red'] : [side],
     seed,
     minute: 0,
     limitMin: R.limitMin,
@@ -58,6 +59,12 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
   if (mission === 'find') {
     log(state, 'info', `Mission: find the enemy. Fix ${R.fixesToWin} Red emitters to CEP under ${R.winCepKm} km within ${R.limitMin} minutes.`);
     log(state, 'info', 'Red is hidden. Your squads and the UAV can take bearings (df). Reports reach HQ over your radio net. Type help.');
+  } else if (mission === 'duel') {
+    state.redOrders = redOrderSchedule(world);
+    log(state, 'info', `Duel: Blue hunts, Red hides. Blue wins with ${R.fixesToWin} fixes under ${R.winCepKm} km on real Red emitters before T+${R.limitMin}.`, 'both');
+    log(state, 'info', `Red wins if Blue has fewer at T+${R.limitMin} and Red delivered ${R.redOrdersToWin} of ${R.redOrderCount} orders on time. Otherwise a draw. wait from either console advances the clock.`, 'both');
+    log(state, 'info', 'Red is hidden. Your squads and the UAV can take bearings (df). Type help.', 'blue');
+    log(state, 'info', `Every transmission is a bearing for Blue. Type help for your electronic-protection measures; send passes the current order. Order 1 is for ${unitById(world, state.redOrders[0].toId)!.name}, window T+0-${R.redOrderWindowMin}.`, 'red');
   } else {
     state.playbook = buildPlaybook(seed);
     state.redOrders = redOrderSchedule(world);
@@ -142,18 +149,19 @@ const updateUnit = (s: MissionState, id: string, patch: (u: Unit) => Unit) => {
   s.world = { ...s.world, units: s.world.units.map((u) => (u.id === id ? patch(u) : u)) };
 };
 
-export function issue(state: MissionState, cmd: MissionCommand): MissionState {
+export function issue(state: MissionState, cmd: MissionCommand, as: PlayerSide = state.side): MissionState {
   const s = clone(state);
+  s.actor = as; // console lines from this command belong to the side that typed it
   if (cmd.type === 'help') {
-    for (const line of HELP[s.side]) log(s, 'info', line);
+    for (const line of HELP[as]) log(s, 'info', line);
     return s;
   }
   if (cmd.type === 'status') {
-    for (const line of statusLines(s)) log(s, 'info', line);
+    for (const line of statusLines(s, as)) log(s, 'info', line);
     return s;
   }
   if (cmd.type === 'picture') {
-    for (const line of pictureLines(s)) log(s, 'info', line);
+    for (const line of pictureLines(s, as)) log(s, 'info', line);
     return s;
   }
   if (cmd.type === 'reveal' || cmd.type === 'replay') {
@@ -171,7 +179,7 @@ export function issue(state: MissionState, cmd: MissionCommand): MissionState {
   }
   if (cmd.type === 'emcon') {
     const net = s.world.nets.find((n) => n.id === cmd.netId);
-    if (!net || net.side !== s.side) {
+    if (!net || net.side !== as) {
       log(s, 'error', 'emcon applies to your own nets.');
       return s;
     }
@@ -181,7 +189,7 @@ export function issue(state: MissionState, cmd: MissionCommand): MissionState {
   }
   if (cmd.type === 'waveform') {
     const net = s.world.nets.find((n) => n.id === cmd.netId);
-    if (!net || net.side !== s.side) {
+    if (!net || net.side !== as) {
       log(s, 'error', 'waveform applies to your own nets.');
       return s;
     }
@@ -197,7 +205,7 @@ export function issue(state: MissionState, cmd: MissionCommand): MissionState {
     log(s, 'error', `No unit ${cmd.unitId}`);
     return s;
   }
-  if (unit.side !== s.side) {
+  if (unit.side !== as) {
     log(s, 'error', `${unit.name} is not yours to command.`);
     return s;
   }
@@ -223,7 +231,7 @@ export function issue(state: MissionState, cmd: MissionCommand): MissionState {
       return s;
     }
     const target = unitById(s.world, cmd.towardId);
-    if (!target || target.side !== s.side || target.id === unit.id) {
+    if (!target || target.side !== as || target.id === unit.id) {
       log(s, 'error', 'Point the antenna at one of your other units.');
       return s;
     }
@@ -246,7 +254,7 @@ export function issue(state: MissionState, cmd: MissionCommand): MissionState {
       return s;
     }
     const net = s.world.nets.find((n) => n.id === cmd.netId);
-    if (!net || net.side !== s.side) {
+    if (!net || net.side !== as) {
       log(s, 'error', 'The decoy imitates one of your own nets.');
       return s;
     }
@@ -359,7 +367,7 @@ function unitCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 'df' 
     return;
   }
   // move
-  if (unit.kind === 'hq' && s.mission === 'find') {
+  if (unit.kind === 'hq' && (s.mission === 'find' || unit.side === 'blue')) {
     log(s, 'error', `${name} does not move in this mission.`);
     return;
   }
@@ -376,8 +384,8 @@ function unitCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 'df' 
 
 // Mission 2: transmit the current order.
 function send(s: MissionState) {
-  if (s.mission !== 'hide') {
-    log(s, 'error', 'There is nothing to send in this mission.');
+  if (s.mission === 'find' || s.actor !== 'red') {
+    log(s, 'error', s.mission === 'duel' ? 'Only the red console sends orders.' : 'There is nothing to send in this mission.');
     return;
   }
   const order = s.redOrders.find((o) => o.status === 'pending' && o.windowStart <= s.minute && s.minute < o.windowEnd);
@@ -488,7 +496,7 @@ function tick(s: MissionState): MissionState {
   const m = s.minute; // the minute now beginning; logs and reports are stamped at its end
   // The opponent's playbook speaks first, at the start of the minute, exactly as a player typing before 'wait'.
   if (s.playbook) {
-    const opp = enemyOf(s.side);
+    const opp = enemyOf(s.humans[0]);
     s.actor = opp;
     for (const item of s.playbook.schedule.filter((x) => x.minute === m)) {
       const unit = unitById(s.world, item.command.type === 'wait' ? '' : (item.command as { unitId: string }).unitId);
@@ -601,7 +609,7 @@ function tick(s: MissionState): MissionState {
   }
 
   // Mission 2: Red's untasked ES listens all round and reports what it heard this minute, as one console line.
-  if (s.mission === 'hide') {
+  if (s.mission !== 'find') {
     const heardBy: Record<string, Set<string>> = {};
     for (const sensor of s.world.units.filter((u) => u.side === 'red' && canIntercept(u))) {
       const heard = listen(s, sensor, 0, 180, {}, m, rng, opts);
@@ -636,6 +644,17 @@ function resolve(s: MissionState) {
   if (s.mission === 'find') {
     if (fixes >= R.fixesToWin) end(s, 'won');
     else if (s.minute >= s.limitMin) end(s, 'lost');
+    return;
+  }
+  if (s.mission === 'duel') {
+    // Status is from Blue's seat (the primary console); the winner field is what the panel shows.
+    if (fixes >= R.fixesToWin) {
+      s.winner = 'blue';
+      end(s, 'won');
+    } else if (s.minute >= s.limitMin) {
+      s.winner = deliveredOrders(s) >= R.redOrdersToWin ? 'red' : 'draw';
+      end(s, s.winner === 'red' ? 'lost' : 'draw');
+    }
     return;
   }
   if (fixes >= R.fixesToWin) end(s, 'lost');
@@ -834,6 +853,20 @@ function end(s: MissionState, status: 'won' | 'lost' | 'draw' | 'ended') {
           : `Mission ended at T+${s.minute} for the debrief: ${fixes} of ${R.fixesToWin} emitters fixed.`,
       'both',
     );
+  } else if (s.mission === 'duel') {
+    const d = deliveredOrders(s);
+    log(
+      s,
+      'hq',
+      status === 'ended'
+        ? `Duel ended at T+${s.minute} for the debrief: Blue has ${fixes} of ${R.fixesToWin} fixes, Red delivered ${d} of ${R.redOrderCount} orders on time.`
+        : s.winner === 'blue'
+          ? `Blue wins at T+${s.minute}: ${fixes} Red emitters fixed.`
+          : s.winner === 'red'
+            ? `Red wins at T+${s.minute}: Blue has ${fixes} of ${R.fixesToWin} fixes, and Red delivered ${d} of ${R.redOrderCount} orders on time.`
+            : `Draw at T+${s.minute}: Blue has ${fixes} of ${R.fixesToWin} fixes, but Red delivered only ${d} of ${R.redOrderCount} orders on time (${R.redOrdersToWin} needed).`,
+      'both',
+    );
   } else {
     const d = deliveredOrders(s);
     log(
@@ -868,16 +901,17 @@ export function revealLines(s: MissionState): string[] {
     }
     return lines;
   }
-  lines.push(`Reveal: Blue ran the "${s.playbook?.name}" plan.`);
+  if (s.playbook) lines.push(`Reveal: Blue ran the "${s.playbook.name}" plan.`);
   for (const e of s.world.units.filter((u) => u.side === 'red')) {
     const decoy = e.kind === 'jammer';
     const what = describe(s.tracks, e);
-    lines.push(`Reveal: Blue on ${e.name}: ${what}${decoy && /fix/.test(what) ? ' (a decoy, did not count)' : ''}.`);
+    const { col, row } = axialToOffset(e.pos);
+    lines.push(`Reveal: Blue on ${e.name}${s.mission === 'duel' ? ` at ${col},${row}` : ''}: ${what}${decoy && /fix/.test(what) ? ' (a decoy, did not count)' : ''}.`);
     if (s.tracks.some((t) => t.emitterId === e.id)) lines.push(`  Blue ${heardTimeline(s, s.tracks, e.id)}.`);
   }
   for (const e of s.world.units.filter((u) => u.side === 'blue')) {
     const { col, row } = axialToOffset(e.pos);
-    lines.push(`Reveal: ${e.name} at ${col},${row}: you ${describe(s.redTracks, e)}.`);
+    lines.push(`Reveal: ${e.name} at ${col},${row}: ${s.mission === 'duel' ? 'Red' : 'you'} ${describe(s.redTracks, e)}.`);
   }
   for (const o of s.redOrders) lines.push(`Reveal: order ${o.n} to ${unitById(s.world, o.toId)!.name}: ${o.status}${o.sentMin !== undefined ? ` (sent T+${o.sentMin})` : ''}.`);
   return lines;
@@ -954,17 +988,19 @@ function replayCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 're
   const summary =
     s.mission === 'find'
       ? `T+${to}: ${said.length === 0 ? 'quiet. ' : ''}${blueHeard} of ${redEmitters} Red emitters heard, ${blueFixed} fixed.`
-      : `T+${to}: ${said.length === 0 ? 'quiet. ' : ''}Blue has heard ${blueHeard} of your ${redEmitters} emitters, ${blueFixed} fixed; you have ${snap.redTracks.length} tracks on Blue.`;
+      : s.mission === 'duel'
+        ? `T+${to}: ${said.length === 0 ? 'quiet. ' : ''}Blue has heard ${blueHeard} of ${redEmitters} Red emitters, ${blueFixed} fixed; Red has ${snap.redTracks.length} tracks on Blue.`
+        : `T+${to}: ${said.length === 0 ? 'quiet. ' : ''}Blue has heard ${blueHeard} of your ${redEmitters} emitters, ${blueFixed} fixed; you have ${snap.redTracks.length} tracks on Blue.`;
   s.log = [...s.log, { minute: to, kind: 'replay', text: summary }];
   for (const e of cmd.move === 'back' ? said.reverse() : said) {
-    s.log = [...s.log, { minute: e.minute, kind: 'replay', text: `  ${e.side && e.side !== s.side ? `[${e.side}] ` : ''}${e.text}` }];
+    s.log = [...s.log, { minute: e.minute, kind: 'replay', text: `  ${e.side && (s.mission === 'duel' || e.side !== s.side) ? `[${e.side}] ` : ''}${e.text}` }];
   }
 }
 
-export function statusLines(s: MissionState): string[] {
+export function statusLines(s: MissionState, side: PlayerSide = s.side): string[] {
   const links = allLinkBudgets(s.world);
   const lines: string[] = [];
-  if (s.mission === 'find') {
+  if (side === 'blue') {
     lines.push(`T+${s.minute} of ${s.limitMin} min. Tracks: ${s.tracks.length}, fixed under ${R.winCepKm} km: ${realFixes(s)}/${R.fixesToWin}.`);
   } else {
     const cur = s.redOrders.find((o) => o.status === 'pending' && o.windowStart <= s.minute && s.minute < o.windowEnd);
@@ -975,7 +1011,7 @@ export function statusLines(s: MissionState): string[] {
       lines.push(`net ${netAliasOf(net.id).padEnd(7)} ${net.name.padEnd(16)} ${net.freqMHz} MHz · ${w.kind === 'fixed' ? 'fixed' : w.kind === 'fh' ? `hopping ${w.hopsPerSec}/s` : `DSSS ${w.chipRateMcps} Mcps`} · chatter ${Math.round(dutyOf(s, net) * 100)}%`);
     }
   }
-  for (const u of s.world.units.filter((x) => x.side === s.side)) {
+  for (const u of s.world.units.filter((x) => x.side === side)) {
     const { col, row } = axialToOffset(u.pos);
     const o = s.orders[u.id];
     const order = !o
@@ -999,8 +1035,8 @@ export function statusLines(s: MissionState): string[] {
   return lines;
 }
 
-export function pictureLines(s: MissionState): string[] {
-  const picture = pictureOf(s, s.side);
+export function pictureLines(s: MissionState, side: PlayerSide = s.side): string[] {
+  const picture = pictureOf(s, side);
   if (picture.length === 0) return ['No tracks yet.'];
   return picture.map((t) => {
     if (t.fix) {
@@ -1013,8 +1049,8 @@ export function pictureLines(s: MissionState): string[] {
 }
 
 // The world as the player sees it: the enemy removed.
-export function visibleWorld(s: MissionState): World {
-  const enemy = enemyOf(s.side);
+export function visibleWorld(s: MissionState, side: PlayerSide = s.side): World {
+  const enemy = enemyOf(side);
   return { ...s.world, units: s.world.units.filter((u) => u.side !== enemy) };
 }
 
@@ -1031,8 +1067,8 @@ export function activeSectors(s: MissionState, side?: PlayerSide): { pos: Hex; c
 }
 
 // Remaining waypoints of each of the player's drones on a sortie, ending at its squad, for the map.
-export function flightPlans(s: MissionState, side?: PlayerSide): { from: Hex; points: Hex[] }[] {
-  const out: { from: Hex; points: Hex[] }[] = [];
+export function flightPlans(s: MissionState, side?: PlayerSide): { unitId: string; from: Hex; points: Hex[] }[] {
+  const out: { unitId: string; from: Hex; points: Hex[] }[] = [];
   for (const [id, o] of Object.entries(s.orders)) {
     if (o.kind !== 'sortie') continue;
     const drone = unitById(s.world, id)!;
@@ -1040,23 +1076,24 @@ export function flightPlans(s: MissionState, side?: PlayerSide): { from: Hex; po
     const parent = unitById(s.world, drone.parentId ?? '');
     const points = o.legs.slice(o.phase === 'df' ? o.legIndex + 1 : o.legIndex).map((l) => l.to);
     if (parent) points.push(parent.pos);
-    out.push({ from: drone.pos, points });
+    out.push({ unitId: id, from: drone.pos, points });
   }
   return out;
 }
 
 // Enemy units the player has a track on (heard and reported at least once).
-export const foundRedIds = (s: MissionState): Set<string> => new Set(pictureOf(s, s.side).map((t) => t.emitterId));
+export const foundRedIds = (s: MissionState, side: PlayerSide = s.side): Set<string> => new Set(pictureOf(s, side).map((t) => t.emitterId));
 
 // Enemy units never found, for greying out at the reveal.
-export const unfoundRedIds = (s: MissionState): Set<string> => {
-  const found = foundRedIds(s);
-  const enemy = enemyOf(s.side);
+export const unfoundRedIds = (s: MissionState, side: PlayerSide = s.side): Set<string> => {
+  const found = foundRedIds(s, side);
+  const enemy = enemyOf(side);
   return new Set(s.world.units.filter((u) => u.side === enemy && !found.has(u.id)).map((u) => u.id));
 };
 
 // What the map and panel should show: the live mission, or the replay snapshot while stepping through the reveal.
-export function viewOf(s: MissionState): {
+// `umpire` shows the truth: every unit, both sides' sectors, plans, trails and pictures (E* Blue's tracks on Red, B* Red's on Blue).
+export function viewOf(s: MissionState, side: PlayerSide = s.side, umpire = false): {
   truth: World; // every unit, at the positions of the moment shown: use for link budgets
   world: World; // what the map shows: the enemy removed while the mission runs
   tracks: Track[]; // the player's picture
@@ -1067,23 +1104,46 @@ export function viewOf(s: MissionState): {
   minute: number;
 } {
   const over = s.status !== 'running';
-  const enemy = enemyOf(s.side);
+  const enemy = enemyOf(side);
   if (s.replay) {
     const snap = s.history[Math.min(s.replay.minute, s.history.length - 1)];
     const world = { ...s.world, units: s.world.units.map((u) => ({ ...u, pos: snap.positions[u.id] ?? u.pos })) };
-    const picture = s.side === 'blue' ? snap.tracks : snap.redTracks;
+    const picture = umpire ? [...snap.tracks, ...snap.redTracks] : side === 'blue' ? snap.tracks : snap.redTracks;
     const found = new Set(picture.map((t) => t.emitterId));
-    const dim = new Set(s.world.units.filter((u) => u.side === enemy && !found.has(u.id)).map((u) => u.id));
-    return { truth: world, world, tracks: picture, sectors: snap.sectors, plans: snap.plans, dimUnitIds: dim, trails: trails(s, snap.minute), minute: snap.minute };
+    const dim = umpire ? undefined : new Set(s.world.units.filter((u) => u.side === enemy && !found.has(u.id)).map((u) => u.id));
+    const umpireTrails = () => [...trails(s, snap.minute, 'blue'), ...trails(s, snap.minute, 'red')];
+    // The snapshot keeps both sides' sectors and plans; a side sees only its own.
+    const own = (id: string) => umpire || unitById(s.world, id)?.side === side;
+    return {
+      truth: world,
+      world,
+      tracks: picture,
+      sectors: snap.sectors.filter((x) => own(x.label)),
+      plans: snap.plans.filter((x) => own(x.unitId)),
+      dimUnitIds: dim,
+      trails: umpire ? umpireTrails() : trails(s, snap.minute, side),
+      minute: snap.minute,
+    };
+  }
+  if (umpire) {
+    return {
+      truth: s.world,
+      world: s.world,
+      tracks: [...pictureOf(s, 'blue'), ...pictureOf(s, 'red')],
+      sectors: activeSectors(s),
+      plans: flightPlans(s),
+      trails: [...trails(s, Infinity, 'blue'), ...trails(s, Infinity, 'red')],
+      minute: s.minute,
+    };
   }
   return {
     truth: s.world,
-    world: over ? s.world : visibleWorld(s),
-    tracks: pictureOf(s, s.side),
-    sectors: activeSectors(s, s.side),
-    plans: flightPlans(s, s.side),
-    dimUnitIds: over ? unfoundRedIds(s) : undefined,
-    trails: trails(s),
+    world: over ? s.world : visibleWorld(s, side),
+    tracks: pictureOf(s, side),
+    sectors: activeSectors(s, side),
+    plans: flightPlans(s, side),
+    dimUnitIds: over ? unfoundRedIds(s, side) : undefined,
+    trails: trails(s, Infinity, side),
     minute: s.minute,
   };
 }
@@ -1095,10 +1155,10 @@ export interface Trail {
 }
 
 // Where each of the player's units has been, from the minute-by-minute snapshots, up to `uptoMinute`.
-export function trails(s: MissionState, uptoMinute = Infinity): Trail[] {
+export function trails(s: MissionState, uptoMinute = Infinity, side: PlayerSide = s.side): Trail[] {
   const out: Trail[] = [];
   const snaps = s.history.filter((h) => h.minute <= uptoMinute);
-  for (const u of s.world.units.filter((x) => x.side === s.side)) {
+  for (const u of s.world.units.filter((x) => x.side === side)) {
     const points: Hex[] = [];
     for (const h of snaps) {
       const p = h.positions[u.id];
@@ -1110,7 +1170,7 @@ export function trails(s: MissionState, uptoMinute = Infinity): Trail[] {
 }
 
 // Console lines the player's side should see.
-export const visibleLog = (s: MissionState) => s.log.filter((e) => !e.side || e.side === s.side);
+export const visibleLog = (s: MissionState, side: PlayerSide = s.side) => s.log.filter((e) => !e.side || e.side === side);
 
 // When an emitter was heard by the other side, what gave it away, who heard it, and when it was fixed.
 export function heardTimeline(s: MissionState, picture: Track[], emitterId: string, limit = 6): string {

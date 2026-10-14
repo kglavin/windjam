@@ -1,15 +1,21 @@
 import { aliasOf } from '../engine/mission/commands';
 import { deliveredOrders, realFixes, routeToHq, viewOf } from '../engine/mission/mission';
-import { MISSION_RULES as R, type MissionState } from '../engine/mission/types';
+import { MISSION_RULES as R, type MissionState, type PlayerSide } from '../engine/mission/types';
 import { axialToOffset } from '../engine/hex';
 import { type LinkView, unitById } from '../engine/world';
-import { DF_COLOR, SIDE_COLORS, toCss } from './colors';
+import { SIDE_COLORS, dfColorOf, toCss } from './colors';
+
+export type Seat = PlayerSide | 'umpire';
 
 interface Props {
   mission: MissionState;
   view: ReturnType<typeof viewOf>;
   linkViews: LinkView[]; // the player's links, for the route column
   timeline: boolean; // sequence chart shown instead of the map
+  seat: Seat; // whose picture the map and this panel show (a duel offers all three)
+  onSeat: (seat: Seat) => void;
+  oneConsole: boolean; // duel: both sides in one console, lines prefixed blue> or red>
+  onOneConsole: (on: boolean) => void;
   onToggleTimeline: () => void;
   onNewMission: () => void;
   onExit: () => void;
@@ -17,19 +23,57 @@ interface Props {
 
 const short = (name: string) => name.replace(/^(Blue|Red) /, '');
 
-export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTimeline, onNewMission, onExit }: Props) {
+export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSeat, oneConsole, onOneConsole, onToggleTimeline, onNewMission, onExit }: Props) {
   const tracks = view.tracks;
   const fixed = realFixes(m);
-  const red = m.mission === 'hide';
+  const duel = m.mission === 'duel';
+  const side: PlayerSide = seat === 'umpire' ? 'blue' : seat; // the picture shown
+  const red = m.mission === 'hide' || (duel && seat === 'red');
   const current = m.redOrders.find((o) => o.status === 'pending' && o.windowStart <= m.minute && m.minute < o.windowEnd);
   const over = m.status !== 'running';
+  const title = duel ? 'Duel' : red ? 'Stay hidden' : 'Find the enemy';
+  const result = duel
+    ? m.status === 'ended'
+      ? 'Duel ended for the debrief.'
+      : m.winner === 'draw'
+        ? 'Draw: Red hidden, but not commanding.'
+        : `${m.winner === 'blue' ? 'Blue' : 'Red'} wins.`
+    : m.status === 'won'
+      ? red
+        ? 'You stayed hidden.'
+        : 'Mission complete.'
+      : m.status === 'lost'
+        ? red
+          ? 'You were found.'
+          : 'Time is up.'
+        : m.status === 'draw'
+          ? 'Hidden, but not commanding.'
+          : 'Mission ended for the debrief.';
   return (
     <aside className="panel">
       <header>
-        <h1>Windjam · Mission {red ? 2 : 1}</h1>
+        <h1>Windjam · Mission {duel ? 3 : red ? 2 : 1}</h1>
         <div className="sub">
-          {red ? 'Stay hidden' : 'Find the enemy'} · seed {m.seed} <button onClick={onNewMission}>New mission</button> <button onClick={onExit}>Sandbox</button>
+          {title} · seed {m.seed} <button onClick={onNewMission}>New mission</button> <button onClick={onExit}>Sandbox</button>
         </div>
+        {duel && (
+          <div className="sub seg">
+            {(['blue', 'red', 'umpire'] as Seat[]).map((x) => (
+              <button key={x} className={seat === x ? 'active' : ''} onClick={() => onSeat(x)}>
+                {x === 'umpire' ? 'Umpire' : x === 'blue' ? 'Blue view' : 'Red view'}
+              </button>
+            ))}
+            <span className="muted">{seat === 'umpire' ? 'The truth: both sides on the map.' : `Only what ${seat === 'blue' ? 'Blue' : 'Red'} knows.`}</span>
+          </div>
+        )}
+        {duel && (
+          <div className="sub">
+            <label>
+              <input type="checkbox" checked={oneConsole} onChange={(e) => onOneConsole(e.target.checked)} /> One console
+            </label>{' '}
+            <span className="muted">{oneConsole ? 'Lines start with blue> or red>; paste a whole duel script.' : 'Two consoles, one per side.'}</span>
+          </div>
+        )}
         <div className="sub">
           <button className={timeline ? 'active' : ''} onClick={onToggleTimeline}>
             {timeline ? 'Map' : 'Timeline'}
@@ -40,7 +84,12 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
 
       <section>
         <h2>Objective</h2>
-        {red ? (
+        {duel ? (
+          <p className="help">
+            Blue hunts, Red hides, both from their own console. Blue wins with {R.fixesToWin} fixes under {R.winCepKm} km on real Red emitters. Red wins if Blue has fewer at T+
+            {R.limitMin} and Red delivered {R.redOrdersToWin} of {R.redOrderCount} orders on time. wait from either console advances the clock for both.
+          </p>
+        ) : red ? (
           <p className="help">
             Blue is hunting you with a plan you can't see. It wins with {R.fixesToWin} fixes under {R.winCepKm} km on your real emitters. You win if it has fewer at T+
             {R.limitMin} and you delivered {R.redOrdersToWin} of your {R.redOrderCount} orders on time. Every transmission is a bearing for Blue.
@@ -58,14 +107,14 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
           </span>
         </div>
         <div className="row">
-          <span className="k">{red ? 'Blue fixes on you (under 1 km)' : `Fixed under ${R.winCepKm} km`}</span>
+          <span className="k">{duel ? `Blue fixes under ${R.winCepKm} km` : red ? 'Blue fixes on you (under 1 km)' : `Fixed under ${R.winCepKm} km`}</span>
           <span className="v">
             <b>
               {fixed}/{R.fixesToWin}
             </b>
           </span>
         </div>
-        {red && (
+        {(red || duel) && (
           <div className="row">
             <span className="k">Orders on time</span>
             <span className="v">
@@ -81,17 +130,17 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
         </div>
         {over && (
           <p className={`mission-result ${m.status}`}>
-            {m.status === 'won' ? (red ? 'You stayed hidden.' : 'Mission complete.') : m.status === 'lost' ? (red ? 'You were found.' : 'Time is up.') : m.status === 'draw' ? 'Hidden, but not commanding.' : 'Mission ended for the debrief.'}{' '}
+            {result}{' '}
             {m.replay
-              ? `Replay at T+${view.minute}: next, step, back or exit in the console.`
+              ? `Replay at T+${view.minute}: play, step and scrub with the bar under the map, or next, step, back and exit in the console.`
               : m.history.length > 1 && m.log.some((l) => l.kind === 'replay')
-                ? 'Type reveal to open the replay again.'
-                : 'Type reveal in the console to see the truth and step through how the picture built up.'}
+                ? 'Reveal and replay (bar under the map) opens the replay again.'
+                : 'Reveal and replay (bar under the map) shows the truth and plays back how the picture built up.'}
           </p>
         )}
       </section>
 
-      {red && (
+      {(red || duel) && (
         <section>
           <h2>Orders to pass</h2>
           {m.redOrders.map((o) => (
@@ -104,7 +153,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
               </span>
             </div>
           ))}
-          <p className="muted">send transmits the current order: a one-minute burst from HQ (and the relay if routed through it), then the squad's acknowledgement.</p>
+          <p className="muted">{duel ? 'From the red console, ' : ''}send transmits the current order: a one-minute burst from HQ (and the relay if routed through it), then the squad's acknowledgement.</p>
         </section>
       )}
 
@@ -113,6 +162,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
         <div className="symbols">
           <span><span className="sym sym-wedge" /> pink wedge: one bearing, emitter somewhere along it</span>
           <span><span className="sym sym-ellipse" /> pink ellipse and ×: HQ's fix and its error</span>
+          {duel && <span><span className="sym sym-ellipse-red" /> amber wedge or ellipse: Red's picture of Blue (Umpire and Red view)</span>}
           <span><span className="sym sym-sector" /> blue dashed sector: a unit listening now</span>
           <span><span className="sym sym-plan" /> cyan dashed line: the UAV's remaining plan</span>
           <span><span className="sym sym-trail" /> solid fading line with dots: where a unit has been (cyan UAV, blue ground)</span>
@@ -124,7 +174,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
       <section>
         <h2>Tracks</h2>
         {tracks.length === 0 && (
-          <p className="muted">{red ? 'No intercepts of Blue yet. Your units listen all round; Blue is heard when it transmits.' : 'Nothing heard yet. Try: sq1: df e 5, then wait 5.'}</p>
+          <p className="muted">{side === 'red' ? 'No intercepts of Blue yet. Your units listen all round; Blue is heard when it transmits.' : 'Nothing heard yet. Try: sq1: df e 5, then wait 5.'}</p>
         )}
         {tracks.map((t) => {
           const good = t.fix && t.fix.cepKm < R.winCepKm;
@@ -134,7 +184,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
             <div key={t.id} className="track-row">
               <div className="row">
                 <span className="k">
-                  <span className="dot" style={{ background: toCss(DF_COLOR), opacity: t.fix ? 1 : 0.5 }} /> <b>{t.id}</b> · {t.signature}
+                  <span className="dot" style={{ background: toCss(dfColorOf(t.id)), opacity: t.fix ? 1 : 0.5 }} /> <b>{t.id}</b> · {t.signature}
                 </span>
                 <span className="v" style={{ color: good ? '#22c55e' : undefined }}>
                   {t.fix ? `CEP ${t.fix.cepKm.toFixed(2)} km` : 'no fix'}
@@ -155,7 +205,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
       <section>
         <h2>Units</h2>
         {m.world.units
-          .filter((u) => u.side === m.side)
+          .filter((u) => u.side === side)
           .map((u) => {
             const { col, row } = axialToOffset(u.pos);
             const o = m.orders[u.id];
@@ -171,7 +221,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
             return (
               <div key={u.id} className="row unit-row">
                 <span className="k">
-                  <span className="swatch" style={{ background: toCss(SIDE_COLORS[m.side]) }} /> <b>{aliasOf(u.id)}</b> {short(u.name)} · {col},{row}
+                  <span className="swatch" style={{ background: toCss(SIDE_COLORS[side]) }} /> <b>{aliasOf(u.id)}</b> {short(u.name)} · {col},{row}
                 </span>
                 <span className="v muted">
                   {!o ? 'idle' : o.kind === 'df' ? `DF until T+${o.endMin}` : o.kind === 'move' ? `moving (${o.path.length})` : `sortie: ${o.phase === 'df' ? `DF until T+${o.dfEndMin}` : o.phase} · silent`} ·{' '}
@@ -183,7 +233,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, onToggleTi
             );
           })}
         <p className="muted">
-          {red
+          {side === 'red'
             ? 'Your squads and relay listen all round and report intercepts over your net. HQ moves at 10 km/h and cannot send while moving.'
             : `Only squads and the UAV can DF. On a linked DF the UAV must stay within 5 km of ${unitById(m.world, 'b-sq2')?.name ?? 'its squad'}; on a silent sortie it flies out, listens, and brings the report back.`}{' '}
           Reports travel over the command net; if a unit's link to HQ is lost, its report waits.

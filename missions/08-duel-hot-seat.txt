@@ -1,0 +1,58 @@
+# Mission 3, a duel. Both sides are typed by people: prefix each line with the console it belongs to.
+# Blue runs the "Line sweep" plan; Red goes quiet, points the backhaul, runs a decoy and sends its orders on time.
+# Either side's wait advances the clock for both. Paste the blue> lines into the blue console and the red> lines
+# into the red console one turn at a time, or run the whole file headless.
+mission duel
+seed 1234
+expect red
+red> status
+red> emcon cmd 0
+red> emcon retrans 0
+red> emcon squad 0
+red> cmd: waveform dsss
+red> retrans: waveform dsss
+red> hq: power 10
+red> hq: antenna toward relay
+red> ew: move 146,86
+red> send
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+blue> wait 5
+red> ew: decoy cmd
+red> wait 5
+blue> sq1: df se 10
+blue> sq3: df ne 10
+blue> sq2: df e 10
+blue> uav: df e 10
+blue> wait 2
+red> send
+red> wait 8
+blue> picture
+blue> sq1: df e 15
+blue> sq2: df e 15
+blue> sq3: df e 15
+blue> uav: df e 15
+red> send
+blue> wait 10
+red> picture
+red> send
+red> wait 5
+blue> sq1: df se 15
+blue> sq3: df ne 15
+blue> sq2: df e 15
+blue> wait 10
+red> send
+red> wait 5
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> wait 5
+red> send
+red> wait 5
+blue> status
+red> status
+blue> reveal
+blue> next
+blue> exit

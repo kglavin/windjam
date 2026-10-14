@@ -63,4 +63,6 @@ export const JS_BANDS: { minDb: number; color: number; label: string }[] = [
 export function jsColor(avgJsDb: number): number | null {
   return JS_BANDS.find((b) => avgJsDb >= b.minDb)?.color ?? null;
 }
-export const DF_COLOR = 0xf472b6;
+export const DF_COLOR = 0xf472b6; // Blue's picture of Red (tracks E1, E2, ...)
+export const RED_DF_COLOR = 0xfbbf24; // Red's picture of Blue (tracks B1, B2, ...), shown to the umpire
+export const dfColorOf = (trackId: string): number => (trackId.startsWith('B') ? RED_DF_COLOR : DF_COLOR);

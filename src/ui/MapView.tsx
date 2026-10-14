@@ -5,7 +5,7 @@ import type { CoverageCell, JsCell } from '../engine/coverage';
 import { inBounds } from '../engine/map';
 import type { Unit } from '../engine/units';
 import { type LinkView, type World, activeHops, unitAt } from '../engine/world';
-import { DF_COLOR, JAM_COLOR, LOS_COLOR, QUALITY_COLORS, SIDE_COLORS, TERRAIN_COLORS, lighten, toCss } from './colors';
+import { DF_COLOR, JAM_COLOR, LOS_COLOR, QUALITY_COLORS, SIDE_COLORS, TERRAIN_COLORS, dfColorOf, lighten, toCss } from './colors';
 import { fitLayout, hexCorners, hexToPixel, pixelToHex } from './layout';
 import { Legend } from './Legend';
 import { HexTooltip } from './HexTooltip';
@@ -578,8 +578,8 @@ export function MapView({
             const a1 = rad(b.bearingDeg + 2 * b.sigmaDeg);
             scene.linkLayer
               .poly([s.x, s.y, s.x + Math.sin(a0) * len, s.y - Math.cos(a0) * len, s.x + Math.sin(a1) * len, s.y - Math.cos(a1) * len])
-              .fill({ color: DF_COLOR, alpha: 0.1 })
-              .stroke({ width: px(1), color: DF_COLOR, alpha: 0.6 });
+              .fill({ color: dfColorOf(t.id), alpha: 0.1 })
+              .stroke({ width: px(1), color: dfColorOf(t.id), alpha: 0.6 });
           }
           continue;
         }
@@ -587,7 +587,7 @@ export function MapView({
         for (const b of t.bearings.length <= 4 ? t.bearings : []) {
           const s = hexToPixel(layout, b.sensorPos);
           const len = Math.hypot(c.x - s.x, c.y - s.y) * 1.1;
-          scene.linkLayer.moveTo(s.x, s.y).lineTo(s.x + Math.sin(rad(b.bearingDeg)) * len, s.y - Math.cos(rad(b.bearingDeg)) * len).stroke({ width: px(1), color: DF_COLOR, alpha: 0.5 });
+          scene.linkLayer.moveTo(s.x, s.y).lineTo(s.x + Math.sin(rad(b.bearingDeg)) * len, s.y - Math.cos(rad(b.bearingDeg)) * len).stroke({ width: px(1), color: dfColorOf(t.id), alpha: 0.5 });
         }
         const { aKm, bKm, angleRad } = t.fix.ellipse;
         const pts: number[] = [];
@@ -598,9 +598,9 @@ export function MapView({
           pts.push(c.x + ex * Math.cos(angleRad) - ey * Math.sin(angleRad), c.y + ex * Math.sin(angleRad) + ey * Math.cos(angleRad));
         }
         const good = t.fix.cepKm < MISSION_RULES.winCepKm;
-        scene.linkLayer.poly(pts).fill({ color: DF_COLOR, alpha: good ? 0.22 : 0.12 }).stroke({ width: px(good ? 2 : 1.5), color: DF_COLOR });
+        scene.linkLayer.poly(pts).fill({ color: dfColorOf(t.id), alpha: good ? 0.22 : 0.12 }).stroke({ width: px(good ? 2 : 1.5), color: dfColorOf(t.id) });
         const k = px(5);
-        scene.linkLayer.moveTo(c.x - k, c.y - k).lineTo(c.x + k, c.y + k).moveTo(c.x - k, c.y + k).lineTo(c.x + k, c.y - k).stroke({ width: px(2), color: DF_COLOR });
+        scene.linkLayer.moveTo(c.x - k, c.y - k).lineTo(c.x + k, c.y + k).moveTo(c.x - k, c.y + k).lineTo(c.x + k, c.y - k).stroke({ width: px(2), color: dfColorOf(t.id) });
       }
     }
 
@@ -654,7 +654,7 @@ export function MapView({
         const label = new Text({
           text: `${t.id} · ${t.signature} · CEP ${t.fix!.cepKm.toFixed(1)} km`,
           resolution: textResolution,
-          style: { fontSize: px(11), fill: 0xf9a8d4, fontFamily: 'system-ui, sans-serif', stroke: { color: 0x0f172a, width: px(3) }, padding: px(4) },
+          style: { fontSize: px(11), fill: dfColorOf(t.id), fontFamily: 'system-ui, sans-serif', stroke: { color: 0x0f172a, width: px(3) }, padding: px(4) },
         });
         label.anchor.set(0.5, 1);
         // Sit just above the ellipse, whatever its orientation (half-height of the rotated 2-sigma ellipse).
@@ -673,7 +673,7 @@ export function MapView({
           const label = new Text({
             text: `${t.id} · ${t.signature} · ±${b.sigmaDeg.toFixed(0)}°`,
             resolution: textResolution,
-            style: { fontSize: px(10), fill: 0xf9a8d4, fontFamily: 'system-ui, sans-serif', stroke: { color: 0x0f172a, width: px(3) }, padding: px(4) },
+            style: { fontSize: px(10), fill: dfColorOf(t.id), fontFamily: 'system-ui, sans-serif', stroke: { color: 0x0f172a, width: px(3) }, padding: px(4) },
           });
           label.anchor.set(0.5);
           label.position.set(s.x + Math.sin(a) * d, s.y - Math.cos(a) * d);
