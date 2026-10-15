@@ -807,9 +807,12 @@ function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
   for (const { msg, unit } of arrived) autoExecute(s, m, msg, unit);
 }
 
-// The orders that have reached a unit since a minute, for the unit's own view.
+// The orders that have reached a unit since a minute, for the unit's own view. An order on a good link reaches the unit
+// as it is sent; a late one arrives in the tick of its arrival minute, so it is in the inbox from the next minute on.
 export function inbox(s: MissionState, unitId: string, sinceMin: number): OrderMessage[] {
-  return s.messages.filter((o) => o.toId === unitId && o.arriveMin !== undefined && o.arriveMin >= sinceMin);
+  return s.messages.filter(
+    (o) => o.toId === unitId && o.arriveMin !== undefined && o.arriveMin >= sinceMin && (o.arriveMin === o.sentMin || o.arriveMin < s.minute),
+  );
 }
 
 // A side's orders and where each stands, for the commander's view.
@@ -1852,13 +1855,14 @@ export const visibleLog = (s: MissionState, side: PlayerSide = s.side) => s.log.
 // A unit's own console: lines its tasks and orders produced, plus mission-wide notices. Not the side's other lines.
 export const visibleLogFor = (s: MissionState, unitId: string): LogEntry[] => s.log.filter((e) => e.unitId === unitId || !e.side);
 
-// What a unit knows this turn: its own status line, orders that reached it since sinceMin, and what it heard.
+// What a unit knows this turn: its own status line, the orders given (by default every order that reached it since
+// sinceMin; the server passes the ones the unit has not been shown yet), and what it heard since sinceMin.
 // A capture shows the signal's signature and strength only: the unit cannot know who sent it or where from.
-export function unitStatusLines(s: MissionState, unitId: string, sinceMin: number): string[] {
+export function unitStatusLines(s: MissionState, unitId: string, sinceMin: number, orders: OrderMessage[] = inbox(s, unitId, sinceMin)): string[] {
   const unit = unitById(s.world, unitId);
   if (!unit) return [];
   const lines = [unitLine(s, unit, allLinkBudgets(s.world))];
-  for (const o of inbox(s, unitId, sinceMin)) lines.push(`order ${o.n} at T+${o.arriveMin}: ${o.text}`);
+  for (const o of orders) lines.push(`order ${o.n} at T+${o.arriveMin}: ${o.text}`);
   const heard = s.events.filter((e): e is Extract<MissionEvent, { kind: 'capture' }> => e.kind === 'capture' && e.sensorId === unitId && e.minute >= sinceMin);
   for (const e of heard) {
     const emitter = unitById(s.world, e.emitterId);

@@ -438,6 +438,20 @@ describe('c2: same-turn delivery (WP-1.12)', () => {
     expect(inbox(s, 'b-sq1', 0)).toEqual([]);
   });
 
+  it('a late order is in the inbox only after the tick of its arrival minute', () => {
+    // It arrives during the tick of arriveMin, which runs after the unit's turn at that minute.
+    let s = start();
+    s = { ...s, world: { ...s.world, nets: s.world.nets.map((n) => ({ ...n, dataRateKbps: 1 })) } };
+    s = advance(type(c2(s, ['sq1']), 'send sq1: df e 5'), 1);
+    const arrive = s.messages[0].arriveMin!;
+    expect(arrive).toBeGreaterThan(s.messages[0].sentMin);
+    s = advance(s, arrive - s.minute);
+    expect(s.minute).toBe(arrive);
+    expect(inbox(s, 'b-sq1', 0)).toEqual([]);
+    s = advance(s, 1);
+    expect(inbox(s, 'b-sq1', 0).map((o) => o.n)).toEqual([1]);
+  });
+
   it('an auto unit still acts in the tick of the send minute', () => {
     let s = type(c2(start(), []), 'send sq1: df e 5');
     expect(s.orders['b-sq1']).toBeUndefined();

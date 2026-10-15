@@ -57,7 +57,7 @@ check "red end advances the clock" "$(echo "$R" | jq -e '.advanced == true and .
 
 # The unit view.
 R=$(get "/state?side=blue&unit=sq1&after=0")
-check "sq1 inbox shows the order" "$(echo "$R" | jq -e '.inbox[0].text == "df e 5" and .inbox[0].n == 1' >/dev/null; echo $?)"
+check "sq1 inbox does not repeat the order it saw last turn" "$(echo "$R" | jq -e '.inbox == [] and all(.status_lines[]; test("^order ") | not)' >/dev/null; echo $?)"
 check "sq1 console shows the order received" "$(echo "$R" | jq -e 'any(.console[]; test("order 1 received: df e 5"))' >/dev/null; echo $?)"
 check "sq1 console hides HQ and sq2 lines" "$(echo "$R" | jq -e 'all(.console[]; (test("HQ:") or test("Squad 2")) | not)' >/dev/null; echo $?)"
 check "sq1 status lines are the unit's" "$(echo "$R" | jq -e '.status_lines[0] | test("Blue Squad 1")' >/dev/null; echo $?)"

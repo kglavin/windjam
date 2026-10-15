@@ -22,7 +22,7 @@ import { analyseCoverage, analyseDetect, analyseFix, analyseJs, analyseLink, ana
 import { HELP, UNIT_ALIASES, parseCommand } from '../src/engine/mission/commands';
 import { createMission, enableC2, inbox, issue, pictureLines, reportNow, statusLines, unitStatusLines, visibleLog, visibleLogFor } from '../src/engine/mission/mission';
 import type { JammerMode, UnitKind } from '../src/engine/units';
-import type { LogEntry, MissionKind, MissionState, PlayerSide } from '../src/engine/mission/types';
+import type { LogEntry, MissionKind, MissionState, OrderMessage, PlayerSide } from '../src/engine/mission/types';
 
 interface Args {
   mission: MissionKind;
@@ -55,7 +55,8 @@ interface Game {
   turn: number; // turns completed
   ended: Record<PlayerSide, boolean>; // sides that have ended the current turn
   endedUnits: Set<string>; // C2 unit agents that have ended the current turn, as "blue/sq1"
-  unitSince: Record<string, number>; // the minute each unit agent last ended a turn: its view shows what is new since
+  unitSince: Record<string, number>; // the minute each unit agent last ended a turn: its intercepts are new from there
+  seenOrders: Record<string, number[]>; // the orders each unit agent had in its view when it ended a turn
   history: { turn: number; side: PlayerSide; line: string; minute: number }[]; // every line posted, for the record
   calls: { turn: number; minute: number; method: string; path: string }[]; // every HTTP call, for the record (never the umpire key)
   archived?: boolean;
@@ -73,7 +74,7 @@ function newGame(mission: MissionKind, seed: number, turnMin: number, c2?: C2): 
     const entry = c2?.[side];
     if (entry) enableC2(state, side, entry.agents);
   }
-  return { state, turnMin, turn: 0, ended: { blue: false, red: false }, endedUnits: new Set(), unitSince: {}, history: [], calls: [] };
+  return { state, turnMin, turn: 0, ended: { blue: false, red: false }, endedUnits: new Set(), unitSince: {}, seenOrders: {}, history: [], calls: [] };
 }
 
 // The path as the audit keeps it: the query string without the umpire's key.
@@ -238,6 +239,14 @@ const seatOf = (g: Game, side: PlayerSide, alias: string): string | undefined =>
 };
 
 // A unit's console lines since a cursor into the full log: its own lines and the mission-wide ones.
+// What a unit has not seen yet: the orders that have reached it and were not in its view when it last ended a turn,
+// and the minute its intercepts start (what it hears in minute m is captured in the tick after its turn at m).
+function unitNews(g: Game, side: PlayerSide, alias: string, unitId: string): { orders: OrderMessage[]; heard: number } {
+  const key = `${side}/${alias}`;
+  const seen = new Set(g.seenOrders[key] ?? []);
+  return { orders: inbox(g.state, unitId, 0).filter((o) => !seen.has(o.n)), heard: g.unitSince[key] ?? 0 };
+}
+
 function unitConsoleSince(g: Game, unitId: string, after: number): { lines: string[]; cursor: number } {
   const log = g.state.log;
   const mine = new Set(visibleLogFor(g.state, unitId));
@@ -280,7 +289,8 @@ function postUnit(g: Game, side: PlayerSide, alias: string, text: string): { acc
       continue;
     }
     if (verb === 'status') {
-      extra.push(...unitStatusLines(g.state, unitId, g.unitSince[`${side}/${alias}`] ?? 0));
+      const news = unitNews(g, side, alias, unitId);
+      extra.push(...unitStatusLines(g.state, unitId, news.heard, news.orders));
       accepted.push(line);
       continue;
     }
@@ -316,10 +326,14 @@ function endTurn(g: Game, side: PlayerSide): { advanced: boolean; minute: number
   return advanceIfReady(g);
 }
 
-// A unit agent ends its turn. Its view next turn starts from this minute.
+// A unit agent ends its turn. Its intercepts next turn start from this minute, and the orders now in its view are
+// marked seen so they are not shown again.
 function endUnit(g: Game, side: PlayerSide, alias: string): { advanced: boolean; minute: number } {
-  g.endedUnits.add(`${side}/${alias}`);
-  g.unitSince[`${side}/${alias}`] = g.state.minute;
+  const key = `${side}/${alias}`;
+  const unitId = seatOf(g, side, alias);
+  g.endedUnits.add(key);
+  g.unitSince[key] = g.state.minute;
+  if (unitId) g.seenOrders[key] = [...new Set([...(g.seenOrders[key] ?? []), ...inbox(g.state, unitId, 0).map((o) => o.n)])];
   return advanceIfReady(g);
 }
 
@@ -402,9 +416,9 @@ const server = createServer(async (req, res) => {
         const unitId = seatOf(game, side, alias);
         if (!unitId) return send(res, 403, { error: `no agent seat for ${alias}` });
         const u = unitConsoleSince(game, unitId, after);
-        const since = game.unitSince[`${side}/${alias}`] ?? 0;
-        const mine = inbox(game.state, unitId, since).map((o) => ({ n: o.n, text: o.text, sentMin: o.sentMin, arriveMin: o.arriveMin }));
-        return send(res, 200, { ...summary(game, side), yourTurnEnded: game.endedUnits.has(`${side}/${alias}`), hqTurnEnded: game.ended[side], unit: alias, console: u.lines, cursor: u.cursor, status_lines: unitStatusLines(game.state, unitId, since), inbox: mine });
+        const news = unitNews(game, side, alias, unitId);
+        const mine = news.orders.map((o) => ({ n: o.n, text: o.text, sentMin: o.sentMin, arriveMin: o.arriveMin }));
+        return send(res, 200, { ...summary(game, side), yourTurnEnded: game.endedUnits.has(`${side}/${alias}`), hqTurnEnded: game.ended[side], unit: alias, console: u.lines, cursor: u.cursor, status_lines: unitStatusLines(game.state, unitId, news.heard, news.orders), inbox: mine });
       }
       const c = consoleSince(game, side, after);
       return send(res, 200, { ...summary(game, side), console: c.lines, cursor: c.cursor, status_lines: statusLines(game.state, side), picture: pictureLines(game.state, side) });
