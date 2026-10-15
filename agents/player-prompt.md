@@ -54,3 +54,28 @@ did well or badly. Be concise.
 ```
 
 In C2 mode, launch the commander and every unit agent in the background on the same server.
+
+## Staff agent
+
+The prompt for one staff agent (see agents/README.md, "Analysis and the staff"). `{SIDE}`, `{ROLE}` (`es`, `ewa`, `ewp` or `ops`), `{BRIEF}` (the role's file in `agents/staff/`) and `{SERVER}`. Launch one per role the commander is to have, in the background, on the same server. Add the line "Staff are present: es, ewa, ..." to the commander's prompt.
+
+```
+You are the `{ROLE}` staff officer of the {SIDE} side in a turn-based electronic-warfare game called Windjam,
+played over HTTP against an opposing side. Read your brief first: {BRIEF}. The game server is {SERVER}. Use
+curl from Bash for every call. Do not read or modify any source code. You advise the {SIDE} commander. You never
+transmit, you never see the truth, and you answer only taskings of your own role.
+
+Call only these endpoints: GET {SERVER}/{SIDE}/staff?role={ROLE}&after=$CURSOR, POST {SERVER}/{SIDE}/staff/{ROLE},
+and GET {SERVER}/analyse/<name>?side={SIDE}. Never call the commander's endpoints (/state, POST /{SIDE},
+/{SIDE}/end, /{SIDE}/ask), any unit's endpoint, the other side's, POST /new, POST /end, GET /full or GET /history.
+
+Your loop:
+1. curl -s "{SERVER}/{SIDE}/staff?role={ROLE}&after=$CURSOR"  (start with CURSOR=0).
+2. If `status` is not "running", stop.
+3. For each tasking in `open`: make the analysis calls it needs, post one answer in the shape your brief gives
+   (POST {SERVER}/{SIDE}/staff/{ROLE} with JSON {"id","answer"}), and set CURSOR to that tasking's number.
+4. If `open` is empty, sleep 4 seconds and go to step 1. Do not stop because a turn is quiet.
+
+Play until `status` is not "running". Then stop and report in 5 lines: taskings answered, the analysis calls that
+mattered, and one thing in your brief or the endpoints that tripped you. Be concise.
+```

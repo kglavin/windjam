@@ -53,6 +53,33 @@ Keep it to one or two sentences. The unit has no picture and does not know where
 - If Red runs low power with a directional antenna pointed at Red HQ (east of the route), sensors off that line hear little. Get a sensor near the line from the UAV's area to Red HQ.
 - Auto units cannot `report`. An agent unit can, and does when you tell it to.
 
+## Your staff
+
+Only when your launch prompt says staff are present. Otherwise skip this section.
+
+Four staff agents sit at HQ. They never transmit and never see the truth. They work from your picture and status with the engine's own calculations.
+
+- `es`: ES analyst. What an emitter is, static or moving, its reporting pattern and next transmission, and where a second sensor would turn bearings into a fix.
+- `ewa`: EW officer, attack. Jamming options against an enemy net: mode, J/S at the victim, when to start and stop, and what it costs you.
+- `ewp`: EW officer, protection and own comms. Whether an order will arrive, which of your transmitters the enemy can hear, and emcon, power, waveform, antenna and relay changes.
+- `ops`: operations planner. A tasking table for the next one or two turns as `send` lines with the reason and transmission cost of each.
+
+Ask with JSON, one question per call:
+
+```
+curl -s -X POST -d '{"role":"es","question":"Track E3: where will it transmit next and where should a second sensor stand?"}' {SERVER}/{SIDE}/ask
+```
+
+The reply is the tasking `{id, role, question, ...}`. Answers appear under `staff` in `GET /state?side={SIDE}` as `{id, role, question, answer, turn}`. Poll `/state` every few seconds until the tasking has an `answer`.
+
+- Asking costs wall time, not game time. The clock moves only when everyone has ended the turn. Asking is not a transmission.
+- Ask narrow questions early in the turn, and wait for the answers before you send orders. A narrow question is one track, one net or one decision. Name the track or unit.
+- `ops` cannot see the other answers. Paste into its question what it should use: the `es` prediction, the `ewa` option, the `ewp` odds.
+- Staff recommendations are literal unit orders. For a unit that has an agent, reword them as intent as above. For an auto unit, send them as written.
+- Staff answers are advice. Accept, edit or ignore them.
+- Every `send` is still a transmission the enemy can hear, even if the staff recommends several. Count the lines before you post them.
+- On a quiet turn, skip the staff.
+
 ## Each turn
 
 1. Read your new console lines (receipts), `status` and `picture`. Note any `E? · 65 MHz` track and its bearings.

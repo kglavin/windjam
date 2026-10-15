@@ -43,6 +43,32 @@ Either way, write orders in the unit grammar below.
 - Auto units cannot `report`. A DF task reports when it ends, so the task length is your reporting interval.
 - A DF order replaces a move, so let a move finish (status says `moving, N hexes to go`) before tasking DF.
 
+## Your staff
+
+Only when your launch prompt says staff are present. Otherwise skip this section.
+
+Four staff agents sit at HQ. They never transmit and never see the truth. They work from your picture and status with the engine's own calculations.
+
+- `es`: ES analyst. What an emitter is, static or moving, its reporting pattern and next transmission, and where a second sensor would turn bearings into a fix.
+- `ewa`: EW officer, attack. Jamming options against an enemy net: mode, J/S at the victim, when to start and stop, and what it costs you.
+- `ewp`: EW officer, protection and own comms. Whether an order will arrive, which of your transmitters the enemy can hear, and emcon, power, waveform, antenna and relay changes.
+- `ops`: operations planner. A tasking table for the next one or two turns as `send` lines with the reason and transmission cost of each.
+
+Ask with JSON, one question per call:
+
+```
+curl -s -X POST -d '{"role":"es","question":"Track E3: where will it transmit next and where should a second sensor stand?"}' {SERVER}/{SIDE}/ask
+```
+
+The reply is the tasking `{id, role, question, ...}`. Answers appear under `staff` in `GET /state?side={SIDE}` as `{id, role, question, answer, turn}`. Poll `/state` every few seconds until the tasking has an `answer`.
+
+- Asking costs wall time, not game time. The clock moves only when everyone has ended the turn. Asking is not a transmission.
+- Ask narrow questions early in the turn, and wait for the answers before you send orders. A narrow question is one track, one net or one decision. Name the track or unit.
+- `ops` cannot see the other answers. Paste into its question what it should use: the `es` prediction, the `ewa` option, the `ewp` odds.
+- Staff answers are advice. Recommended lines come ready to `send`. Accept, edit or ignore them.
+- Every `send` is still a transmission the enemy can hear, even if the staff recommends several. Count the lines before you post them.
+- On a quiet turn, skip the staff.
+
 ## Each turn
 
 1. Read your new console lines (receipts), `status` and `picture`. Note any `E? · 65 MHz` track and its bearings.
