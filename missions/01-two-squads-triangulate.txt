@@ -1,7 +1,7 @@
 # Two squads look east from different places; crossing bearings give fixes.
-# A second pair of bearings from the middle finishes the job.
+# A second pair of bearings from the middle sharpens them, but the fixed site errors keep one fix over 1 km off: no win yet.
 seed 1234
-expect won
+expect running
 status
 sq1: df e 5
 sq3: df ne 5

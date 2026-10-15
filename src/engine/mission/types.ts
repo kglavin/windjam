@@ -45,6 +45,8 @@ export interface DfAccumulator {
   emitterId: string;
   signature: string; // what the listener would call it, e.g. "45 MHz hopper"
   trueBearingDeg: number;
+  sumSin: number; // weighted circular sum of the measured bearings, weight n / sigma² as above
+  sumCos: number;
   weight: number; // sum of n / sigma² over every minute it was heard
   measurements: number;
   samples: { minute: number; what: string }[]; // what was heard each minute: chatter, order n, decoy, DF report...
@@ -158,7 +160,7 @@ export interface Playbook {
 // Structured record of what happened, for the sequence chart and analysis. One minute can hold many.
 export type MissionEvent =
   | { kind: 'emit'; minute: number; unitId: string; what: string; signature: string } // a transmission during the minute
-  | { kind: 'capture'; minute: number; sensorId: string; emitterId: string; what: string; snrDb: number } // sensor heard emitter
+  | { kind: 'capture'; minute: number; sensorId: string; emitterId: string; what: string; snrDb: number; bearingDeg: number; sigmaDeg: number } // sensor heard emitter; the bearing it measured that minute (compass degrees)
   | { kind: 'report'; minute: number; unitId: string; side: PlayerSide; bearings: number; delivered: boolean } // DF report sent (or held)
   | { kind: 'release'; minute: number; unitId: string; side: PlayerSide } // a held report finally reached HQ
   | { kind: 'track'; minute: number; side: PlayerSide; trackId: string; emitterId: string; cepKm?: number; first: boolean } // picture changed

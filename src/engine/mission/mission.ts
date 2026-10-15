@@ -485,7 +485,7 @@ function flyUav(s: MissionState, uav: UavState) {
 
 // A report is forced when the interval has run out. Afterwards: did HQ receive what was sent this minute? A delivered
 // report also carries every bearing the UAV has taken since its last one (mission 5), which HQ merges on arrival.
-function uavReports(s: MissionState, m: number, phase: 'before' | 'after', uav: UavState, rng: () => number) {
+function uavReports(s: MissionState, m: number, phase: 'before' | 'after', uav: UavState) {
   if (uav.launchedMin === undefined || uav.doneMin !== undefined) return;
   if (phase === 'before') {
     const due = (uav.lastBurstMin ?? uav.launchedMin) + uav.reportEveryMin;
@@ -516,7 +516,7 @@ function uavReports(s: MissionState, m: number, phase: 'before' | 'after', uav: 
   if (!delivered) return;
   const heard = Object.values(uav.heard);
   if (heard.length === 0) return;
-  const report = writeReport(s, unit, unit.pos, heard, rng);
+  const report = writeReport(s, unit, unit.pos, heard);
   uav.heard = {};
   log(s, 'report', `${unit.name}: ${report.bearings.length} bearing${report.bearings.length === 1 ? '' : 's'} came down with the report.`, uav.side);
   merge(s, report);
@@ -889,7 +889,7 @@ function tick(s: MissionState): MissionState {
   for (const uav of uavStates(s)) {
     s.actor = uav.side;
     flyUav(s, uav);
-    uavReports(s, m, 'before', uav, rng);
+    uavReports(s, m, 'before', uav);
     s.actor = undefined;
   }
 
@@ -914,7 +914,7 @@ function tick(s: MissionState): MissionState {
       s.orders[unitId] = { ...order, heard };
       if (s.minute >= order.endMin) {
         delete s.orders[unitId];
-        const report = writeReport(s, unit, unit.pos, Object.values(heard), rng);
+        const report = writeReport(s, unit, unit.pos, Object.values(heard));
         file(s, unit, report, `DF ${sectorLabel(order.centreDeg)} done`, links);
       }
       continue;
@@ -970,7 +970,7 @@ function tick(s: MissionState): MissionState {
     delete s.orders[unitId];
     updateUnit(s, unitId, (u) => ({ ...u, controlRangeKm: order.restoreRangeKm }));
     links = allLinkBudgets(s.world);
-    const bearings = order.done.flatMap((d) => writeReport(s, now, d.pos, Object.values(d.heard), rng).bearings);
+    const bearings = order.done.flatMap((d) => writeReport(s, now, d.pos, Object.values(d.heard)).bearings);
     const via = parent && home ? parent : now;
     if (!home) log(s, 'error', `${unit.name}: back but not within ${R.handoverKm} km of its squad; reporting from where it is.`, undefined, unit.id);
     file(s, via, { side: via.side as PlayerSide, unitId: via.id, minute: s.minute, bearings }, `back from sortie (${order.done.length} leg${order.done.length === 1 ? '' : 's'}), handed over`, links, unit.name, unit.id);
@@ -978,7 +978,7 @@ function tick(s: MissionState): MissionState {
   s.actor = undefined;
 
   // Mission 4: did this minute's UAV report reach HQ from where the UAV now is?
-  for (const uav of uavStates(s)) uavReports(s, m, 'after', uav, rng);
+  for (const uav of uavStates(s)) uavReports(s, m, 'after', uav);
 
   // Mission 5: each HQ and each airborne UAV listens all round. HQ's bearings reach the picture now; the UAV's wait
   // for its next delivered report. A UAV that hears the other UAV's report from close by has found it.
@@ -989,7 +989,7 @@ function tick(s: MissionState): MissionState {
       const hqHeard = Object.values(listen(s, hq, 0, 180, {}, m, rng, opts));
       if (hqHeard.length) {
         s.actor = side;
-        merge(s, writeReport(s, hq, hq.pos, hqHeard, rng));
+        merge(s, writeReport(s, hq, hq.pos, hqHeard));
         s.actor = undefined;
       }
       const drone = uav && uav.launchedMin !== undefined ? unitById(s.world, uav.unitId) : undefined;
@@ -1032,7 +1032,7 @@ function tick(s: MissionState): MissionState {
       const list = Object.values(heard);
       if (list.length === 0) continue;
       for (const h of list) (heardBy[h.signature] ??= new Set()).add(sensor.id);
-      const report = writeReport(s, sensor, sensor.pos, list, rng);
+      const report = writeReport(s, sensor, sensor.pos, list);
       if (routeToHq(s, sensor.id, links).ok) merge(s, report);
       else s.held = [...s.held, report];
     }
@@ -1158,6 +1158,14 @@ function pathTo(unit: Unit, target: Hex): Hex[] {
   return line.length > 0 && hexEquals(line[line.length - 1], target) ? line.slice(0, -1) : line;
 }
 
+// The bias a sensor has towards one emitter for the whole game: a fixed gaussian draw from a hash of the seed and ids.
+// It does not touch the mission rng and averaging cannot remove it.
+export function siteErrorDeg(seed: number, sensorId: string, emitterId: string): number {
+  let h = 2166136261;
+  for (const c of `${seed}|${sensorId}|${emitterId}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+  return R.siteErrorDeg * gaussian(createRng(h));
+}
+
 // One minute of listening over a sector from where the sensor stands now, for enemy emitters transmitting this minute.
 function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: number, prevHeard: Record<string, DfAccumulator>, m: number, rng: () => number, opts: DetectOptions) {
   const heard = { ...prevHeard };
@@ -1170,9 +1178,14 @@ function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: 
       if (look.pd < R.minPd) continue; // too weak for a usable bearing
       const heardProb = 1 - (1 - look.pd) ** sweeps;
       if (rng() >= heardProb) continue;
-      s.events.push({ kind: 'capture', minute: m, sensorId: sensor.id, emitterId: emitter.id, what, snrDb: look.snrDb });
       const n = Math.max(1, Math.round(sweeps * look.pd));
       const sigma = bearingSigmaDeg(look.snrDb);
+      // This minute's measurement: n sweeps averaged, plus the fixed site error for this sensor and emitter.
+      const measSigma = sigma / Math.sqrt(n);
+      const measured = (trueDeg + siteErrorDeg(s.seed, sensor.id, emitter.id) + measSigma * gaussian(rng) + 360) % 360;
+      s.events.push({ kind: 'capture', minute: m, sensorId: sensor.id, emitterId: emitter.id, what, snrDb: look.snrDb, bearingDeg: measured, sigmaDeg: measSigma });
+      const w = n / (sigma * sigma);
+      const rad = (measured * Math.PI) / 180;
       // A moving emitter gets one accumulator per minute: averaging across minutes would smear its track.
       const moving = emitter.kind === 'drone';
       const key = moving ? `${emitter.id}@${m}` : emitter.id;
@@ -1181,7 +1194,9 @@ function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: 
         emitterId: emitter.id,
         signature: prev?.signature ?? signature,
         trueBearingDeg: trueDeg,
-        weight: (prev?.weight ?? 0) + n / (sigma * sigma),
+        weight: (prev?.weight ?? 0) + w,
+        sumSin: (prev?.sumSin ?? 0) + w * Math.sin(rad),
+        sumCos: (prev?.sumCos ?? 0) + w * Math.cos(rad),
         measurements: (prev?.measurements ?? 0) + n,
         samples: [...(prev?.samples ?? []), { minute: m, what: what }].filter((x, i, a) => a.findIndex((y) => y.minute === x.minute && y.what === x.what) === i),
         heardMin: moving ? m : undefined,
@@ -1215,7 +1230,7 @@ function file(s: MissionState, via: Unit, report: Report, what: string, links: L
 }
 
 // A finished DF task becomes one bearing per emitter heard, with the averaged error.
-function writeReport(s: MissionState, sensor: Unit, sensorPos: Hex, heard: DfAccumulator[], rng: () => number): Report {
+export function writeReport(s: MissionState, sensor: Unit, sensorPos: Hex, heard: DfAccumulator[]): Report {
   const bearings: ReportedBearing[] = heard.map((h) => {
     const sigmaDeg = Math.sqrt(1 / h.weight + R.siteErrorDeg ** 2);
     return {
@@ -1223,7 +1238,7 @@ function writeReport(s: MissionState, sensor: Unit, sensorPos: Hex, heard: DfAcc
       signature: h.signature,
       sensorId: sensor.id,
       sensorPos: h.sensorPos ?? sensorPos,
-      bearingDeg: (h.trueBearingDeg + sigmaDeg * gaussian(rng) + 360) % 360,
+      bearingDeg: ((Math.atan2(h.sumSin, h.sumCos) * 180) / Math.PI + 360) % 360, // weighted circular mean of the measurements
       sigmaDeg,
       measurements: h.measurements,
       samples: h.samples,
@@ -1801,7 +1816,7 @@ export function unitStatusLines(s: MissionState, unitId: string, sinceMin: numbe
   for (const e of heard) {
     const emitter = unitById(s.world, e.emitterId);
     const signature = emitter?.radio ? emissionsAt(s, emitter, e.minute).find((x) => x.what === e.what)?.signature : undefined;
-    lines.push(`T+${e.minute} heard ${signature ?? e.what}, SNR ${Math.round(e.snrDb)} dB`);
+    lines.push(`T+${e.minute} heard ${signature ?? e.what}, SNR ${Math.round(e.snrDb)} dB, bearing ${Math.round(e.bearingDeg)}° ± ${e.sigmaDeg.toFixed(1)}°`);
   }
   if (heard.length === 0) lines.push('Nothing heard.');
   return lines;
