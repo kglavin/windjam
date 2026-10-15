@@ -222,3 +222,125 @@ E9. Cost: tokens and wall time per turn with a full staff; the point at which a 
 Q5. Should the ES analyst be allowed to run its own data association (we give it perfect association today, tracks grouped by true emitter)? Realistic association is a separate piece of work; the analyst role is where it would live.
 Q6. Should analysts see the sequence chart's event record for their own side (captures by own sensors with SNR)? Probably yes: that is what an ES cell sees.
 Q7. One ops planner or none: the commander may be enough with three analysts. E7 answers it.
+
+## Part 3: the agent harness, tools and TTPs
+
+Status: concept. Parts 1 and 2 describe who the agents are and what they can ask of the engine. This part is how they run.
+
+### 22. The split that matters
+
+- **TTPs are procedural knowledge**: when to go quiet, how to time a burst against the enemy's clock, where to put a second sensor, how to read a net plan. They belong in text the model reads: the brief, or a skill loaded for a role. A tool cannot decide.
+- **Data analysis is computation**: path loss, detection footprint, J/S, fix and dilution of precision, pattern of life, track association, link matrices. It belongs in deterministic code with tests, called by the model as tools. Everything in section 14 is of this kind, and all of it already exists in the engine as TypeScript functions.
+- **The harness** is separate from both: the loop that gives a model its brief, its tools and its turn, and records what it did.
+
+### 23. Why a dedicated loop
+
+Claude Code subagents calling the server with curl got the first games played in an afternoon, and they remain the quickest way to put a human-supervised agent on a console. For repeated, measured games they are the wrong harness: tool calls are untyped text through Bash; cost per turn is not controlled; there is no reproducible record of tool inputs and outputs; and every game is orchestrated through a live session.
+
+A dedicated loop in TypeScript, using the Anthropic SDK's tool runner (`client.beta.messages.toolRunner` with tools defined by `betaZodTool`), fixes all four:
+
+- one process per participant (commander, each unit, each analyst), started by a referee script with the role, the side, the server URL and the model;
+- tools are typed functions with schemas, so inputs are validated and the model cannot call anything it was not given;
+- the brief is the system prompt, cached (`cache_control` on the stable block), with the per-turn state appended as the user message;
+- the per-turn hooks log every tool call and result to the game archive, so a game is replayable from its transcript;
+- a model per role (`claude-sonnet-5-5` for commanders and analysts, `claude-haiku-5-5` for units, as the experiments in sections 8 and 19 need), effort set per role, and a task budget and a turn cap so a runaway turn cannot run the bill;
+- it runs standalone from the terminal (`npm run agents -- --server http://localhost:8787 --blue sonnet --red haiku`), with no live session in the loop.
+
+The referee script owns: starting the server or attaching to one, creating the participants, waiting for the game to end, and writing the archive. Adaptive thinking stays on; `tool_choice` is left on `auto` with the brief naming the tools to use, since the current models reject forced tool use.
+
+### 24. Three exposures of one routine
+
+Write each analysis routine once, in the engine, with its own tests. Expose it three ways, all thin wrappers:
+
+1. **HTTP endpoints** on the game server (section 14). First, because they make the routines usable by a person and by curl now, and testable end to end.
+2. **An MCP server** that wraps the same functions, for any harness that is not the custom loop: Claude Code subagents today (so analysts get exact tools before the loop exists), a person playing analyst in Claude Desktop, another model's harness later. MCP earns its place only when a routine must be served to more than one consumer.
+3. **Embedded tool definitions** in the custom loop, importing the engine functions directly. Last, when the loop is built; fewest moving parts.
+
+The side-limiting rule applies to all three: inputs about the enemy come from the side's picture or are stated hypotheses, never the truth.
+
+### 25. Routines to add
+
+Two analysis routines are missing and would be the first new code:
+
+- **Track association.** Bearings are grouped by true emitter today, a stated simplification. The ES analyst should own association: cluster bearings by signature, time and geometry into tracks, with the ambiguity exposed (two tracks that may be one emitter, one track that may be two). This is deterministic code with a confidence output, and the analyst's judgement sits on top of it.
+- **Pattern of life.** Period detection on a track's transmission minutes (the reporting clock), chatter duty estimation, and prediction of the next transmission minute and position. This is what reading the enemy's clock means in the hunt brief.
+
+### 26. Risks
+
+R1. The custom loop loses what the subagent harness gave for free: permission gates and a human in the loop. The loop needs its own limits (turn cap, token budget per role, hard stop when the server says the game is over) and its own audit (every call recorded).
+R2. Prompt caching needs a frozen brief; anything per-turn goes after the cached block, or the cache never hits.
+R3. A tool that returns a lot (a coverage grid) will flood a small model's context; return summaries by default (ranges, counts, the ten best hexes) and the full grid only on request.
+
+## Part 4: network and RF planning tools
+
+Status: concept.
+
+### 27. One propagation model for the plan and the game
+
+A planner that runs a different propagation model from the simulation predicts links the game does not honour, and the agent learns to distrust its tools. The planning tools therefore call the engine's own `analyzePath`, `linkBudget`, `orderDelivery`, `sensorLook` and `jsCoverageMap`. Open-source propagation models enter as a second, selectable model behind `analyzePath`, used by the simulation and the planner together, so a game can be run and planned under ITM instead of the engine's two-ray plus knife-edge model and the two compared.
+
+### 28. What the open-source world offers
+
+| Tool | What it does | Fit |
+|---|---|---|
+| NTIA ITM (Longley-Rice), reference C++ and Python ports | Point-to-point and area propagation over terrain profiles; the standard for VHF/UHF planning | A second propagation model behind `analyzePath`, selectable per game |
+| ITU-R P.1812 / P.452 open implementations | Terrestrial path loss with clutter and diffraction | Same slot; needs clutter data the map does not carry yet |
+| SPLAT!, Signal Server | Coverage maps from DEM data using ITM | Validate the engine's coverage map against a known tool on the same real terrain (Part 5); too heavy to run per turn |
+| Radio Mobile, CloudRF | GUI and SaaS planning | Reference only |
+| Graph algorithms (minimum spanning tree, k-connectivity, Steiner points) | Topology planning | Small enough to implement in the engine; relay placement and redundancy come from here |
+| ns-3, OMNeT++ | Packet-level network simulation | Overkill; the timeliness model is the right fidelity for this game |
+
+### 29. The planning tools
+
+All over the engine's functions, side-limited as in section 14, called by the EW cell's electronic-protection officer, first at deployment and again whenever the picture or the plan changes.
+
+1. `plan/links`: for a deployment (positions, nets, powers, antennas), the full link matrix with quality, delivery odds, and the weakest hop of every route to HQ.
+2. `plan/relay`: candidate hexes for a relay that restore or harden weak links, ranked by routes fixed and by the relay's own exposure.
+3. `plan/antenna`: pointing and power per link that keeps delivery above a threshold at the lowest power radiated sideways.
+4. `plan/exposure`: for a plan, which own transmissions the enemy's likely sensors can hear and DF, from hypothesised enemy positions.
+5. `plan/deploy`: a search over sensor positions subject to constraints: DF baselines wide enough for fixes over the expected area (dilution of precision), every unit linked to HQ at better than marginal, exposure minimised, movement time bounded. Multi-objective, so it returns a few candidate plans with their trade-offs rather than one answer.
+
+The search in `plan/deploy` is a local search over hexes within reach of each unit, scored by a weighted sum the caller sets (connectivity, DF geometry, exposure, time), with `ensureLinks` in `scenario.ts` as the existing one-objective ancestor.
+
+### 30. The work product: a net plan
+
+A net plan is a document the officer produces and the commander approves: a table of units with positions, nets, routes and link qualities, pointing and power per link, the relay placement, the exposure estimate, and the orders in unit grammar that implement it. It is stored in the archive with the game, and the GUI renders it as a plan layer on the map (planned positions and links, dashed), so the umpire can compare the plan with what happened. The agent adds the choice: the tool returns candidates and numbers; the officer picks the plan that fits the commander's intent (a quiet net for a hide mission, a robust one for a search) and writes the reasons.
+
+## Part 5: terrain sources
+
+Status: concept.
+
+### 31. What the engine needs
+
+Per hex: an elevation, a terrain class (water, plain, forest, hill, mountain, and urban when it is added) and the hex size. Propagation, line of sight, noise and access rules derive from that. So any source that provides a height raster and a land-cover raster can feed the engine through one importer that bins rasters into hexes: mean height per hex, majority land cover, with ridge peaks preserved where a hex straddles one (keep the maximum height as a second field if diffraction needs it).
+
+### 32. Real terrain
+
+| Data | Source | Licence | Use |
+|---|---|---|---|
+| Elevation, 30 m | Copernicus DEM GLO-30, NASA SRTM, USGS 3DEP (US, down to 1 m) | free with attribution | the height raster |
+| Land cover, 10 m | ESA WorldCover | CC BY 4.0 | forest, urban, water, open ground |
+| Roads, buildings, power lines | OpenStreetMap | ODbL | urban clutter, man-made noise, later civilian emitters |
+
+Pipeline: GDAL clips and reprojects a chosen area to a local metric grid; a script (`scripts/import-terrain.ts`, or Python with rasterio if GDAL bindings are easier there) bins it into the hex map JSON the engine loads. Any area on Earth, any hex size. The external propagation tools in section 28 then run on the same ground, so the engine can be validated against them. Data stays out of the repository except one small sample area; the importer and a download script go in.
+
+### 33. Milsim terrain
+
+Heightmaps from Operation Flashpoint or Arma are good and their scale fits the home area (8 to 20 km across against 32 by 17 km), but the terrain files are proprietary assets: extracting them needs the publisher's tools and the result cannot be redistributed, so it could live only in a local, untracked folder; and land cover is objects, not classes, so forest and urban would have to be reconstructed from object placement. A legally exported heightmap and land-cover layer go through the same importer; nothing specific to those games is built.
+
+### 34. Engine changes
+
+- A map loader beside `generateMap` that reads hex JSON: `{ hexSizeKm, cols, rows, home: GridArea, tiles: [{ hex, terrain, elevationM }] }`, with `home` in the file so a real area says where the home box sits.
+- The scenario's reference grid and `ensureLinks` already cope with arbitrary ground. Generated maps stay for repeatable tests.
+- The archive's seed field becomes a map name plus seed (the seed still drives schedules and bearing errors).
+- A named real area is a scenario in its own right, like a wargame's map sheet; the mission balance will differ by area, which is the point.
+
+### 35. Build order across Parts 3 to 5
+
+1. Analysis endpoints (section 14) over the engine, including `plan/links` and `plan/exposure`, which are the same functions arranged for a plan.
+2. The MCP wrapper, so the current subagent harness can use them.
+3. The terrain importer and one sample real area, so planning tools and the external propagation tools can be compared on the same ground.
+4. The custom loop and referee script.
+5. `plan/relay`, `plan/antenna`, `plan/deploy`, the net plan work product and its map layer.
+6. Track association and pattern of life.
+7. ITM as the second propagation model.

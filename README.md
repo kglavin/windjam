@@ -177,7 +177,7 @@ The simplest two-sided mission, for long games between agents. Each side has an 
 
 ### Planned: a commander and unit agents per side
 
-[docs/design-hierarchical-agents.md](docs/design-hierarchical-agents.md) specifies the next steps for agent play: one commander agent per side at HQ, one small agent per unit, the commander's orders carried over the simulated radio net with its delay, loss and jamming, and a staff of analyst agents (signals, EW, own comms, operations) that work from HQ's picture with the engine's own calculations exposed as side-limited analysis endpoints. Not built yet; the note has the engine changes, endpoints, briefs, metrics and experiments.
+[docs/design-hierarchical-agents.md](docs/design-hierarchical-agents.md) specifies the next steps for agent play: one commander agent per side at HQ, one small agent per unit, the commander's orders carried over the simulated radio net with its delay, loss and jamming, a staff of analyst agents (signals, EW, own comms, operations) that work from HQ's picture with the engine's own calculations exposed as side-limited analysis endpoints, a dedicated agent harness with tools and TTPs kept apart, network and RF planning tools, and real terrain. Not built yet; the note has the engine changes, endpoints, briefs, metrics, experiments and build order.
 
 ### Replay bar (all missions)
 
