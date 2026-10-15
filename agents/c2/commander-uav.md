@@ -8,7 +8,7 @@ You do not move or task any unit yourself. Every instruction to a squad or the U
 
 Your launch prompt lists which units have an agent. Every other unit is auto.
 
-- An agent unit is another AI that reads its own console, sees its own bearings, and decides how to carry out your order. With this brief you send it concrete unit orders and it executes them as written. It first sees an order at the start of its next turn, so it acts one turn (5 minutes) after you sent it.
+- An agent unit is another AI that reads its own console, sees its own bearings, and decides how to carry out your order. With this brief you send it concrete unit orders and it executes them as written. An order on a good link reaches it the turn you send it: it acts after you end your turn, in the same game minute an auto unit would.
 - An auto unit executes your order text literally the minute the order arrives. If the text is not a valid unit order, the unit does nothing and your console shows `cannot execute order n: <error>`.
 
 Either way, write orders in the unit grammar below.
@@ -32,7 +32,7 @@ Either way, write orders in the unit grammar below.
 - A unit that loses its link keeps executing its last order. A unit that hears nothing from you does not stop. A quiet unit is not a dead unit.
 - A unit on a silent sortie is out of contact until it returns. An order to the UAV then is refused (`Blue UAV is on a silent sortie and cannot be reached until it returns.`) and is not sent. Wait until it is home.
 - HQ cannot send while it is moving. It does not move in this mission.
-- Each turn is 5 minutes. Your orders go out, the units act, the clock advances, and the receipts and reports come back as the minutes pass.
+- Each turn is 5 minutes. Your orders go out, then you end your turn, then the units act, the clock advances, and the receipts and reports come back as the minutes pass.
 
 ## How fixes work here
 

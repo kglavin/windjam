@@ -737,7 +737,10 @@ export function sendOrder(s: MissionState, side: PlayerSide, toId: string, text:
     return;
   }
   const n = s.nextOrderNo++;
-  s.messages.push({ n, side, fromId: hq.id, toId: to.id, text, sentMin: s.minute, status: 'pending' });
+  // An order on a good link is in the unit's inbox at once (same-turn delivery); the tick still does the arrival work.
+  const msg: OrderMessage = { n, side, fromId: hq.id, toId: to.id, text, sentMin: s.minute, status: 'pending' };
+  if (view.order.status === 'on time') msg.arriveMin = s.minute;
+  s.messages.push(msg);
   s.events.push({ kind: 'send', minute: s.minute, orderN: n, fromId: hq.id, toId: to.id, status: 'pending' });
   const what = `order ${n}`;
   s.bursts.push({ minute: s.minute, unitId: hq.id, netId: hubNetId, what });
@@ -770,13 +773,13 @@ function autoExecute(s: MissionState, m: number, msg: OrderMessage, unit: Unit) 
   s.actor = undefined;
 }
 
-// Orders in flight, one minute: decide arrival once at the send minute, hand the order to the unit, send its acknowledgement, and mark orders lost at HQ.
+// Orders in flight, one minute: decide arrival once at the send minute (an on-time order was decided in sendOrder), hand the order to the unit, send its acknowledgement, and mark orders lost at HQ.
 function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
   // Auto units act after the bookkeeping: issue() returns a new state with its own copy of messages, so running it
   // inside this loop would leave the loop updating messages that are no longer in the state.
   const arrived: { msg: OrderMessage; unit: Unit }[] = [];
   for (const msg of s.messages) {
-    if (m === msg.sentMin) {
+    if (m === msg.sentMin && msg.arriveMin === undefined) {
       const view = memberLink(s, msg.toId, links);
       if (view && view.order.status !== 'lost') {
         msg.arriveMin = view.order.status === 'on time' ? m : m + Math.min(ORDER_LATE_CAP_MIN, Math.ceil(view.order.latencyS / 60));

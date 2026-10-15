@@ -40,6 +40,8 @@ Your loop, every turn:
    Read `console`, `status_lines`, `inbox`.
 2. If `status` is not "running", stop.
 3. If `yourTurnEnded` is true, sleep 4 seconds and go to step 1 (others are still thinking).
+   If `hqTurnEnded` is false, sleep 3 seconds and go to step 1 (HQ is still sending orders; the server refuses your
+   lines with 409 until it has ended).
 4. Decide your lines from your latest order and what you heard. If no new order arrived, keep executing the last one.
 5. Post them in one call: curl -s -X POST --data-binary $'line 1\nline 2' {SERVER}/{SIDE}/{UNIT}
    Read `rejected`; if anything was refused, fix it and post again once.

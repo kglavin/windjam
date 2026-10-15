@@ -149,7 +149,8 @@ function waitingFor(g: Game): string[] {
   const out: string[] = [];
   for (const h of g.state.humans) {
     if (!g.ended[h]) out.push(h);
-    for (const a of g.state.c2?.[h]?.agents ?? []) if (!g.endedUnits.has(`${h}/${a}`)) out.push(`${h}/${a}`);
+    // A side's units act after its commander has ended, so they are listed only then.
+    if (g.ended[h]) for (const a of g.state.c2?.[h]?.agents ?? []) if (!g.endedUnits.has(`${h}/${a}`)) out.push(`${h}/${a}`);
   }
   return out;
 }
@@ -403,7 +404,7 @@ const server = createServer(async (req, res) => {
         const u = unitConsoleSince(game, unitId, after);
         const since = game.unitSince[`${side}/${alias}`] ?? 0;
         const mine = inbox(game.state, unitId, since).map((o) => ({ n: o.n, text: o.text, sentMin: o.sentMin, arriveMin: o.arriveMin }));
-        return send(res, 200, { ...summary(game, side), yourTurnEnded: game.endedUnits.has(`${side}/${alias}`), unit: alias, console: u.lines, cursor: u.cursor, status_lines: unitStatusLines(game.state, unitId, since), inbox: mine });
+        return send(res, 200, { ...summary(game, side), yourTurnEnded: game.endedUnits.has(`${side}/${alias}`), hqTurnEnded: game.ended[side], unit: alias, console: u.lines, cursor: u.cursor, status_lines: unitStatusLines(game.state, unitId, since), inbox: mine });
       }
       const c = consoleSince(game, side, after);
       return send(res, 200, { ...summary(game, side), console: c.lines, cursor: c.cursor, status_lines: statusLines(game.state, side), picture: pictureLines(game.state, side) });
@@ -453,12 +454,18 @@ const server = createServer(async (req, res) => {
       const side = unitRoute[1] as PlayerSide;
       const alias = unitRoute[2];
       if (!seatOf(game, side, alias)) return send(res, 403, { error: `no agent seat for ${alias}` });
+      const waitHq = () => send(res, 409, { error: 'wait until HQ has ended its turn' });
+      const hqOpen = game.turnMin > 0 && game.state.status === 'running' && !game.ended[side];
       if (unitRoute[3] === 'end') {
+        if (hqOpen) return waitHq();
         const r = endUnit(game, side, alias);
         return send(res, 200, { ...r, ...summary(game, side), yourTurnEnded: true });
       }
+      if (unitRoute[3] === 'report' && hqOpen) return waitHq();
       const body = unitRoute[3] === 'report' ? 'report' : await readBody(req);
       const text = req.headers['content-type']?.includes('application/json') ? String((JSON.parse(body) as { lines?: string; text?: string }).lines ?? (JSON.parse(body) as { text?: string }).text ?? '') : body;
+      const acts = text.split(/\r?\n/).map((l) => l.replace(/#.*$/, '').trim().split(/\s+/)[0].toLowerCase()).filter((v) => v && v !== 'status' && v !== 'help');
+      if (hqOpen && acts.length > 0) return waitHq();
       const r = postUnit(game, side, alias, text);
       return send(res, 200, { ...r, ...summary(game, side), yourTurnEnded: game.endedUnits.has(`${side}/${alias}`) });
     }

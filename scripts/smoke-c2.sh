@@ -34,14 +34,26 @@ check "server answers" "$([ -n "$R" ] && echo "$R" | jq -e '.mission == "duel"' 
 # The commander sends orders; sq1 has an agent, sq2 is auto.
 R=$(post /blue $'send sq1: df e 5\nsend sq2: df n 10\nsend ew: jam cmd')
 check "commander send accepted" "$(echo "$R" | jq -e '(.accepted | length) == 3 and (.rejected | length) == 0' >/dev/null; echo $?)"
-check "waiting for blue, blue/sq1 and red" "$(echo "$R" | jq -e '.waitingFor == ["blue","blue/sq1","red"]' >/dev/null; echo $?)"
+check "waiting for blue and red only (units are listed once their commander has ended)" "$(echo "$R" | jq -e '.waitingFor == ["blue","red"]' >/dev/null; echo $?)"
+
+# Same-turn delivery and the commander gate: the order is in sq1's inbox before the commander ends, and sq1 may act only after.
+R=$(get "/state?side=blue&unit=sq1&after=0")
+check "order sent this turn is in sq1's inbox the same turn" "$(echo "$R" | jq -e '.minute == 0 and .hqTurnEnded == false and .inbox[0].text == "df e 5" and .inbox[0].arriveMin == 0' >/dev/null; echo $?)"
+check "sq1 order line before HQ ends gets 409" "$([ "$(code -X POST --data-binary 'df e 5' "$BASE/blue/sq1")" = 409 ]; echo $?)"
+check "sq1 report before HQ ends gets 409" "$([ "$(code -X POST "$BASE/blue/sq1/report")" = 409 ]; echo $?)"
+check "sq1 end before HQ ends gets 409" "$([ "$(code -X POST "$BASE/blue/sq1/end")" = 409 ]; echo $?)"
+R=$(post /blue/sq1 "status")
+check "sq1 status before HQ ends is allowed" "$(echo "$R" | jq -e '.accepted == ["status"]' >/dev/null; echo $?)"
 
 R=$(post /blue/end "")
 check "blue end does not advance" "$(echo "$R" | jq -e '.advanced == false and .waitingFor == ["blue/sq1","red"]' >/dev/null; echo $?)"
+R=$(get "/state?side=blue&unit=sq1&after=0")
+check "hqTurnEnded is true after blue ends" "$(echo "$R" | jq -e '.hqTurnEnded == true' >/dev/null; echo $?)"
+check "sq1 order line after HQ ends is accepted" "$([ "$(code -X POST --data-binary 'status' "$BASE/blue/sq1")" = 200 ]; echo $?)"
 R=$(post /blue/sq1/end "")
 check "blue/sq1 end does not advance" "$(echo "$R" | jq -e '.advanced == false and .waitingFor == ["red"]' >/dev/null; echo $?)"
 R=$(post /red/end "")
-check "red end advances the clock" "$(echo "$R" | jq -e '.advanced == true and .minute == 5 and .waitingFor == ["blue","blue/sq1","red"]' >/dev/null; echo $?)"
+check "red end advances the clock" "$(echo "$R" | jq -e '.advanced == true and .minute == 5 and .waitingFor == ["blue","red"]' >/dev/null; echo $?)"
 
 # The unit view.
 R=$(get "/state?side=blue&unit=sq1&after=0")
@@ -68,7 +80,8 @@ check "commander still sets HQ's own radio" "$(echo "$R" | jq -e '(.accepted | l
 check "no seat for auto unit sq2" "$([ "$(code "$BASE/state?side=blue&unit=sq2")" = 403 ] && [ "$(code -X POST --data-binary 'df e 5' "$BASE/blue/sq2")" = 403 ]; echo $?)"
 check "no seat on a side without C2" "$([ "$(code "$BASE/state?side=red&unit=sq1")" = 403 ]; echo $?)"
 
-# The unit's own endpoint.
+# The unit's own endpoint: turn 2, so sq1 acts once blue has ended again.
+post /blue/end "" >/dev/null
 R=$(post /blue/sq1 $'df e 5\nsend hq: hello\nreport')
 check "unit df accepted" "$(echo "$R" | jq -e '.accepted == ["df e 5","report"]' >/dev/null; echo $?)"
 check "unit send rejected" "$(echo "$R" | jq -e '(.rejected | length) == 1 and (.rejected[0] | test("^send hq: hello"))' >/dev/null; echo $?)"
@@ -90,6 +103,7 @@ for _ in $(seq 1 100); do
   curl -s "http://127.0.0.1:$PORT2/" >/dev/null 2>&1 && break
   sleep 0.2
 done
+curl -s -X POST "http://127.0.0.1:$PORT2/red/end" >/dev/null
 R=$(curl -s -X POST --data-binary "launch" "http://127.0.0.1:$PORT2/red/uav")
 check "launch accepted on a unit seat (mission uav, red uav)" "$(echo "$R" | jq -e '.accepted == ["launch"] and (.rejected | length) == 0' >/dev/null; echo $?)"
 

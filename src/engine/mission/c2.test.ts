@@ -418,3 +418,47 @@ describe('c2: EW net and commander status (WP-1.11)', () => {
     expect(visibleLog(s, 'blue').at(-1)).toMatchObject({ kind: 'error', text: 'Blue UAV is on a silent sortie and cannot be reached until it returns.' });
   });
 });
+
+describe('c2: same-turn delivery (WP-1.12)', () => {
+  const c2 = (s: MissionState, agents: string[]): MissionState => ({ ...s, c2: { blue: { agents } } });
+
+  it('an on-time order is in the inbox immediately after sendOrder, before any tick', () => {
+    const s = type(c2(start(), ['sq1']), 'send sq1: df e 5');
+    expect(s.messages[0]).toMatchObject({ status: 'pending', sentMin: 0, arriveMin: 0 });
+    expect(inbox(s, 'b-sq1', 0).map((o) => o.n)).toEqual([1]);
+    expect(unitStatusLines(s, 'b-sq1', 0).some((l) => /order 1 at T\+0: df e 5/.test(l))).toBe(true);
+    expect(visibleLogFor(s, 'b-sq1').some((e) => /received/.test(e.text))).toBe(false);
+  });
+
+  it('a late order is not in the inbox until the tick sets its arrival', () => {
+    let s = start();
+    s = { ...s, world: { ...s.world, nets: s.world.nets.map((n) => ({ ...n, dataRateKbps: 1 })) } };
+    s = type(c2(s, ['sq1']), 'send sq1: df e 5');
+    expect(s.messages[0].arriveMin).toBeUndefined();
+    expect(inbox(s, 'b-sq1', 0)).toEqual([]);
+  });
+
+  it('an auto unit still acts in the tick of the send minute', () => {
+    let s = type(c2(start(), []), 'send sq1: df e 5');
+    expect(s.orders['b-sq1']).toBeUndefined();
+    s = advance(s, 1);
+    expect(s.orders['b-sq1']).toMatchObject({ kind: 'df', startMin: 0 });
+  });
+
+  it('the received line and the acknowledgement happen once, in the tick, with several orders in a turn', () => {
+    let s = type(c2(start(), ['sq1']), 'send sq1: df e 5');
+    s = type(s, 'send sq1: df n 5');
+    expect(s.messages.map((m) => m.ackMin)).toEqual([undefined, undefined]);
+    s = advance(s, 5);
+    expect(s.messages).toMatchObject([{ status: 'on time', arriveMin: 0, ackMin: 0 }, { status: 'on time', arriveMin: 0, ackMin: 0 }]);
+    const text = visibleLog(s, 'blue').map((e) => e.text);
+    for (const n of [1, 2]) {
+      expect(text.filter((t) => t.startsWith(`Blue Squad 1: order ${n} received`))).toHaveLength(1);
+      expect(text.filter((t) => t === `HQ: order ${n} acknowledged by Blue Squad 1.`)).toHaveLength(1);
+    }
+    expect(s.events.filter((e) => e.kind === 'ack')).toHaveLength(2);
+    expect(s.bursts.filter((b) => b.what === 'ack order 1')).toHaveLength(1);
+    expect(statusLines(s, 'blue').find((l) => l.startsWith('Orders:'))).toMatch(/^Orders: 2 sent; acknowledged 2 \(on time 2, late 0\)/);
+    expect(inbox(s, 'b-sq1', 0).map((o) => o.n)).toEqual([1, 2]);
+  });
+});

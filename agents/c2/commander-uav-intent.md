@@ -8,7 +8,7 @@ You do not move or task any unit yourself. Every instruction to a squad or the U
 
 Your launch prompt lists which units have an agent. Every other unit is auto.
 
-- Agent unit: another AI that sees its own bearings and decides how to carry out your order. Send it intent: what to achieve, over what area and time, and what to report. It chooses the verbs. It first sees an order at the start of its next turn, so it acts one turn (5 minutes) after you sent it.
+- Agent unit: another AI that sees its own bearings and decides how to carry out your order. Send it intent: what to achieve, over what area and time, and what to report. It chooses the verbs. An order on a good link reaches it the turn you send it: it acts after you end your turn, in the same game minute an auto unit would.
 - Auto unit: executes the order text literally the minute it arrives. Send it a unit order such as `df e 5`. Intent text means nothing to it. It does nothing and your console shows `cannot execute order n: <error>`.
 
 ```
