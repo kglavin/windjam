@@ -115,6 +115,10 @@ post /blue/ask '{"role":"ops","question":"plan"}' >/dev/null
 check "answer under the wrong role gets 404" "$([ "$(code -X POST --data-binary '{"id":"t2","answer":"x"}' "$BASE/blue/staff/es")" = 404 ]; echo $?)"
 R=$(get "/state?side=blue")
 check "state shows the answer under staff" "$(echo "$R" | jq -e '(.staff | map(select(.id == "t1"))[0].answer) == "E1 is the UAV link." and (.staff | map(select(.id == "t2"))[0] | has("answer") | not)' >/dev/null; echo $?)"
+check "ops sees es's answer under cell" "$(get "/blue/staff?role=ops" | jq -e '(.cell | map(select(.id == "t1" and .role == "es"))[0].answer) == "E1 is the UAV link."' >/dev/null; echo $?)"
+check "es staff has no cell" "$(get "/blue/staff?role=es" | jq -e 'has("cell") | not' >/dev/null; echo $?)"
+check "analyse/js by alias with f and waveform gives 200" "$([ "$(code "$BASE/analyse/js?side=blue&jammer=ew&mode=spot&rx=12,9&tx=100,80&f=60&waveform=fixed")" = 200 ]; echo $?)"
+check "analyse/js naming an enemy net gives 400" "$([ "$(code "$BASE/analyse/js?side=blue&jammer=ew&mode=spot&rx=12,9&tx=100,80&net=red-cmd")" = 400 ]; echo $?)"
 check "red staff es does not show blue's tasking" "$(get "/red/staff?role=es" | jq -e '.open == [] and .answered == []' >/dev/null; echo $?)"
 check "red state staff is empty" "$(get "/state?side=red" | jq -e '.staff == []' >/dev/null; echo $?)"
 

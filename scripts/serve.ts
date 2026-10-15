@@ -166,7 +166,16 @@ function analyse(name: string, side: PlayerSide, q: URLSearchParams): unknown {
     case 'detect':
       return analyseDetect(s, side, { sensor: need(q, 'sensor'), ...hypothesis(q) });
     case 'js':
-      return analyseJs(s, side, { jammer: need(q, 'jammer'), mode: need(q, 'mode') as JammerMode, netId: need(q, 'net'), rx: needPos(q, 'rx'), tx: optPos(q, 'tx') });
+      return analyseJs(s, side, {
+        jammer: need(q, 'jammer'),
+        mode: need(q, 'mode') as JammerMode,
+        rx: needPos(q, 'rx'),
+        netId: q.get('net') || undefined,
+        tx: optPos(q, 'tx'),
+        txKind: (q.get('txKind') || undefined) as UnitKind | undefined,
+        freqMHz: num(q, 'f'),
+        waveform: q.get('waveform') || undefined,
+      });
     case 'fix': {
       const bearings = q.get('bearings');
       return analyseFix(s, side, bearings ? { bearings: JSON.parse(bearings) } : { track: need(q, 'track') }, { add: optPos(q, 'add'), addSigmaDeg: num(q, 'sigma') });
@@ -540,9 +549,17 @@ const server = createServer(async (req, res) => {
       const after = Number(q.get('after') ?? 0);
       const mine = game.staff.filter((t) => t.side === side && t.role === role);
       const brief = (t: Tasking) => ({ id: t.id, role: t.role, question: t.question, turn: t.turn, minute: t.minute });
+      // Ops plans across the cell, so it also sees every answered tasking of the side from this turn and last.
+      const cell =
+        role === 'ops'
+          ? game.staff
+              .filter((t) => t.side === side && t.answer !== undefined && t.turn >= game.turn - 1)
+              .map((t) => ({ ...brief(t), answer: t.answer, answeredTurn: t.answeredTurn, answeredMinute: t.answeredMinute }))
+          : undefined;
       return send(res, 200, {
         ...summary(game, side),
         role,
+        ...(cell ? { cell } : {}),
         open: mine.filter((t) => t.answer === undefined && Number(t.id.slice(1)) > (Number.isFinite(after) ? after : 0)).map(brief),
         status_lines: statusLines(game.state, side),
         picture: pictureLines(game.state, side),

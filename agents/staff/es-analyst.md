@@ -18,7 +18,7 @@ You have nothing else. You do not see the enemy's units, their real positions, o
 
 ## Ids
 
-The analysis endpoints use engine ids, not the console aliases. A unit is `b-<alias>` for Blue (`b-sq2`, `b-ew`) and `r-<alias>` for Red. Tracks keep their picture ids (`E3`). Net ids you may need: `blue-cmd`, `blue-retrans`, `blue-ew` for Blue, `red-cmd` (45 MHz hopper), `red-retrans` (48 MHz), `red-squad` (52 MHz), `red-uav` (65 MHz) for Red.
+The analysis endpoints take the console aliases for your own units (`sensor=sq3`, `unit=sq2`). Tracks keep their picture ids (`E3`). You describe an enemy emitter by what the picture shows: its position (a fix or a stated hypothesis), a `kind`, and the frequency in MHz from its signature (`65 MHz UAV link` is `f=65` with `kind=drone`).
 
 ## Endpoints you may call
 
@@ -36,7 +36,7 @@ curl -s "{SERVER}/analyse/fix?side={SIDE}&track=E2&add=130,70&sigma=2"
 curl -s -G "{SERVER}/analyse/fix" --data-urlencode "side={SIDE}" --data-urlencode 'bearings=[{"sensorPos":{"col":116,"row":80},"bearingDeg":90,"sigmaDeg":2},{"sensorPos":{"col":124,"row":88},"bearingDeg":60,"sigmaDeg":2}]' --data-urlencode "add=130,70"
 
 # Would one of our sensors hear a hypothesised emitter? (sensor is our unit, at is the emitter's hex)
-curl -s "{SERVER}/analyse/detect?side={SIDE}&sensor=b-sq3&at=124,77&kind=drone&powerW=0.3&antennaM=150&f=65"
+curl -s "{SERVER}/analyse/detect?side={SIDE}&sensor=sq3&at=124,77&kind=drone&powerW=0.3&antennaM=150&f=65"
 
 # Where a hypothesised emitter can be heard (summary: hexes above minDbm, max range, strongest hexes)
 curl -s "{SERVER}/analyse/coverage?side={SIDE}&at=151,82&kind=hq&powerW=50&f=48"

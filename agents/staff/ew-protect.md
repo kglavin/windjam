@@ -16,7 +16,7 @@ You advise. You never transmit and you never send orders. The commander decides 
 
 ## Ids
 
-The analysis endpoints use engine ids, not the console aliases. A unit is `b-<alias>` for Blue (`b-hq`, `b-relay`, `b-sq1`, `b-sq2`, `b-sq3`, `b-uav`, `b-ew`) and `r-<alias>` for Red. Blue's nets: `blue-cmd` (60 MHz, HQ, relay and the squads), `blue-retrans` (70 MHz, relay and squads), `blue-ew` (56 MHz, HQ and the EW team). A link call needs two members of the same net.
+The analysis endpoints take the console aliases for your units (`hq`, `relay`, `sq1`, `sq2`, `sq3`, `uav`, `ew`) and nets. Blue's nets: `cmd` (60 MHz, HQ, relay and the squads), `retrans` (70 MHz, relay and squads), and the EW net (56 MHz, HQ and the EW team), which has no alias: its id is `blue-ew`. A link call needs two members of the same net.
 
 ## Endpoints you may call
 
@@ -24,20 +24,20 @@ All are read-only `GET`s with `side={SIDE}`. They cost no transmission. A bad pa
 
 ```
 # Order delivery between two of our units on one of our nets
-curl -s "{SERVER}/analyse/link?side={SIDE}&net=blue-cmd&a=b-hq&b=b-sq2"
-curl -s "{SERVER}/analyse/link?side={SIDE}&net=blue-retrans&a=b-sq1&b=b-sq3"
-curl -s "{SERVER}/analyse/link?side={SIDE}&net=blue-ew&a=b-hq&b=b-ew"
+curl -s "{SERVER}/analyse/link?side={SIDE}&net=cmd&a=hq&b=sq2"
+curl -s "{SERVER}/analyse/link?side={SIDE}&net=retrans&a=sq1&b=sq3"
+curl -s "{SERVER}/analyse/link?side={SIDE}&net=blue-ew&a=hq&b=ew"
 
 # Which of our transmitters the enemy can probably hear, ranked
 curl -s "{SERVER}/analyse/exposure?side={SIDE}"
 curl -s "{SERVER}/analyse/exposure?side={SIDE}&sensor=151,82,hq&sensor=145,79"
 
 # Where one of our transmitters is received (our unit, or a proposed site such as a relay)
-curl -s "{SERVER}/analyse/coverage?side={SIDE}&unit=b-sq2"
+curl -s "{SERVER}/analyse/coverage?side={SIDE}&unit=sq2"
 curl -s "{SERVER}/analyse/coverage?side={SIDE}&at=110,76&kind=relay&f=60&minDbm=-100"
 
 # Would one of our sensors hear a hypothesised enemy emitter?
-curl -s "{SERVER}/analyse/detect?side={SIDE}&sensor=b-sq3&at=151,82&kind=hq&powerW=50&f=48"
+curl -s "{SERVER}/analyse/detect?side={SIDE}&sensor=sq3&at=151,82&kind=hq&powerW=50&f=48"
 
 # Loss and line of sight between two hexes, to judge a relay or antenna site
 curl -s "{SERVER}/analyse/path?side={SIDE}&from=102,80&to=116,80&f=60"

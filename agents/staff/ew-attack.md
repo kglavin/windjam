@@ -16,23 +16,24 @@ You advise. You never transmit and you never send orders. The commander decides 
 
 ## Ids
 
-The analysis endpoints use engine ids, not the console aliases. Your units are `b-<alias>` for Blue (`b-ew`, `b-hq`) and `r-<alias>` for Red. Enemy nets you can jam (from Blue): `red-uav` (65 MHz, the UAV telemetry link), `red-cmd` (45 MHz hopper, Red HQ and squads), `red-retrans` (48 MHz fixed), `red-squad` (52 MHz fixed). The order alias for `red-uav` is `uavlink` (`ew: jam uavlink`). Use the net whose frequency and waveform match the signature of the track you are talking about.
+The analysis endpoints take the console aliases for your own units and nets: `jammer=ew`, `sensor=sq3`, `a=hq`, `net=cmd`. You never name an enemy net. You describe it by the frequency and waveform its signature shows in the picture, with `f=<MHz>` and `waveform=fixed|slow|fast|dsss`: `65 MHz UAV link` is `f=65&waveform=fixed`, `65 MHz DSSS` is `f=65&waveform=dsss`, `48 MHz fixed` is `f=48&waveform=fixed`, and `45 MHz hopper` is `f=45&waveform=slow` or `fast` (the picture does not say which: try both). A call with `net=` naming an enemy net answers 400. The order for jamming the UAV link is `ew: jam uavlink`.
 
 ## Endpoints you may call
 
 All are read-only `GET`s with `side={SIDE}`. They cost no transmission. A bad parameter answers 400 `{error}`: read it and correct the call.
 
 ```
-# J/S at a receiver under a jamming option. tx is where the net's transmitter is believed to be (a hypothesis from a fix).
-curl -s "{SERVER}/analyse/js?side={SIDE}&jammer=b-ew&mode=spot&net=red-uav&rx=151,82&tx=124,77"
-curl -s "{SERVER}/analyse/js?side={SIDE}&jammer=b-ew&mode=follower&net=red-cmd&rx=145,79&tx=151,82"
-curl -s "{SERVER}/analyse/js?side={SIDE}&jammer=b-ew&mode=barrage&net=red-cmd&rx=145,79&tx=151,82"
+# J/S at a receiver under a jamming option. tx is where the target's transmitter is believed to be (a hypothesis from a fix).
+# f and waveform describe the target net as the picture shows it. txKind is hq (default), squad, relay or drone.
+curl -s "{SERVER}/analyse/js?side={SIDE}&jammer=ew&mode=spot&f=65&waveform=fixed&txKind=drone&rx=151,82&tx=124,77"
+curl -s "{SERVER}/analyse/js?side={SIDE}&jammer=ew&mode=follower&f=45&waveform=slow&rx=145,79&tx=151,82"
+curl -s "{SERVER}/analyse/js?side={SIDE}&jammer=ew&mode=barrage&f=45&waveform=slow&rx=145,79&tx=151,82"
 
 # Where our jammer would be heard if the enemy had a squad there (the cost): hexes above minDbm, max range
 curl -s "{SERVER}/analyse/coverage?side={SIDE}&at=123,72&kind=jammer&f=65&minDbm=-100"
 
 # Would one of our sensors hear a hypothesised emitter? Useful to check a fix's source
-curl -s "{SERVER}/analyse/detect?side={SIDE}&sensor=b-sq3&at=151,82&kind=hq&powerW=50&f=48"
+curl -s "{SERVER}/analyse/detect?side={SIDE}&sensor=sq3&at=151,82&kind=hq&powerW=50&f=48"
 
 # Loss and line of sight between the jammer and a victim receiver
 curl -s "{SERVER}/analyse/path?side={SIDE}&from=123,72&to=151,82&f=65"
@@ -48,21 +49,21 @@ What `js` returns, and its limits:
 
 - `jsDb` is jammer-to-signal at `rx` in dB. Above 0 the jammer wins at that receiver. `fraction` is the share of time or hops the jammer hits (1 for spot against a fixed net). `avgJsDb` is `jsDb` plus 10 log10(`fraction`): the time-averaged figure. `nearJammedShare` is the share of hexes within 10 km of `rx` where `avgJsDb` is above 0.
 - `rx` is the victim receiver. For a UAV telemetry link it is the enemy HQ that receives it, not the UAV. `tx` is the net's transmitter position. It is required, because enemy positions are never filled in for you. Take both from fixes (`E?` tracks) and say which.
-- `js` models the transmitter as an HQ-class radio on the net's frequency and waveform, whatever the real transmitter is. A UAV on low power is easier to jam than the number says. Say so when the target is a UAV.
-- `js` uses the real net's frequency and waveform. Pick the net from the picture's signature, not by trying every net to see which one answers differently.
-- The jammer is your own `b-ew` at its current position. The calls do not move it.
+- `txKind` sets the class of the target's transmitter: `hq` by default (50 W), `drone` for a UAV link (2 W, the mission's UAV link power, antenna 150 m up). Use `txKind=drone` when the signature is a UAV link. If the enemy has lowered the UAV's power, the real J/S is higher than the number says. Say so.
+- `js` builds the target from what you state: `f`, `waveform`, `tx` and `txKind`, with a standard 25 kHz, 16 kbps channel. It reads nothing of the enemy's real nets, so take `f` and `waveform` from the picture's signature and say which track they came from.
+- The jammer is your own `ew` at its current position. The calls do not move it.
 
 ## Facts to know
 
 - Spot jamming puts the jammer's power on the target's channel. It is the cheapest mode and works against a fixed-frequency net. It does almost nothing against a hopper, which leaves the channel each dwell.
-- Barrage spreads power over the band, so J/S at the victim falls by the ratio of band to channel. Against a hopper it hits every hop but weakly: on `red-cmd` the example above gives J/S around -30 dB, a failed jam. Use barrage only when the victim is close to the jammer and the net is wide.
+- Barrage spreads power over the band, so J/S at the victim falls by the ratio of band to channel. Against a hopper it hits every hop but weakly: on a 45 MHz hopper the example above gives J/S around -30 dB, a failed jam. Use barrage only when the victim is close to the jammer and the net is wide.
 - A follower finds a hopper's current channel and jams it. It wins only if it reacts within a fraction of the dwell. Against slow hopping (100 hops a second) it hits most hops (the example gives a fraction near 0.94 and J/S around 4 dB). Against fast hopping (32 000 hops a second) it arrives too late.
 - DSSS spreads the signal over a wide channel, so it carries processing gain against a jammer: the jammer must overcome the gain, or spread its own power wide and lose it. A DSSS link needs far more jammer power. Spot jamming is the wrong tool against it, and the right answer may be that jamming is not worth its cost.
 - A jammer's power divides across its band overlap. Partial band, multitone, pulse (duty cycle) and swept modes trade fraction against J/S. Sync jams only packet headers.
-- Front-end overload: a loud jammer near our own receivers desensitises them. Our own sensors and nets close to `b-ew` suffer collateral. Check `analyse/link` with the cell `ewp` before recommending a jammer next to our own nets.
+- Front-end overload: a loud jammer near our own receivers desensitises them. Our own sensors and nets close to `ew` suffer collateral. Check `analyse/link` with the cell `ewp` before recommending a jammer next to our own nets.
 - The jammer is the loudest emitter on the map: 200 W against a squad's 5 W. While it jams, any enemy sensor within reach hears it, and it can be fixed. The `coverage` call shows the reach: the example above puts it above -100 dBm in about 16 000 hexes. Moving the jammer after it is found is slow.
 - A jammer does not help our own fixes. It denies the enemy's reports. Against a UAV, a report is lost only when J/S at the enemy HQ is above 0 for that burst. The enemy's reply is to raise power, which makes the UAV easy to hear. Count that as a gain for the intelligence cell.
-- An order to the EW team goes over its own net (`blue-ew`, 56 MHz): the order and its acknowledgement are two short transmissions. A jam order takes effect the minute it arrives.
+- An order to the EW team goes over its own net (56 MHz): the order and its acknowledgement are two short transmissions. A jam order takes effect the minute it arrives.
 
 ## When to start and stop
 

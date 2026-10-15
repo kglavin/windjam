@@ -58,12 +58,60 @@ describe('analyse', () => {
   it('js: blue EW team spot-jamming red-cmd gives positive J/S 1 km from the jammer', () => {
     const rx = east(posOf(s, 'b-ew'), 2);
     const tx = posOf(s, 'r-hq');
-    const r = analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', netId: 'red-cmd', rx, tx });
+    const r = analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', rx, tx, freqMHz: 60, waveform: 'fixed' });
     expect(r.jsDb).toBeGreaterThan(0);
     expect(r.fraction).toBeGreaterThan(0);
     expect(r.nearJammedShare).toBeGreaterThan(0);
-    expect(() => analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', netId: 'red-cmd', rx })).toThrow('give tx');
+    expect(() => analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', rx, freqMHz: 60, waveform: 'fixed' })).toThrow('give tx');
+    expect(() => analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', rx, tx, waveform: 'fixed' })).toThrow('freqMHz');
+    expect(() => analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', rx, tx, freqMHz: 60, waveform: 'wide' })).toThrow('waveform');
     expect(unitById(s.world, 'b-ew')!.jammer!.mode).toBe('off');
+  });
+
+  it('js: an enemy target described by the caller does not read the enemy net', () => {
+    const rx = east(posOf(s, 'b-ew'), 2);
+    const tx = posOf(s, 'r-hq');
+    const call = (st: MissionState) => analyseJs(st, 'blue', { jammer: 'b-ew', mode: 'spot', rx, tx, freqMHz: 60, waveform: 'fixed' });
+    const moved: MissionState = {
+      ...s,
+      world: {
+        ...s.world,
+        nets: s.world.nets.map((n) => (n.side === 'red' ? { ...n, freqMHz: n.freqMHz + 9, waveform: { kind: 'dsss' as const, chipRateMcps: 5 } } : n)),
+      },
+    };
+    expect(call(moved)).toEqual(call(s));
+  });
+
+  it('js: a netId naming an enemy net is rejected, by id or alias', () => {
+    const rx = east(posOf(s, 'b-ew'), 2);
+    const tx = posOf(s, 'r-hq');
+    expect(() => analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', netId: 'red-cmd', rx, tx })).toThrow('freqMHz and waveform');
+    expect(() => analyseJs(s, 'red', { jammer: 'ew', mode: 'spot', netId: 'blue-cmd', rx, tx })).toThrow('freqMHz and waveform');
+  });
+
+  it('aliases give the same results as engine ids', () => {
+    expect(analyseLink(s, 'blue', { netId: 'cmd', a: 'hq', b: 'sq1' })).toEqual(analyseLink(s, 'blue', { netId: 'blue-cmd', a: 'b-hq', b: 'b-sq1' }));
+    expect(analyseCoverage(s, 'blue', { unit: 'sq2' })).toEqual(analyseCoverage(s, 'blue', { unit: 'b-sq2' }));
+    const at = posOf(s, 'b-sq2');
+    expect(analyseDetect(s, 'blue', { sensor: 'sq2', at: east(at, 10), kind: 'squad' })).toEqual(
+      analyseDetect(s, 'blue', { sensor: 'b-sq2', at: east(at, 10), kind: 'squad' }),
+    );
+    const rx = east(posOf(s, 'b-ew'), 2);
+    const tx = posOf(s, 'r-hq');
+    expect(analyseJs(s, 'blue', { jammer: 'ew', mode: 'spot', rx, tx, freqMHz: 60, waveform: 'fixed' })).toEqual(
+      analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', rx, tx, freqMHz: 60, waveform: 'fixed' }),
+    );
+    expect(analyseJs(s, 'blue', { jammer: 'ew', mode: 'spot', netId: 'cmd', rx, tx })).toEqual(
+      analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', netId: 'blue-cmd', rx, tx }),
+    );
+    expect(() => analyseLink(s, 'blue', { netId: 'cmd', a: 'hq', b: 'r-hq' })).toThrow('not your unit');
+  });
+
+  it('js: txKind drone gives a higher J/S at the same receiver than txKind hq', () => {
+    const rx = east(posOf(s, 'b-ew'), 2);
+    const tx = posOf(s, 'r-hq');
+    const run = (txKind: 'hq' | 'drone') => analyseJs(s, 'blue', { jammer: 'b-ew', mode: 'spot', rx, tx, txKind, freqMHz: 60, waveform: 'fixed' });
+    expect(run('drone').jsDb).toBeGreaterThan(run('hq').jsDb);
   });
 
   it('fix: two sites 10 km apart at 90 degrees fix, a third lowers CEP, near-parallel gives none', () => {
@@ -97,7 +145,7 @@ describe('analyse', () => {
       analyseLink(st, 'blue', { netId: 'blue-cmd', a: 'b-hq', b: 'b-sq1' }),
       analyseCoverage(st, 'blue', { unit: 'b-hq' }),
       analyseDetect(st, 'blue', { sensor: 'b-sq1', at: east(posOf(s, 'b-sq1'), 10), kind: 'squad' }),
-      analyseJs(st, 'blue', { jammer: 'b-ew', mode: 'spot', netId: 'red-cmd', rx: east(posOf(s, 'b-ew'), 2), tx: posOf(s, 'r-hq') }),
+      analyseJs(st, 'blue', { jammer: 'b-ew', mode: 'spot', rx: east(posOf(s, 'b-ew'), 2), tx: posOf(s, 'r-hq'), freqMHz: 60, waveform: 'fixed' }),
       analyseFix(st, 'blue', { bearings }, { add: { col: 70, row: 80 } }),
     ];
     expect(run(moved)).toEqual(run(s));

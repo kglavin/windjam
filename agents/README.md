@@ -86,12 +86,14 @@ An order cannot reach a UAV on a silent sortie: `send uav: ...` is refused with 
 
 (The other analyses are `path`, `link`, `coverage`, `detect`, `js` and `fix`.)
 
+Analysis parameters take the calling side's console aliases as well as engine ids: units (`a`, `b`, `unit`, `sensor`, `jammer`) as `hq`, `sq2`, `ew`, nets (`net`) as `cmd`, `retrans`, `uavlink`. An enemy net is never named. `/analyse/js` describes an enemy target by what the side's picture shows: `f=<MHz>` and `waveform=fixed|slow|fast|dsss` (`65 MHz UAV link` is `fixed`, `65 MHz DSSS` is `dsss`, `hopper` is `slow` or `fast`), `tx=col,row` for the transmitter and `txKind=hq|squad|relay|civil|jammer|drone` (default `hq`; `drone` for a UAV link, at the mission's 2 W link power). The server builds a stand-in 25 kHz, 16 kbps net from them and reads no enemy net. `net=` naming an enemy net answers 400. `net=` for an own net still works.
+
 A commander can task a staff of up to four roles: `es` (ES analyst, intelligence cell), `ewa` (EW officer, electronic attack), `ewp` (EW officer, electronic protection and own comms), `ops` (operations planner). Staff agents poll, call `/analyse/*` freely, and never transmit. They take no part in turn gating: the commander waits for the answers it wants before ending its turn.
 
 | Call | What it does |
 |---|---|
 | `POST /blue/ask` `{"role":"es","question":"..."}` | The commander tasks a role. Returns `{id, side, role, question, turn, minute, askedAt}` with `id` `t1`, `t2`, ... 400 for an unknown role or empty question |
-| `GET /blue/staff?role=es&after=N` | The analyst's view: `open` (taskings of that role with no answer, numbered above `N`), `answered` (its last 5 with answers), and the commander's `status`, `minute`, `turn`, `status_lines` and `picture` |
+| `GET /blue/staff?role=es&after=N` | The analyst's view: `open` (taskings of that role with no answer, numbered above `N`), `answered` (its last 5 with answers), and the commander's `status`, `minute`, `turn`, `status_lines` and `picture`. For `role=ops` it also returns `cell`: every answered tasking of the side from this turn and last, whatever the role |
 | `POST /blue/staff/es` `{"id":"t1","answer":"..."}` | Answer a tasking. 404 for an unknown id or another role's tasking, 409 if already answered |
 
 `GET /state?side=blue` gains `staff`: the side's taskings of this turn and the last, each `{id, role, question, answer?, turn}`. The archive records every tasking with its answer (`staff`) and the number of `/analyse` calls per side (`analyses`); `npm run games` prints both as `analyses b/r` and `asks b/r`.

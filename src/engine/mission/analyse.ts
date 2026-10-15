@@ -18,8 +18,9 @@ import {
   sensorLook,
   type Hypothesis,
 } from '../analysis';
-import { RADIO_PRESETS, type JammerMode, type Unit, type UnitKind } from '../units';
+import { RADIO_PRESETS, type JammerMode, type Net, type Unit, type UnitKind, type Waveform } from '../units';
 import { jammers as jammersOf, netById, unitById } from '../world';
+import { NET_ALIASES, UNIT_ALIASES } from './commands';
 import { motion, nextTransmission, predict, reportingPeriod, type KmFix } from './pattern';
 import { MISSION_RULES, type MissionState, type PlayerSide, type Track } from './types';
 
@@ -58,7 +59,24 @@ function hexAt(s: MissionState, p: Pos, what: string): Hex {
   return h;
 }
 
-function ownUnit(s: MissionState, side: PlayerSide, id: string, what = 'unit'): Unit {
+// The side's console aliases (sq2, ew, cmd, uavlink) as well as engine ids.
+const unitId = (side: PlayerSide, id: string): string => UNIT_ALIASES[side][id] ?? id;
+const netIdOf = (side: PlayerSide, id: string): string => NET_ALIASES[side][id] ?? id;
+
+// The waveform words of the console (<net>: waveform fixed|slow|fast|dsss), as engine waveforms.
+const WAVEFORMS: Record<string, Waveform> = {
+  fixed: { kind: 'fixed' },
+  slow: { kind: 'fh', hopsPerSec: 100 },
+  fast: { kind: 'fh', hopsPerSec: 32000 },
+  dsss: { kind: 'dsss', chipRateMcps: 5 },
+};
+
+// The scenario's standard net: 25 kHz at 16 kbps.
+const STANDARD_BANDWIDTH_KHZ = 25;
+const STANDARD_DATA_RATE_KBPS = 16;
+
+function ownUnit(s: MissionState, side: PlayerSide, alias: string, what = 'unit'): Unit {
+  const id = unitId(side, alias);
   const u = unitById(s.world, id);
   if (!u) throw new Error(`no ${what} ${id}`);
   if (u.side !== side) throw new Error(`${id} is not your unit`);
@@ -107,7 +125,7 @@ export function analysePath(
 export function analyseLink(s: MissionState, side: PlayerSide, p: { netId: string; a: string; b: string }) {
   const a = ownUnit(s, side, p.a);
   const b = ownUnit(s, side, p.b);
-  const net = netById(s.world, p.netId);
+  const net = netById(s.world, netIdOf(side, p.netId));
   if (!net || net.side !== side) throw new Error(`${p.netId} is not your net`);
   if (a.id === b.id) throw new Error('a and b must be different units');
   for (const u of [a, b]) if (!net.memberIds.includes(u.id)) throw new Error(`${u.id} is not a member of ${net.id}`);
@@ -176,27 +194,62 @@ export function analyseDetect(s: MissionState, side: PlayerSide, p: { sensor: st
 }
 
 // One of the side's jammers in a chosen mode against a net, seen from a receiver position.
-// The net's hub is the transmitter. When the hub is not the side's own unit its position is unknown to the side, so
-// the caller states it as `tx`.
-export function analyseJs(s: MissionState, side: PlayerSide, p: { jammer: string; mode: JammerMode; netId: string; rx: Pos; tx?: Pos }) {
+// Own net (netId): the net and its hub are read from the world. Enemy net: nothing of it is read. The caller describes
+// it as the picture shows it (freqMHz, waveform) and states where the transmitter is (tx) and what kind it is
+// (txKind, default hq; drone for a UAV link), and a stand-in two-member net is built from that.
+export function analyseJs(
+  s: MissionState,
+  side: PlayerSide,
+  p: { jammer: string; mode: JammerMode; rx: Pos; netId?: string; tx?: Pos; txKind?: UnitKind; freqMHz?: number; waveform?: string },
+) {
   const unit = ownUnit(s, side, p.jammer, 'jammer');
   if (!unit.jammer) throw new Error(`${unit.id} has no jammer`);
   if (!JAMMER_MODES.includes(p.mode)) throw new Error(`mode must be one of ${JAMMER_MODES.join(', ')}`);
-  const net = netById(s.world, p.netId);
-  if (!net) throw new Error(`no net ${p.netId}`);
   const rx = hexAt(s, p.rx, 'rx');
-  const hub = net.hubId ? unitById(s.world, net.hubId) : undefined;
+  const kind = p.txKind ?? 'hq';
+  if (!(kind in RADIO_PRESETS)) throw new Error(`txKind must be one of ${Object.keys(RADIO_PRESETS).join(', ')}`);
+  // The drone preset is a receiver (0 W): a UAV's link transmits at the mission's link power.
+  const txPower = kind === 'drone' ? MISSION_RULES.uavLinkW : undefined;
+  let net: Net;
+  let nets: Net[];
   let txUnit: Unit;
-  if (hub && hub.side === side) txUnit = hub;
-  else if (p.tx) txUnit = hypothesisUnit({ pos: hexAt(s, p.tx, 'tx'), kind: 'hq' });
-  else throw new Error(`the transmitter of ${net.id} is not yours: give tx as a position`);
+  if (p.netId) {
+    const own = netById(s.world, netIdOf(side, p.netId));
+    if (!own) throw new Error(`no net ${p.netId}`);
+    if (own.side !== side) throw new Error(`${p.netId} is not your net: describe an enemy net by freqMHz and waveform (with tx and txKind)`);
+    const hub = own.hubId ? unitById(s.world, own.hubId) : undefined;
+    if (hub && hub.side === side) txUnit = hub;
+    else if (p.tx) txUnit = hypothesisUnit({ pos: hexAt(s, p.tx, 'tx'), kind, powerW: txPower });
+    else throw new Error(`the transmitter of ${own.id} is not yours: give tx as a position`);
+    net = own;
+    nets = s.world.nets;
+  } else {
+    if (!p.tx) throw new Error('give tx as a position');
+    if (!(p.freqMHz !== undefined && p.freqMHz > 0)) throw new Error('freqMHz must be a positive number');
+    const waveform = WAVEFORMS[p.waveform ?? ''];
+    if (!waveform) throw new Error(`waveform must be one of ${Object.keys(WAVEFORMS).join(', ')}`);
+    txUnit = hypothesisUnit({ pos: hexAt(s, p.tx, 'tx'), kind, powerW: txPower });
+    net = {
+      id: 'stated-net',
+      name: 'stated net',
+      side: 'neutral',
+      topology: 'hub',
+      hubId: txUnit.id,
+      memberIds: [txUnit.id, 'stated-rx'],
+      freqMHz: p.freqMHz,
+      bandwidthKHz: STANDARD_BANDWIDTH_KHZ,
+      dataRateKbps: STANDARD_DATA_RATE_KBPS,
+      waveform,
+    };
+    nets = [net];
+  }
   const jammer: Unit = { ...unit, jammer: { ...unit.jammer, mode: p.mode, targetNetId: net.id } };
   const squad = RADIO_PRESETS.squad;
   const map = s.world.map;
   const tx = { pos: txUnit.pos, powerW: txUnit.radio.powerW, antennaHeightM: txUnit.radio.antennaHeightM, gainDbi: txUnit.radio.gainDbi, freqMHz: net.freqMHz };
   // Far enough to include every hex within JS_NEAR_KM of rx.
   const reach = hexDistanceKm(map, tx.pos, rx) + JS_NEAR_KM;
-  const grid = jsCoverageMap(map, tx, { antennaHeightM: squad.antennaHeightM, gainDbi: squad.gainDbi }, jammer, net, s.world.nets, reach);
+  const grid = jsCoverageMap(map, tx, { antennaHeightM: squad.antennaHeightM, gainDbi: squad.gainDbi }, jammer, net, nets, reach);
   const here = grid[hexKey(rx)];
   const near = Object.entries(grid).filter(([k]) => hexDistanceKm(map, rx, map.tiles[k].hex) <= JS_NEAR_KM);
   return {
