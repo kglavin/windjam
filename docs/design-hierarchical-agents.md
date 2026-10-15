@@ -372,7 +372,7 @@ Status, as of the latest merge on main:
 | WP-1.9 | done | `/full` polling is left out of the call audit |
 | WP-1.10 | done | writing the briefs found seven inconsistencies; four become WP-1.11 |
 | WP-1.11 | done | an EW team not jamming now radiates its acknowledgements (it was silent because a jammer's emissions were only its jam band) |
-| WP-1.12 | in progress | same-turn delivery, from the first C2 game |
+| WP-1.12 | done | same-turn delivery, from the first C2 game; review made the unit view show each order once, and a late order only after the tick it arrives in (the server records the orders a unit had in view when it ended its turn) |
 | WP-2.1 | done | |
 | WP-2.2 to 2.5 | done | logic in `src/engine/mission/analyse.ts`; `analyseLink` scores the direct path only and uses the side's own jammers only |
 | WP-2.6 | done | |
