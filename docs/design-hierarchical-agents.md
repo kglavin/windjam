@@ -361,6 +361,23 @@ Conventions every package follows:
 
 Size: S is under 100 lines and one session; M is a few hundred lines and a session with tests; L is a day and needs review.
 
+Status, as of the latest merge on main:
+
+| Package | State | Notes from review |
+|---|---|---|
+| WP-1.1 to 1.5 | done | `memberLink` searches every hub net of the side (a UAV has its own); order bursts follow the link used; a lost order is an `'hq'` event, not an error |
+| WP-1.6, 1.7 | done | |
+| WP-1.7b | done | site error is a fixed bias per (sensor, emitter); mission 01 gained a third pair of bearings to keep winning |
+| WP-1.8 | done | auto units execute after the delivery loop; the commander keeps direct control of HQ itself in C2 mode |
+| WP-1.9, 1.10 | in progress | |
+| WP-2.1 | done | |
+| WP-2.2 to 2.5 | done | logic in `src/engine/mission/analyse.ts`; `analyseLink` scores the direct path only and uses the side's own jammers only |
+| WP-2.6 | done | |
+| WP-5.1 | done | |
+| everything else | not started | |
+
+Found while reviewing, fixed on main: `marcumQ1` under-resolved its integral at high SNR, so detection probability fell to 0.995 at 55 dB; it now integrates the miss probability above threshold.
+
 ### WP-1: orders over the net (Part 1, section 3)
 
 WP-1.1 (S) `OrderMessage` in `src/engine/mission/types.ts` as written in section 3, plus `messages: OrderMessage[]` on `MissionState`, initialised `[]` in `createMission` and copied in `clone()`. Test: a created mission has `messages` equal to `[]`.
