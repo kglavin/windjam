@@ -18,9 +18,9 @@ import {
   sensorLook,
   type Hypothesis,
 } from '../analysis';
-import { RADIO_PRESETS, type JammerMode, type Net, type Unit, type UnitKind, type Waveform } from '../units';
+import { RADIO_PRESETS, type JammerMode, type Net, type Unit, type UnitKind } from '../units';
 import { jammers as jammersOf, netById, unitById } from '../world';
-import { NET_ALIASES, UNIT_ALIASES } from './commands';
+import { NET_ALIASES, UNIT_ALIASES, WAVEFORMS } from './commands';
 import { motion, nextTransmission, predict, reportingPeriod, type KmFix } from './pattern';
 import { MISSION_RULES, type MissionState, type PlayerSide, type Track } from './types';
 
@@ -62,14 +62,6 @@ function hexAt(s: MissionState, p: Pos, what: string): Hex {
 // The side's console aliases (sq2, ew, cmd, uavlink) as well as engine ids.
 const unitId = (side: PlayerSide, id: string): string => UNIT_ALIASES[side][id] ?? id;
 const netIdOf = (side: PlayerSide, id: string): string => NET_ALIASES[side][id] ?? id;
-
-// The waveform words of the console (<net>: waveform fixed|slow|fast|dsss), as engine waveforms.
-const WAVEFORMS: Record<string, Waveform> = {
-  fixed: { kind: 'fixed' },
-  slow: { kind: 'fh', hopsPerSec: 100 },
-  fast: { kind: 'fh', hopsPerSec: 32000 },
-  dsss: { kind: 'dsss', chipRateMcps: 5 },
-};
 
 // The scenario's standard net: 25 kHz at 16 kbps.
 const STANDARD_BANDWIDTH_KHZ = 25;

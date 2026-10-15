@@ -40,7 +40,8 @@ const COMPASS: Record<string, number> = {
   nw: 315, northwest: 315,
 };
 
-const WAVEFORMS: Record<string, Waveform> = {
+// The waveform words of the console (<net>: waveform fixed|slow|fast|dsss); the analyses describe enemy nets with them too.
+export const WAVEFORMS: Record<string, Waveform> = {
   fixed: { kind: 'fixed' },
   slow: { kind: 'fh', hopsPerSec: 100 },
   fast: { kind: 'fh', hopsPerSec: 32000 },
