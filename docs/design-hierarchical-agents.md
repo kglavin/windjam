@@ -447,6 +447,13 @@ WP-2.1 (S) `src/engine/analysis.ts`: a module that re-exports the engine functio
 
 Endpoint logic for WP-2.2 to WP-2.7 lives in `src/engine/mission/analyse.ts` as pure functions `(state, side, params) => result` with their own tests; `serve.ts` only parses query strings and routes to them, and the MCP server (WP-3.4) and the embedded tools (Part 3) call the same functions. None of them edits `mission.ts`.
 
+WP-2.11a (M) Analysis fixes found writing the staff briefs (WP-2.10):
+- **No truth through enemy nets.** An analysis that concerns an enemy net never reads that net's real frequency, waveform or members. The caller describes it instead: `freqMHz` and `waveform` (`fixed`, `slow`, `fast`, `dsss`), as the side's picture shows the signature. `analyseJs` takes `{ jammer, mode, rx, tx, txKind?, freqMHz, waveform }` for an enemy target and builds a stand-in net from them; for an own net, `netId` still works. `analyseLink` stays own-nets only. A test moves the enemy net to a new frequency and waveform in `s.world` and checks the enemy-target results do not change.
+- **Aliases.** Every unit and net parameter of the analyse functions accepts the side's console aliases (`sq2`, `ew`, `uavlink`) as well as engine ids, resolved through `UNIT_ALIASES` and `NET_ALIASES` for the calling side.
+- **Transmitter class.** `analyseJs` takes `txKind` (default `hq`) so a jamming estimate against a UAV uses the drone's radio, not an HQ's.
+- **Ops sees the cell's answers.** `GET /<side>/staff?role=ops` also returns every answered tasking of the side from the current and previous turn, whatever the role.
+The staff briefs are updated to match (no engine ids needed; describe an enemy net by what the picture shows). Depends on WP-2.4, WP-2.8, WP-2.10.
+
 WP-2.2 (M) `GET /analyse/path` and `GET /analyse/link` in `serve.ts`: parse `from`, `to` as `col,row`; `f` in MHz; for `link`, `a` and `b` must be the side's own unit ids (else 400) and the net the side's; return `analyzePath`'s profile summary (loss, line of sight, worst obstacle) and `linkBudget` plus `orderDelivery`. Depends on WP-2.1. Test: `scripts/smoke-analyse.sh` checks a known pair on seed 1234 returns `lineOfSight` and a finite loss.
 
 WP-2.3 (M) `GET /analyse/coverage` and `GET /analyse/detect`: coverage for an own unit by id, or for a hypothesis (`at`, `powerW`, `antennaM`, `f`); detect takes `sensor` (own unit id) and a hypothesis; return summaries by default (count of hexes above a threshold, the ten strongest, max range) and the full grid only with `full=1`. Depends on WP-2.1. Test: the hypothesis at an own unit's position gives the same numbers as the unit itself.
