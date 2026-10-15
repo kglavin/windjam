@@ -1,6 +1,7 @@
 // Tabulate archived games: npm run games [-- games/]
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { c2Stats, type C2Stats, type ArchivedC2, type PerSide } from '../src/engine/mission/c2stats';
 
 const dir = process.argv[2] ?? 'games';
 let files: string[] = [];
@@ -15,7 +16,7 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-interface Record_ {
+interface Record_ extends ArchivedC2 {
   mission: string;
   seed: number;
   turnMin: number;
@@ -31,14 +32,32 @@ const rows = files.map((f) => {
   const r = JSON.parse(readFileSync(join(dir, f), 'utf8')) as Record_;
   const blueOrders = r.orders.filter((o) => o.side === 'blue').length;
   const redOrders = r.orders.filter((o) => o.side === 'red').length;
-  return { file: f, ...r, blueOrders, redOrders };
+  return { file: f, ...r, blueOrders, redOrders, stats: c2Stats(r) };
+});
+
+// "b/r" for a per-side count, "-" when the record has no messages (archives older than WP-1.9).
+const pair = (v: PerSide<number> | undefined) => (v ? `${v.blue}/${v.red}` : '-');
+const delay = (v: PerSide<number | undefined> | undefined) => {
+  if (!v) return '-';
+  const f = (n: number | undefined) => (n === undefined ? '-' : n.toFixed(1));
+  return `${f(v.blue)}/${f(v.red)}`;
+};
+const cells = (st: C2Stats | undefined) => ({
+  sent: pair(st?.sent),
+  onTime: pair(st?.onTime),
+  late: pair(st?.late),
+  lost: pair(st?.lost),
+  delay: delay(st?.meanDelayMin),
 });
 
 const pad = (s: string | number, n: number) => String(s).padEnd(n);
-console.log(`${pad('finished', 20)} ${pad('mission', 8)} ${pad('seed', 7)} ${pad('turn', 5)} ${pad('end', 5)} ${pad('winner', 7)} ${pad('orders b/r', 11)} blue summary`);
+console.log(
+  `${pad('finished', 20)} ${pad('mission', 8)} ${pad('seed', 7)} ${pad('turn', 5)} ${pad('end', 5)} ${pad('winner', 7)} ${pad('orders b/r', 11)} ${pad('sent b/r', 9)} ${pad('on time b/r', 11)} ${pad('late b/r', 9)} ${pad('lost b/r', 9)} ${pad('delay b/r', 11)} blue summary`,
+);
 for (const r of rows) {
+  const c = cells(r.stats);
   console.log(
-    `${pad(r.finishedAt.slice(0, 19).replace('T', ' '), 20)} ${pad(r.mission, 8)} ${pad(r.seed, 7)} ${pad(r.turnMin, 5)} ${pad(`T+${r.endedAt}`, 5)} ${pad(r.winner, 7)} ${pad(`${r.blueOrders}/${r.redOrders}`, 11)} ${r.summary.blue[0] ?? ''}`,
+    `${pad(r.finishedAt.slice(0, 19).replace('T', ' '), 20)} ${pad(r.mission, 8)} ${pad(r.seed, 7)} ${pad(r.turnMin, 5)} ${pad(`T+${r.endedAt}`, 5)} ${pad(r.winner, 7)} ${pad(`${r.blueOrders}/${r.redOrders}`, 11)} ${pad(c.sent, 9)} ${pad(c.onTime, 11)} ${pad(c.late, 9)} ${pad(c.lost, 9)} ${pad(c.delay, 11)} ${r.summary.blue[0] ?? ''}`,
   );
 }
 const tally = rows.reduce<Record<string, number>>((a, r) => ({ ...a, [r.winner]: (a[r.winner] ?? 0) + 1 }), {});

@@ -57,6 +57,7 @@ interface Game {
   endedUnits: Set<string>; // C2 unit agents that have ended the current turn, as "blue/sq1"
   unitSince: Record<string, number>; // the minute each unit agent last ended a turn: its view shows what is new since
   history: { turn: number; side: PlayerSide; line: string; minute: number }[]; // every line posted, for the record
+  calls: { turn: number; minute: number; method: string; path: string }[]; // every HTTP call, for the record (never the umpire key)
   archived?: boolean;
 }
 
@@ -76,8 +77,16 @@ function newGame(mission: MissionKind, seed: number, turnMin: number, c2?: C2): 
     if (bad.length) throw new Error(`c2: unknown ${side} unit ${bad.join(', ')}. Units: ${Object.keys(UNIT_ALIASES[side]).join(' ')}`);
   }
   const hasC2 = c2 && (c2.blue || c2.red);
-  return { state: hasC2 ? { ...state, c2 } : state, turnMin, turn: 0, ended: { blue: false, red: false }, endedUnits: new Set(), unitSince: {}, history: [] };
+  return { state: hasC2 ? { ...state, c2 } : state, turnMin, turn: 0, ended: { blue: false, red: false }, endedUnits: new Set(), unitSince: {}, history: [], calls: [] };
 }
+
+// The path as the audit keeps it: the query string without the umpire's key.
+const auditPath = (url: URL): string => {
+  const q = new URLSearchParams(url.searchParams);
+  q.delete('key');
+  const qs = q.toString();
+  return qs ? `${url.pathname}?${qs}` : url.pathname;
+};
 
 const sideOf = (q: URLSearchParams): PlayerSide | undefined => {
   const s = q.get('side');
@@ -346,6 +355,8 @@ function archive(g: Game) {
     finishedAt: new Date().toISOString(),
     c2: s.c2 ?? null,
     messages: s.messages,
+    units: s.world.units.map(({ id, name, side }) => ({ id, name, side })),
+    calls: g.calls,
     orders: g.history,
     console: { blue: consoleSince(g, 'blue', 0).lines, red: consoleSince(g, 'red', 0).lines },
     reveal: revealed.log.filter((e) => e.kind === 'info' && /^Reveal:/.test(e.text)).map((e) => e.text),
@@ -379,6 +390,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const q = url.searchParams;
   if (req.method === 'OPTIONS') return send(res, 204, {});
+  game.calls.push({ turn: game.turn, minute: game.state.minute, method: req.method ?? 'GET', path: auditPath(url) });
   try {
     if (req.method === 'GET' && url.pathname === '/') {
       return send(res, 200, { ...summary(game), endpoints: ['GET /state?side=', 'GET /help?side=', 'POST /blue', 'POST /red', 'POST /blue/end', 'POST /red/end', 'GET /state?side=&unit=', 'POST /<side>/<unit>', 'POST /<side>/<unit>/end', 'POST /<side>/<unit>/report', 'POST /new', 'POST /end', 'GET /full', 'GET /history'] });
