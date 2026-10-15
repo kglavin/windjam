@@ -379,7 +379,8 @@ Status, as of the latest merge on main:
 | WP-2.6 | done | |
 | WP-2.7 | done | exposure ranks by SNR where per-minute detection saturates at 1 (most VHF ranges) |
 | WP-2.8, 2.9 | done | staff state is server-side; `/ask` closes when the mission ends; ids are global across sides |
-| WP-2.10 | in progress | |
+| WP-2.10 | done | writing the briefs found a truth leak (an enemy net named in an analysis was read from the world) and three usability gaps; all four fixed in WP-2.11a |
+| WP-2.11a | done | enemy nets are described by stated frequency and waveform; a test shows the real enemy net no longer matters |
 | A1 (from C2 game 2) | done | an engine refusal moves a parsed line to `rejected`; `wait` is exempt |
 | WP-5.1 | done | |
 | everything else | not started | |
