@@ -109,5 +109,6 @@ Briefs for mission 4 (`--mission uav`), Blue side:
 - [blue-uav.md](blue-uav.md): Blue in mission 4, track the UAV.
 - [red-uav.md](red-uav.md): Red in mission 4, fly the UAV and keep reporting.
 - [hunt.md](hunt.md): either side in mission 5, UAV hunt (`--mission hunt`, long games: `--turn 10`).
+- [staff/es-analyst.md](staff/es-analyst.md), [staff/ew-attack.md](staff/ew-attack.md), [staff/ew-protect.md](staff/ew-protect.md), [staff/ops.md](staff/ops.md): the staff at HQ (roles `es`, `ewa`, `ewp`, `ops`), for any mission with a commander; launch with the staff prompt in [player-prompt.md](player-prompt.md).
 
 Each brief is the whole context a side's agent gets: objective, what it can see, its orders, and tactics worth knowing. Write a new pair for a new mission.
