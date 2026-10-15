@@ -18,8 +18,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { analyseCoverage, analyseDetect, analyseFix, analyseJs, analyseLink, analysePath, type HypothesisParams, type Pos } from '../src/engine/mission/analyse';
 import { HELP, parseCommand } from '../src/engine/mission/commands';
 import { createMission, issue, pictureLines, statusLines, visibleLog } from '../src/engine/mission/mission';
+import type { JammerMode, UnitKind } from '../src/engine/units';
 import type { LogEntry, MissionKind, MissionState, PlayerSide } from '../src/engine/mission/types';
 
 interface Args {
@@ -65,6 +67,60 @@ const sideOf = (q: URLSearchParams): PlayerSide | undefined => {
   const s = q.get('side');
   return s === 'blue' || s === 'red' ? s : undefined;
 };
+
+// Query parsing for /analyse/*: a bad value throws and the route answers 400.
+const need = (q: URLSearchParams, k: string): string => {
+  const v = q.get(k);
+  if (v === null || v === '') throw new Error(`${k} is required`);
+  return v;
+};
+const num = (q: URLSearchParams, k: string): number | undefined => {
+  const v = q.get(k);
+  if (v === null || v === '') return undefined;
+  if (!Number.isFinite(Number(v))) throw new Error(`${k} must be a number`);
+  return Number(v);
+};
+const needNum = (q: URLSearchParams, k: string): number => {
+  const v = num(q, k);
+  if (v === undefined) throw new Error(`${k} is required`);
+  return v;
+};
+const pos = (v: string, k: string): Pos => {
+  const m = /^(-?\d+),(-?\d+)$/.exec(v);
+  if (!m) throw new Error(`${k} must be col,row`);
+  return { col: Number(m[1]), row: Number(m[2]) };
+};
+const needPos = (q: URLSearchParams, k: string): Pos => pos(need(q, k), k);
+const optPos = (q: URLSearchParams, k: string): Pos | undefined => (q.get(k) ? pos(need(q, k), k) : undefined);
+const hypothesis = (q: URLSearchParams): HypothesisParams => ({
+  at: needPos(q, 'at'),
+  kind: need(q, 'kind') as UnitKind,
+  powerW: num(q, 'powerW'),
+  antennaM: num(q, 'antennaM'),
+  freqMHz: num(q, 'f'),
+});
+
+// One analysis call. The logic is in analyse.ts; this only turns a query string into its params.
+function analyse(name: string, side: PlayerSide, q: URLSearchParams): unknown {
+  const s = game.state;
+  switch (name) {
+    case 'path':
+      return analysePath(s, side, { from: needPos(q, 'from'), to: needPos(q, 'to'), freqMHz: needNum(q, 'f'), fromAntennaM: num(q, 'fromAntennaM'), toAntennaM: num(q, 'toAntennaM') });
+    case 'link':
+      return analyseLink(s, side, { netId: need(q, 'net'), a: need(q, 'a'), b: need(q, 'b') });
+    case 'coverage':
+      return analyseCoverage(s, side, q.get('unit') ? { unit: need(q, 'unit') } : hypothesis(q), { minDbm: num(q, 'minDbm'), full: q.get('full') === '1' });
+    case 'detect':
+      return analyseDetect(s, side, { sensor: need(q, 'sensor'), ...hypothesis(q) });
+    case 'js':
+      return analyseJs(s, side, { jammer: need(q, 'jammer'), mode: need(q, 'mode') as JammerMode, netId: need(q, 'net'), rx: needPos(q, 'rx'), tx: optPos(q, 'tx') });
+    case 'fix': {
+      const bearings = q.get('bearings');
+      return analyseFix(s, side, bearings ? { bearings: JSON.parse(bearings) } : { track: need(q, 'track') }, { add: optPos(q, 'add'), addSigmaDeg: num(q, 'sigma') });
+    }
+  }
+  throw new Error(`no such analysis ${name}`);
+}
 
 function waitingFor(g: Game): PlayerSide[] {
   if (g.state.status !== 'running' || g.turnMin <= 0) return [];
@@ -212,6 +268,16 @@ const server = createServer(async (req, res) => {
       const side = sideOf(q);
       if (!side) return send(res, 400, { error: 'side=blue|red' });
       return send(res, 200, { help: HELP[side] });
+    }
+    const an = /^\/analyse\/(\w+)$/.exec(url.pathname);
+    if (req.method === 'GET' && an) {
+      const side = sideOf(q);
+      if (!side) return send(res, 400, { error: 'side=blue|red' });
+      try {
+        return send(res, 200, analyse(an[1], side, q));
+      } catch (e) {
+        return send(res, 400, { error: e instanceof Error ? e.message : String(e) });
+      }
     }
     if (req.method === 'GET' && (url.pathname === '/full' || url.pathname === '/history') && q.get('key') !== UMPIRE_KEY) {
       return send(res, 403, { error: 'umpire only: pass the key the server printed at start (?key=...)' });
