@@ -390,7 +390,8 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const q = url.searchParams;
   if (req.method === 'OPTIONS') return send(res, 204, {});
-  game.calls.push({ turn: game.turn, minute: game.state.minute, method: req.method ?? 'GET', path: auditPath(url) });
+  // The umpire's GUI polls /full every second; the audit is for what the players did.
+  if (url.pathname !== '/full') game.calls.push({ turn: game.turn, minute: game.state.minute, method: req.method ?? 'GET', path: auditPath(url) });
   try {
     if (req.method === 'GET' && url.pathname === '/') {
       return send(res, 200, { ...summary(game), endpoints: ['GET /state?side=', 'GET /help?side=', 'POST /blue', 'POST /red', 'POST /blue/end', 'POST /red/end', 'GET /state?side=&unit=', 'POST /<side>/<unit>', 'POST /<side>/<unit>/end', 'POST /<side>/<unit>/report', 'POST /new', 'POST /end', 'GET /full', 'GET /history'] });
