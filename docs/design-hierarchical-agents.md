@@ -121,7 +121,7 @@ D-auto. Unmanned units execute their inbox literally, so a game can run with few
 Q1. Should a unit be able to message another unit directly (a mesh net exists for Red's squads)? Realistic, more transmissions, more coordination. Leave out of the first build.
 Q2. How much local picture should a unit agent get: raw bearings only, or its own small track table? Start with raw bearings this turn plus the last five it took.
 Q3. Does the commander see the enemy's jamming as such (the EW team's intercept line already names a jammer)? Yes, through the EW team's report when it has a link.
-Q8. The EW teams are on no net today, so HQ cannot order them over the air (WP-1.2 refuses). Options: put them on the hub net (changes link views and balance in missions 2 to 4), give them their own net, or a courier delay. Decide before the staff (Part 2) tasks jamming through orders.
+Q8 (decided). The EW teams are on no net. In C2 mode only, each side gets an EW net: a hub net from HQ to its EW team, `<side>-ew`, fixed frequency (Blue 56 MHz, Red 50 MHz), chatter 0, so it carries orders and acknowledgements and nothing else. Games without C2 keep the world they have, so missions 2 to 4 do not change balance.
 Q4. Token budget: five Haiku units and one Sonnet commander per side, 36 turns at 5 minutes, is roughly 36 × 6 × 2 calls. At the observed 3 000 to 5 000 tokens per call that is about 1.3 million tokens per game. Acceptable for experiments, not for bulk; E4 will tell whether Haiku commanders are enough for bulk runs.
 
 ## Part 2: a staff at HQ, and putting the EW science to work
@@ -369,7 +369,9 @@ Status, as of the latest merge on main:
 | WP-1.6, 1.7 | done | |
 | WP-1.7b | done | site error is a fixed bias per (sensor, emitter); mission 01 gained a third pair of bearings to keep winning |
 | WP-1.8 | done | auto units execute after the delivery loop; the commander keeps direct control of HQ itself in C2 mode |
-| WP-1.9, 1.10 | in progress | |
+| WP-1.9 | done | `/full` polling is left out of the call audit |
+| WP-1.10 | done | writing the briefs found seven inconsistencies; four become WP-1.11 |
+| WP-1.11 | in progress | |
 | WP-2.1 | done | |
 | WP-2.2 to 2.5 | done | logic in `src/engine/mission/analyse.ts`; `analyseLink` scores the direct path only and uses the side's own jammers only |
 | WP-2.6 | done | |
@@ -414,6 +416,14 @@ WP-1.8 (M) Server per-unit endpoints in `scripts/serve.ts`, as in section 4, wit
 - **Turn gating**: the clock advances when every participant has ended: the commander of each side, and each unit listed in `agents`. `POST /<side>/<alias>/end` ends a unit's turn; `waitingFor` lists participants as `blue`, `blue/sq1`, ...
 - **Archive**: the record gains `c2` and `messages`.
 Depends on WP-1.5 and WP-1.7. Tests: engine tests in `c2.test.ts` for `reportNow` (files the heard bearings mid-task; refused on a sortie) and for auto execution (an order `df e 5` to an auto squad starts its DF task at arrival; an unparseable order logs the error); and `scripts/smoke-c2.sh`, which starts the server on a free port with `--c2-blue sq1`, posts `send sq1: df e 5` and `send sq2: df n 5` from `/blue`, ends blue, blue/sq1 and red, then checks that `GET /state?side=blue&unit=sq1` shows the order in `inbox`, that sq2 (auto) is on a DF task in blue's `status`, and that `POST /blue` with `sq1: df e 5` is rejected.
+
+WP-1.11 (M) C2 follow-ups found by writing the briefs (WP-1.10):
+- `enableC2(s, side, agents)` in `mission.ts` sets `s.c2[side]` and adds the side's EW net (Q8), with `s.emcon[netId] = 0`; the server calls it at `/new` instead of setting `c2` itself. Missions without an EW team skip the net.
+- In C2 mode the commander's `status` gains two lines: `Unit agents: sq1, uav. Auto: sq2, sq3, ew.` and `Orders: 5 sent; acknowledged 3 (on time 2, late 1); pending 1 (n4 to sq2 since T+10); lost 1 (n2 to sq3).`
+- `launch` joins the unit verbs in `serve.ts`.
+- `sendOrder` refuses a drone on a silent sortie: `<unit> is on a silent sortie and cannot be reached until it returns.`
+- The C2 briefs and the README are updated to match: jamming is available through `send ew: jam <net>`; receipts are in `status`; a UAV with an agent can `launch`.
+Depends on WP-1.8 and WP-1.10. Tests: an order to `ew` in C2 mode is delivered on the EW net and an auto EW team starts jamming; a game without C2 has no EW net; the status lines; an order to a UAV on a sortie is refused; the smoke script gains a check that `send ew: jam cmd` reaches the EW team.
 
 WP-1.9 (S) Archive: `messages` and the per-call audit (`{ turn, path }`) added to the archive record in `serve.ts`; `scripts/games.ts` gains columns orders sent, on time, late, lost, and mean order-to-action delay (sent minute to the minute the unit's matching order line appears in its log). Depends on WP-1.8.
 
