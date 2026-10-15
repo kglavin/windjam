@@ -274,6 +274,16 @@ describe('c2: auto units', () => {
     expect(visibleLogFor(done, 'b-sq1').some((e) => /DF .* done/.test(e.text))).toBe(true);
   });
 
+  it('an order an auto unit executes is still acknowledged, and so are orders after it in the same minute', () => {
+    // Executing inside the delivery loop once left the loop updating stale copies: acted on, then marked lost.
+    let s = c2(start(), []);
+    s = type(type(s, 'send sq1: df e 5'), 'send sq3: df e 5');
+    s = advance(s, 4);
+    expect(s.orders['b-sq1']?.kind).toBe('df');
+    expect(s.orders['b-sq3']?.kind).toBe('df');
+    expect(s.messages.map((m) => m.status)).toEqual(['on time', 'on time']);
+  });
+
   it('an order to a squad with an agent only waits in its inbox', () => {
     const s = advance(type(c2(start(), ['sq1']), 'send sq1: df e 5'), 1);
     expect(s.orders['b-sq1']).toBeUndefined();

@@ -740,6 +740,9 @@ function autoExecute(s: MissionState, m: number, msg: OrderMessage, unit: Unit) 
 
 // Orders in flight, one minute: decide arrival once at the send minute, hand the order to the unit, send its acknowledgement, and mark orders lost at HQ.
 function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
+  // Auto units act after the bookkeeping: issue() returns a new state with its own copy of messages, so running it
+  // inside this loop would leave the loop updating messages that are no longer in the state.
+  const arrived: { msg: OrderMessage; unit: Unit }[] = [];
   for (const msg of s.messages) {
     if (m === msg.sentMin) {
       const view = memberLink(s, msg.toId, links);
@@ -750,7 +753,7 @@ function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
     const unit = unitById(s.world, msg.toId)!;
     if (m === msg.arriveMin) {
       log(s, 'order', `${unit.name}: order ${msg.n} received: ${msg.text}`, msg.side, unit.id);
-      autoExecute(s, m, msg, unit);
+      arrived.push({ msg, unit });
       const view = memberLink(s, msg.toId, links);
       const netId = view ? (view.route === 'relay' && view.relay ? view.relay.retransNetId : view.link.netId) : s.world.nets.find((n) => n.side === msg.side && n.topology === 'hub')!.id;
       s.bursts.push({ minute: m, unitId: unit.id, netId, what: `ack order ${msg.n}` });
@@ -766,6 +769,7 @@ function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
       log(s, 'hq', `HQ: order ${msg.n} to ${unit.name}: no acknowledgement, lost.`, msg.side); // an event, not a rejected command
     }
   }
+  for (const { msg, unit } of arrived) autoExecute(s, m, msg, unit);
 }
 
 // The orders that have reached a unit since a minute, for the unit's own view.

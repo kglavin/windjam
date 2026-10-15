@@ -61,6 +61,8 @@ R=$(post /blue "sq1: df e 5")
 check "commander unit command rejected" "$(echo "$R" | jq -e '(.accepted | length) == 0 and (.rejected[0] | test("in C2 mode, task units with send <unit>: <order>"))' >/dev/null; echo $?)"
 R=$(post /blue "status")
 check "commander status still accepted" "$(echo "$R" | jq -e '(.accepted | length) == 1' >/dev/null; echo $?)"
+R=$(post /blue "hq: power 20")
+check "commander still sets HQ's own radio" "$(echo "$R" | jq -e '(.accepted | length) == 1' >/dev/null; echo $?)"
 check "no seat for auto unit sq2" "$([ "$(code "$BASE/state?side=blue&unit=sq2")" = 403 ] && [ "$(code -X POST --data-binary 'df e 5' "$BASE/blue/sq2")" = 403 ]; echo $?)"
 check "no seat on a side without C2" "$([ "$(code "$BASE/state?side=red&unit=sq1")" = 403 ]; echo $?)"
 

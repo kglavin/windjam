@@ -208,7 +208,9 @@ function post(g: Game, side: PlayerSide, text: string): { accepted: string[]; re
       rejected.push(`${line}: reveal ends the mission; only the umpire may do that (POST /end)`);
       continue;
     }
-    if (g.state.c2?.[side] && UNIT_COMMANDS.has(p.command.type)) {
+    // The commander sits at HQ, so HQ's own settings and moves stay direct; every other unit is tasked over the net.
+    const target = 'unitId' in p.command ? g.state.world.units.find((u) => u.id === p.command.unitId) : undefined;
+    if (g.state.c2?.[side] && UNIT_COMMANDS.has(p.command.type) && target?.kind !== 'hq') {
       rejected.push(`${line}: in C2 mode, task units with send <unit>: <order>`);
       continue;
     }
