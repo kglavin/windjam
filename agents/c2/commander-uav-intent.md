@@ -83,7 +83,7 @@ Any unit line without `send` (`sq1: df e 5`) is rejected. Do not type `wait`.
 
 The facts below come from five played games, all won by Red. Blue never had two sensors hear the same burst in the same minute, so it never got a fix. Your orders arrive with delay, so plan from turn 1.
 
-Two-sensor rule. Always keep at least two sensors on DF covering the same sector at the same time, from places a few km apart. Then any burst in that sector is heard by both in the same minute and gives a fix. Two sensors at the same site, or on different minutes, give no fix. For agent units, send it as intent: name the sector, the time, and the partner that covers the same sector now.
+Two-sensor rule. Always keep at least two sensors on DF covering the same sector at the same time, from places a few km apart (one hex is 0.5 km, so 3 km is 6 columns; positions are in `status`). Then any burst in that sector is heard by both in the same minute and gives a fix. Two sensors at the same site, or on different minutes, give no fix. For agent units, send it as intent: name the sector, the time, and the partner that covers the same sector now.
 
 ```
 send sq1: go to 130,70, then cover the sector east for 15 minutes, repeating the listening task without a gap; sq2 covers the same sector from the west, so report the first time you hear 65 MHz

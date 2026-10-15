@@ -74,7 +74,7 @@ help
 
 The facts below come from five played games, all won by Red. Blue never had two sensors hear the same burst in the same minute, so it never got a fix. Your orders arrive with delay, so plan from turn 1.
 
-Two-sensor rule. Always keep at least two sensors on DF covering the same sector at the same time, from places a few km apart. Then any burst in that sector is heard by both in the same minute and gives a fix. Two sensors at the same site, or on different minutes, give no fix. Which units can do this early:
+Two-sensor rule. Always keep at least two sensors on DF covering the same sector at the same time, from places a few km apart (one hex is 0.5 km, so 3 km is 6 columns; positions are in `status`). Then any burst in that sector is heard by both in the same minute and gives a fix. Two sensors at the same site, or on different minutes, give no fix. Which units can do this early:
 
 - sq2 is on DF from T+0. Send `send sq2: df e 5` every turn (it is auto and sits idle when a task ends).
 - The UAV on a sortie listens only while on station. Put its station a few km from sq2 and keep legs within 6 km of sq2. Send a sortie each turn it is home, so its 5 minutes on station fall in the same minutes as sq2's DF (`send uav: sortie 126,76 e 5`).
