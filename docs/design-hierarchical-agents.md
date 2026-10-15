@@ -344,3 +344,108 @@ Heightmaps from Operation Flashpoint or Arma are good and their scale fits the h
 5. `plan/relay`, `plan/antenna`, `plan/deploy`, the net plan work product and its map layer.
 6. Track association and pattern of life.
 7. ITM as the second propagation model.
+
+## Part 6: work packages
+
+Status: the implementation breakdown for Parts 1 to 5. Each work package is sized for a small model working alone with this document, the repository and the test suite. A package names its files, its interface, its acceptance test and what it depends on. Packages with no dependency can run in parallel. Nothing here changes the design above; where a package needs a decision the design does not make, the package states the default.
+
+Conventions every package follows:
+
+- Code goes in the file the package names; new engine code gets a `*.test.ts` beside it; `npm test`, `npm run typecheck` and `npm run build` must pass before the package is done.
+- Engine code never reads the truth on a side's behalf: a function that takes a `PlayerSide` sees only that side's picture (`pictureOf`, `visibleWorld`) and its own units.
+- Console lines are added with `log(s, kind, text, side)` and carry the side that may see them.
+- New state fields are copied in `clone()` in `mission.ts` if a turn mutates them; forgetting this leaks mutations between turns (it happened with `blueUav`).
+- Scripts in `missions/` and briefs in `agents/` are updated in the same package as the feature they describe.
+- A package reports what it built, the test names it added, and anything it could not do.
+
+Size: S is under 100 lines and one session; M is a few hundred lines and a session with tests; L is a day and needs review.
+
+### WP-1: orders over the net (Part 1, section 3)
+
+WP-1.1 (S) `OrderMessage` in `src/engine/mission/types.ts` as written in section 3, plus `messages: OrderMessage[]` on `MissionState`, initialised `[]` in `createMission` and copied in `clone()`. Test: a created mission has `messages` equal to `[]`.
+
+WP-1.2 (M) `sendOrder(s, side, toId, text)` in `src/engine/mission/mission.ts`: refuses a `toId` not on the side; creates the message with `n` from a counter, `status: 'pending'`; pushes a burst for the hub (and the relay when the member's route is via the relay, as `send()` does today for mission 2's orders); logs `HQ: order n to <unit> sent.` to the side. Depends on WP-1.1. Test: after `sendOrder`, `s.messages` has one pending message and `s.bursts` has the hub burst at `s.minute`.
+
+WP-1.3 (M) `deliverOrders(s, links)` called in `tick` after the orders loop and before `uavReports(... 'after')`: for each pending message sent at or before `m`, find the member's `LinkView` on the hub net; if `order.status` is `'lost'` leave pending; otherwise set `arriveMin` to `m` for `'on time'` or `m + ceil(latencyS / 60)` for `'late'` (cap 5); when `arriveMin <= m`, push the member's acknowledgement burst, log `<unit>: order n received.` to the side, and set `ackMin` when the acknowledgement's own link status is not lost; a message pending longer than `ackTimeoutMin` (3) since `sentMin` with no `ackMin` becomes `'lost'` with the log `HQ: order n to <unit>: no acknowledgement, lost.` Depends on WP-1.2. Tests: on seed 1234 mission `duel` an order to `r-sq1` is on time; with `s.world` edited so the member is 40 km away, it is lost after 3 minutes; a late order carries `arriveMin > sentMin`.
+
+WP-1.4 (S) `inbox(s, unitId, sinceMin)` returning the messages to that unit with `arriveMin` defined and `>= sinceMin`, and `receipts(s, side)` returning the side's messages with status. Depends on WP-1.3. Test: both reflect WP-1.3's results.
+
+WP-1.5 (S) Console grammar in `src/engine/mission/commands.ts`: `send <unit>: <text>` parses to `{ type: 'order', toId, text }` for either side; the existing bare `send` stays for mission 2. `issue()` routes `order` to `sendOrder`. Depends on WP-1.2. Test: `parseCommand('send sq1: df e 5', 'blue')` returns `toId: 'b-sq1'` and `text: 'df e 5'`.
+
+WP-1.6 (S) Events and the chart: `MissionEvent` gains `{ kind: 'ack', minute, unitId, side, orderN }`; `deliverOrders` records sends (existing `send` event) and acknowledgements; `src/ui/SequenceChart.tsx` draws an acknowledgement as a short arrow from the unit to HQ in the order colour. Depends on WP-1.3. Test: events contain the `ack` after delivery.
+
+WP-1.7 (M) Unit view: `unitStatusLines(s, unitId)` in `mission.ts` (position, link to HQ, current task and its end, inbox since the last turn, intercepts this turn from `events` filtered by `sensorId`) and `visibleLogFor(s, unitId)` (log entries with a new optional `unitId` field equal to this unit, plus entries with no side). `log()` gains an optional `unitId` parameter and the orders loop in `tick` passes the unit's id for its own lines. Depends on WP-1.4. Test: a squad's view shows its DF task line and not another squad's.
+
+WP-1.8 (M) Server per-unit endpoints in `scripts/serve.ts` as in section 4: `GET /state?side=&unit=&after=`, `POST /<side>/<unit>` restricted to the verbs `df move sortie stop burst hold resume route jam decoy power antenna report status help`, `POST /<side>/<unit>/end`, `POST /<side>/<unit>/report` (files held bearings now: calls the existing `file` path through a new exported `reportNow(s, unitId)`), turn gating over commander and every attached unit, `auto` units declared at `/new` that execute their inbox literally and end their turn. Depends on WP-1.5 and WP-1.7. Test: a shell script in `scripts/smoke-c2.sh` that starts the server on a free port, posts an order from `/blue`, ends turns, and checks the unit's `GET /state` inbox contains it.
+
+WP-1.9 (S) Archive: `messages` and the per-call audit (`{ turn, path }`) added to the archive record in `serve.ts`; `scripts/games.ts` gains columns orders sent, on time, late, lost, and mean order-to-action delay (sent minute to the minute the unit's matching order line appears in its log). Depends on WP-1.8.
+
+WP-1.10 (S) Briefs: `agents/c2/commander-uav.md` (explicit variant), `agents/c2/commander-uav-intent.md`, `agents/c2/unit.md` with `{UNIT}` and `{KIND}` placeholders, and a section in `agents/README.md` for the unit protocol. Depends on WP-1.8 for the endpoint names.
+
+### WP-2: analysis endpoints and the staff (Part 2, sections 14 and 17)
+
+WP-2.1 (S) `src/engine/analysis.ts`: a module that re-exports the engine functions the endpoints need and adds `hypothesisUnit(pos, kind, powerW, antennaHeightM, gainDbi)` building a `Unit` for a stated enemy hypothesis (as `probeUnit` does in `coverage.ts`). No side logic yet. Test: a hypothesis unit runs through `sensorLook` without error.
+
+WP-2.2 (M) `GET /analyse/path` and `GET /analyse/link` in `serve.ts`: parse `from`, `to` as `col,row`; `f` in MHz; for `link`, `a` and `b` must be the side's own unit ids (else 400) and the net the side's; return `analyzePath`'s profile summary (loss, line of sight, worst obstacle) and `linkBudget` plus `orderDelivery`. Depends on WP-2.1. Test: `scripts/smoke-analyse.sh` checks a known pair on seed 1234 returns `lineOfSight` and a finite loss.
+
+WP-2.3 (M) `GET /analyse/coverage` and `GET /analyse/detect`: coverage for an own unit by id, or for a hypothesis (`at`, `powerW`, `antennaM`, `f`); detect takes `sensor` (own unit id) and a hypothesis; return summaries by default (count of hexes above a threshold, the ten strongest, max range) and the full grid only with `full=1`. Depends on WP-2.1. Test: the hypothesis at an own unit's position gives the same numbers as the unit itself.
+
+WP-2.4 (M) `GET /analyse/js`: own jammer id, `mode`, target `net` (an enemy net id the side knows from its picture signatures, else any net id the caller states), `rx` as a hypothesis position; return `jsCoverageMap` summarised at `rx` and over the grid. Depends on WP-2.1.
+
+WP-2.5 (M) `GET /analyse/fix?side=&track=` and `POST /analyse/fix` with a bearings array: run `fixFromBearings` on the side's track or on the supplied bearings; with `&add=<col,row>&sigma=` compute the CEP if one more bearing from that site were added with the true bearing to the current fix (dilution of precision). Depends on WP-2.1. Test: adding a site at 90 degrees to a two-bearing baseline lowers the CEP.
+
+WP-2.6 (M) `pattern.ts` in `src/engine/mission/`: `reportingPeriod(minutes: number[])` (best period in 2..15 minutes by phase consistency), `nextTransmission(minutes)`, `motion(fixes: {minute, fix}[])` (speed and heading from the last three fixes), `predict(track, atMinute)`. Pure functions with tests on synthetic series. No dependency.
+
+WP-2.7 (S) `GET /analyse/predict?side=&track=` over WP-2.6, and `GET /analyse/exposure?side=` over `sensorLook` from hypothesised enemy sensors (the side's fixes on enemy units with `kind` from the signature, defaulting to squad parameters). Depends on WP-2.3 and WP-2.6.
+
+WP-2.8 (M) Staff taskings in `serve.ts`: `POST /<side>/ask { role, question }`, `GET /<side>/staff?role=` (open taskings plus the commander's status and picture), `POST /<side>/staff/<role>` (answer text); answers appear under `staff` in `GET /state?side=`; both go in the archive. Roles are the four in section 13. No engine change. Depends on nothing but should land after WP-2.2 so the analysts have something to call.
+
+WP-2.9 (S) Analysis audit: every `/analyse/*` call recorded in the archive as `{ turn, side, endpoint, params }`, and a `games.ts` column for analysis calls per side. Depends on WP-2.2.
+
+WP-2.10 (S) Staff briefs: `agents/staff/es-analyst.md`, `agents/staff/ew-attack.md`, `agents/staff/ew-protect.md`, `agents/staff/ops.md`, each with the endpoints it may call, the answer shape (assessment, recommendation as unit-grammar lines, what would change it), and the section-15 facts for that role written out. Depends on WP-2.7 and WP-2.8 for names.
+
+WP-2.11 (L) Track association: `associate(bearings, signaturesKnown)` in `src/engine/mission/association.ts` producing tracks from bearings by signature, time and geometry with a confidence and the ambiguities listed; a mission flag `association: 'perfect' | 'estimated'` chosen at `createMission`; `merge()` uses the estimated path when set. Needs review of how `Track.id` and scoring interact (scoring uses `emitterId`; under estimation a track may hold two emitters, so scoring must match tracks to emitters by majority). Depends on WP-2.6. This is the one package in WP-2 for a larger model.
+
+### WP-3: harness (Part 3)
+
+WP-3.1 (S) `scripts/agents/tools.ts`: tool definitions with `betaZodTool` for the side console (`state`, `post`, `end_turn`, `help`) wrapping the server endpoints over `fetch`; each tool's description is one sentence; the module exports a factory `sideTools(server, side)`. Depends on the SDK being added to `package.json` (`@anthropic-ai/sdk`, `zod`). Test: a unit test with the server mocked by a tiny `http` stub asserts the tools call the right paths.
+
+WP-3.2 (M) `scripts/agents/player.ts`: one participant process: arguments `--server --side --role --brief --model --effort --turn-cap --token-budget`; builds the system prompt from the brief file with `cache_control` on it; runs the tool runner per turn with the per-turn state as the user message; logs every tool call and result as JSON lines to `games/live/<game>-<role>.jsonl`; stops when the server reports the game over or the caps are hit. Adaptive thinking on, `tool_choice` auto. Depends on WP-3.1. Test: against the `http` stub, a scripted game of two turns completes and the log has the calls.
+
+WP-3.3 (M) `scripts/agents/referee.ts`: starts or attaches to a server, launches participants as child processes from a game spec (`{ mission, seed, turn, blue: { commander: model, units?: model, staff?: {...} }, red: {...} }`), waits for the game to end, moves the live logs into the archive record, prints the outcome. `npm run agents -- spec.json`. Depends on WP-3.2 and, for units and staff, WP-1.8 and WP-2.8. Test: a spec with `--dry-run` prints the processes it would start.
+
+WP-3.4 (M) `scripts/mcp-server.ts`: an MCP server exposing the `/analyse/*` endpoints and the side console as MCP tools, for use from Claude Code or Claude Desktop; configuration takes the server URL, the side and, for the umpire, the key. Depends on WP-2.2 to WP-2.7. Test: `scripts/smoke-mcp.sh` lists the tools.
+
+WP-3.5 (S) Cost accounting: `player.ts` records `usage` per request (input, cache read, output) and the referee sums them per role into the archive; `games.ts` prints tokens per side. Depends on WP-3.2.
+
+### WP-4: planning tools (Part 4)
+
+WP-4.1 (M) `src/engine/plan.ts`: `linkMatrix(world, side)` returning, for every unit of the side, its route to HQ with quality, delivery status and the weakest hop, from `allLinkBudgets` and `routeToHq`-style logic lifted out of `mission.ts` into a world-level function; `GET /plan/links?side=` over it. Test: on seed 4242 before `ensureLinks` ran, three Blue units are reported as lost (use `createScenario` with `ensureLinks` bypassed via an exported option).
+
+WP-4.2 (M) `relayCandidates(world, side, radiusHexes)`: for the side's relay, the ring hexes it may stand on, scored by the number of member routes that become not-lost and by its elevation; `GET /plan/relay?side=`. Reuses `ringHexes` and `linkedToHub` from `scenario.ts` (export them). Depends on WP-4.1.
+
+WP-4.3 (M) `antennaPlan(world, side, minStatus)`: for HQ, relay and any unit with a directional antenna, the pointing and the lowest power that keeps every route at `minStatus`, searched over the power steps 0.1, 0.3, 1, 3, 10 and the current maximum; `GET /plan/antenna?side=`. Depends on WP-4.1.
+
+WP-4.4 (S) `GET /plan/exposure?side=`: the WP-2.7 exposure calculation applied to a proposed deployment supplied in the body (positions and powers) rather than the current one. Depends on WP-2.7.
+
+WP-4.5 (L) `deploySearch(world, side, objective, constraints)`: local search over positions reachable within `constraints.minutes` for the side's sensors, scoring connectivity (WP-4.1), DF geometry (the CEP of a fix on the centre of `objective.area` from the sensors, via WP-2.5's DOP calculation), exposure (WP-4.4) and movement time with caller weights; returns the three best plans with scores; `POST /plan/deploy`. Depends on WP-4.1, WP-2.5, WP-4.4. For a larger model; the scoring function and the search are separable, so a small model can build the scoring first against fixed candidate sets.
+
+WP-4.6 (M) Net plan work product: `NetPlan` type (units, positions, nets, routes, qualities, pointing, power, relay, exposure, orders), `planToMarkdown()` and `planToOrders()` (unit-grammar lines), stored in the archive under `plans`; the GUI's `MapView` gets an optional `plan` prop that draws planned positions and links dashed, toggled from the Layers menu. Depends on WP-4.1 to WP-4.3.
+
+WP-4.7 (L) Pluggable propagation: `analyzePath` takes a `model` from the world (`'engine' | 'itm'`); the ITM implementation ported to TypeScript from the NTIA reference, point-to-point mode, with the terrain profile the engine already extracts; a test comparing the two models on the same profiles and a note on the differences. For a larger model.
+
+### WP-5: terrain (Part 5)
+
+WP-5.1 (S) Map file format and loader: `src/engine/map.ts` gains `loadMap(json)` for `{ hexSizeKm, cols, rows, home, tiles: [{ hex, terrain, elevationM }] }` and `generateMap` stays; `World.map` unchanged. Test: a map round-trips through `JSON.stringify` and `loadMap`.
+
+WP-5.2 (M) `scripts/import-terrain.ts`: takes a height raster and a land-cover raster already clipped and reprojected to a local metric grid (GeoTIFF read with a small dependency, or 16-bit PNG plus a sidecar for scale), bins them to hexes (mean height, majority class, max height kept as `peakM`), writes the map JSON; a README in `maps/` with the GDAL commands to produce the inputs from Copernicus DEM and ESA WorldCover for a bounding box. Depends on WP-5.1. Test: a synthetic raster with a ridge produces mountain hexes along it.
+
+WP-5.3 (S) Scenario on a named map: `createScenario(seed, mapName?)` loads `maps/<name>.json` when given and uses its `home`; the server takes `--map`; the archive records `map`; `games.ts` prints it. Depends on WP-5.1.
+
+WP-5.4 (S) One sample area under a free licence in `maps/` (small, a few hundred kilobytes), its attribution in `maps/README.md`, and a script to download and build it. Depends on WP-5.2.
+
+WP-5.5 (S) GUI: the terrain legend and tooltip show `peakM` when present; the elevation shading uses the map's own range rather than the generated map's 0 to 1500 m. Depends on WP-5.1.
+
+### 36. Order and parallelism
+
+Packages with no dependency, which can start at once and in parallel: WP-1.1, WP-2.1, WP-2.6, WP-2.8, WP-3.1, WP-5.1. The critical path to the first staffed, split-side game is WP-1.1 to WP-1.8, WP-2.2, WP-2.8, WP-2.10, then WP-3.1 to WP-3.3. Planning (WP-4) and terrain (WP-5) are independent of both and can proceed beside them. The three packages marked for a larger model are WP-2.11, WP-4.5 and WP-4.7; everything else is sized for a small one.
