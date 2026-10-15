@@ -232,6 +232,7 @@ function clone(s: MissionState): MissionState {
     events: [...s.events],
     redOrders: s.redOrders.map((o) => ({ ...o })),
     messages: s.messages.map((o) => ({ ...o })),
+    ...(s.c2 ? { c2: { ...s.c2 } } : {}),
     uav: cloneUav(s.uav),
     blueUav: cloneUav(s.blueUav),
     actor: undefined,
@@ -719,6 +720,24 @@ export function sendOrder(s: MissionState, side: PlayerSide, toId: string, text:
 const ACK_TIMEOUT_MIN = 3;
 const ORDER_LATE_CAP_MIN = 5;
 
+// An auto unit (a unit of a C2 side with no agent) carries out an order's text literally the minute it arrives. The command is
+// issued as at minute m, so a DF task that starts here runs for the minutes it was given, from this minute.
+function autoExecute(s: MissionState, m: number, msg: OrderMessage, unit: Unit) {
+  const c2 = s.c2?.[msg.side];
+  const alias = aliasOf(unit.id);
+  if (!c2 || c2.agents.includes(alias)) return;
+  const p = parseCommand(`${alias}: ${msg.text}`, msg.side);
+  if (!p.ok) {
+    log(s, 'error', `${unit.name}: cannot execute order ${msg.n}: ${p.error}`, msg.side, unit.id);
+    return;
+  }
+  const minute = s.minute;
+  s.minute = m;
+  Object.assign(s, issue(s, p.command, msg.side));
+  s.minute = minute;
+  s.actor = undefined;
+}
+
 // Orders in flight, one minute: decide arrival once at the send minute, hand the order to the unit, send its acknowledgement, and mark orders lost at HQ.
 function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
   for (const msg of s.messages) {
@@ -731,6 +750,7 @@ function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
     const unit = unitById(s.world, msg.toId)!;
     if (m === msg.arriveMin) {
       log(s, 'order', `${unit.name}: order ${msg.n} received: ${msg.text}`, msg.side, unit.id);
+      autoExecute(s, m, msg, unit);
       const view = memberLink(s, msg.toId, links);
       const netId = view ? (view.route === 'relay' && view.relay ? view.relay.retransNetId : view.link.netId) : s.world.nets.find((n) => n.side === msg.side && n.topology === 'hub')!.id;
       s.bursts.push({ minute: m, unitId: unit.id, netId, what: `ack order ${msg.n}` });
@@ -1170,19 +1190,19 @@ function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: 
 }
 
 // Log a finished task and send its report to HQ, or hold it if the route is down. Sending is itself a burst.
-function file(s: MissionState, via: Unit, report: Report, what: string, links: LinkView[], who = via.name, ownerId = via.id) {
+function file(s: MissionState, via: Unit, report: Report, what: string, links: LinkView[], who = via.name, ownerId = via.id, at = s.minute - 1) {
   const summary = `${report.bearings.length} emitter${report.bearings.length === 1 ? '' : 's'}, ${report.bearings.reduce((a, b) => a + b.measurements, 0)} measurements`;
   if (report.bearings.length === 0) {
     log(s, 'report', `${who}: ${what}. Nothing heard.`, undefined, ownerId);
     return;
   }
   const hub = s.world.nets.find((n) => n.side === via.side && n.topology === 'hub');
-  if (hub && via.id !== hub.hubId) s.bursts.push({ minute: s.minute - 1, unitId: via.id, netId: hub.id, what: 'DF report' });
+  if (hub && via.id !== hub.hubId) s.bursts.push({ minute: at, unitId: via.id, netId: hub.id, what: 'DF report' });
   const delivered = routeToHq(s, via.id, links).ok;
-  s.events.push({ kind: 'report', minute: s.minute - 1, unitId: via.id, side: via.side as PlayerSide, bearings: report.bearings.length, delivered });
+  s.events.push({ kind: 'report', minute: at, unitId: via.id, side: via.side as PlayerSide, bearings: report.bearings.length, delivered });
   if (delivered) {
     log(s, 'report', `${who}: ${what}. ${summary}. Reported to HQ.`, undefined, ownerId);
-    if (hub?.hubId) s.bursts.push({ minute: s.minute - 1, unitId: hub.hubId, netId: hub.id, what: 'report acknowledged' });
+    if (hub?.hubId) s.bursts.push({ minute: at, unitId: hub.hubId, netId: hub.id, what: 'report acknowledged' });
     merge(s, report);
   } else {
     s.held = [...s.held, report];
@@ -1209,6 +1229,25 @@ function writeReport(s: MissionState, sensor: Unit, sensorPos: Hex, heard: DfAcc
     };
   });
   return { side: sensor.side as PlayerSide, unitId: sensor.id, minute: s.minute, bearings };
+}
+
+// A unit sends what it has heard so far, now. A DF task keeps running with an empty accumulator; a sortie is radio silent.
+// Returns a new state, as issue() does.
+export function reportNow(state: MissionState, unitId: string): MissionState {
+  const s = clone(state);
+  const unit = unitById(s.world, unitId);
+  if (!unit) return s;
+  s.actor = unit.side as PlayerSide;
+  const o = s.orders[unitId];
+  if (o?.kind === 'sortie') log(s, 'error', `${unit.name}: radio silent until it returns.`, undefined, unit.id);
+  else if (o?.kind === 'df') {
+    const rng = createRng((s.seed * 1000003 + s.minute * 7919 + 0x7e9) >>> 0);
+    const report = writeReport(s, unit, unit.pos, Object.values(o.heard), rng);
+    s.orders[unitId] = { ...o, heard: {} };
+    file(s, unit, report, `DF ${sectorLabel(o.centreDeg)} report so far`, allLinkBudgets(s.world), unit.name, unit.id, s.minute);
+  } else log(s, 'info', 'Nothing to report.', undefined, unit.id);
+  s.actor = undefined;
+  return s;
 }
 
 // Does this unit currently have a working path to its HQ? Drones report through their parent.

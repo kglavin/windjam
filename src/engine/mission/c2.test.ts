@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { axialToOffset, offsetToAxial } from '../hex';
 import { allLinkBudgets, unitById } from '../world';
 import { parseCommand } from './commands';
-import { advance, createMission, inbox, issue, memberLink, receipts, sendOrder, unitStatusLines, visibleLog, visibleLogFor } from './mission';
+import { advance, createMission, inbox, issue, memberLink, receipts, reportNow, sendOrder, unitStatusLines, visibleLog, visibleLogFor } from './mission';
 import type { MissionState, PlayerSide } from './types';
 
 const start = () => createMission(1234, 'duel');
@@ -211,5 +211,95 @@ describe('c2: unit view', () => {
     const all = s.world.units.filter((u) => u.side === 'blue').flatMap((u) => unitStatusLines(s, u.id, 0));
     expect(all.some((l) => / heard /.test(l))).toBe(true);
     for (const l of all) for (const r of red) expect(l.includes(r.id) || l.includes(r.name), l).toBe(false);
+  });
+});
+
+describe('c2: reportNow', () => {
+  // All three squads listen east for 20 minutes; return the first one that has heard something by T+10.
+  const heardSquad = (): { s: MissionState; id: string } => {
+    let s = start();
+    for (const sq of ['sq1', 'sq2', 'sq3']) s = type(s, `${sq}: df e 20`);
+    s = advance(s, 10);
+    const id = ['b-sq1', 'b-sq2', 'b-sq3'].find((u) => {
+      const o = s.orders[u];
+      return o?.kind === 'df' && Object.keys(o.heard).length > 0;
+    })!;
+    return { s, id };
+  };
+  const heardOf = (s: MissionState, id: string) => {
+    const o = s.orders[id];
+    return o?.kind === 'df' ? Object.keys(o.heard).length : -1;
+  };
+
+  it('files what a DF task has heard so far, and the task continues', () => {
+    const { s: before, id } = heardSquad();
+    expect(id).toBeDefined();
+    const emitters = heardOf(before, id);
+    const s = reportNow(before, id);
+    const text = visibleLogFor(s, id).filter((e) => e.kind === 'report').map((e) => e.text);
+    expect(text.at(-1)).toMatch(new RegExp(`report so far. ${emitters} emitter.*Reported to HQ`));
+    expect(s.tracks.some((t) => t.bearings.some((b) => b.sensorId === id))).toBe(true);
+    const o = s.orders[id];
+    expect(o?.kind === 'df' && o.endMin === 20).toBe(true);
+    expect(heardOf(s, id)).toBe(0);
+    expect(heardOf(before, id)).toBe(emitters); // the old state is untouched
+    const done = advance(s, 10);
+    expect(visibleLogFor(done, id).some((e) => /DF .* done/.test(e.text))).toBe(true);
+  });
+
+  it('is refused on a sortie', () => {
+    let s = createMission(1234, 'hunt');
+    s = type(s, 'uav: sortie 30,30 e 4');
+    s = advance(s, 1);
+    expect(s.orders['b-uav']?.kind).toBe('sortie');
+    s = reportNow(s, 'b-uav');
+    const last = visibleLogFor(s, 'b-uav').at(-1)!;
+    expect(last).toMatchObject({ kind: 'error', text: 'Blue UAV: radio silent until it returns.' });
+  });
+
+  it('says so when there is nothing to report', () => {
+    const s = reportNow(start(), 'b-sq1');
+    expect(visibleLogFor(s, 'b-sq1').at(-1)!.text).toBe('Nothing to report.');
+  });
+});
+
+describe('c2: auto units', () => {
+  const c2 = (s: MissionState, agents: string[]): MissionState => ({ ...s, c2: { blue: { agents } } });
+
+  it('an order to an auto squad starts its DF task when it arrives', () => {
+    const s = advance(type(c2(start(), []), 'send sq1: df e 5'), 1);
+    expect(s.orders['b-sq1']).toMatchObject({ kind: 'df', centreDeg: 90, startMin: 0, endMin: 5 });
+    expect(s.c2).toEqual({ blue: { agents: [] } });
+    const done = advance(s, 5);
+    expect(visibleLogFor(done, 'b-sq1').some((e) => /DF .* done/.test(e.text))).toBe(true);
+  });
+
+  it('an order to a squad with an agent only waits in its inbox', () => {
+    const s = advance(type(c2(start(), ['sq1']), 'send sq1: df e 5'), 1);
+    expect(s.orders['b-sq1']).toBeUndefined();
+    expect(inbox(s, 'b-sq1', 0)).toHaveLength(1);
+  });
+
+  it('a side not in C2 mode never executes an order', () => {
+    const s = advance(type(c2(start(), []), 'send sq1: df e 5', 'red'), 1);
+    expect(s.orders['r-sq1']).toBeUndefined();
+  });
+
+  it('an unparseable order logs the error and starts nothing', () => {
+    const s = advance(type(c2(start(), []), 'send sq1: dance wildly'), 1);
+    expect(s.orders['b-sq1']).toBeUndefined();
+    const e = visibleLog(s, 'blue').find((x) => /cannot execute order 1/.test(x.text))!;
+    expect(e.kind).toBe('error');
+    expect(e.text).toMatch(/^Blue Squad 1: cannot execute order 1: Unknown order "dance"/);
+  });
+
+  it('text that is not a unit order, such as a wait, does not run', () => {
+    const s = advance(type(c2(start(), []), 'send sq1: wait 5'), 1);
+    expect(s.minute).toBe(1);
+    expect(visibleLog(s, 'blue').some((x) => /cannot execute order 1/.test(x.text))).toBe(true);
+  });
+
+  it('clone keeps c2 across turns', () => {
+    expect(advance(c2(start(), ['sq1']), 3).c2).toEqual({ blue: { agents: ['sq1'] } });
   });
 });

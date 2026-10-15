@@ -19,8 +19,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { analyseCoverage, analyseDetect, analyseFix, analyseJs, analyseLink, analysePath, type HypothesisParams, type Pos } from '../src/engine/mission/analyse';
-import { HELP, parseCommand } from '../src/engine/mission/commands';
-import { createMission, issue, pictureLines, statusLines, visibleLog } from '../src/engine/mission/mission';
+import { HELP, UNIT_ALIASES, parseCommand } from '../src/engine/mission/commands';
+import { createMission, inbox, issue, pictureLines, reportNow, statusLines, unitStatusLines, visibleLog, visibleLogFor } from '../src/engine/mission/mission';
 import type { JammerMode, UnitKind } from '../src/engine/units';
 import type { LogEntry, MissionKind, MissionState, PlayerSide } from '../src/engine/mission/types';
 
@@ -29,7 +29,11 @@ interface Args {
   seed: number;
   turn: number;
   port: number;
+  c2?: C2;
 }
+
+// C2 mode per side: the unit aliases that have an agent. A side with no entry plays with one console, as before.
+type C2 = Partial<Record<PlayerSide, { agents: string[] }>>;
 
 function parseArgs(argv: string[]): Args {
   const a: Args = { mission: 'uav', seed: Math.floor(Math.random() * 1_000_000), turn: 5, port: 8787 };
@@ -40,6 +44,7 @@ function parseArgs(argv: string[]): Args {
     if (k === '--seed') a.seed = Number(v);
     if (k === '--turn') a.turn = Number(v);
     if (k === '--port') a.port = Number(v);
+    if (k === '--c2-blue' || k === '--c2-red') (a.c2 ??= {})[k === '--c2-blue' ? 'blue' : 'red'] = { agents: (v ?? '').split(',').map((x) => x.trim()).filter(Boolean) };
   }
   return a;
 }
@@ -49,6 +54,8 @@ interface Game {
   turnMin: number;
   turn: number; // turns completed
   ended: Record<PlayerSide, boolean>; // sides that have ended the current turn
+  endedUnits: Set<string>; // C2 unit agents that have ended the current turn, as "blue/sq1"
+  unitSince: Record<string, number>; // the minute each unit agent last ended a turn: its view shows what is new since
   history: { turn: number; side: PlayerSide; line: string; minute: number }[]; // every line posted, for the record
   archived?: boolean;
 }
@@ -57,10 +64,19 @@ const GAMES_DIR = join(process.cwd(), 'games');
 const args = parseArgs(process.argv.slice(2));
 // The umpire's key: /full and /history show the whole truth, so a player must not be able to call them.
 const UMPIRE_KEY = process.env.WINDJAM_UMPIRE_KEY ?? Math.random().toString(36).slice(2, 10);
-let game = newGame(args.mission, args.seed, args.turn);
+let game = newGame(args.mission, args.seed, args.turn, args.c2);
 
-function newGame(mission: MissionKind, seed: number, turnMin: number): Game {
-  return { state: createMission(seed, mission), turnMin, turn: 0, ended: { blue: false, red: false }, history: [] };
+function newGame(mission: MissionKind, seed: number, turnMin: number, c2?: C2): Game {
+  const state = createMission(seed, mission);
+  for (const side of ['blue', 'red'] as const) {
+    const entry = c2?.[side];
+    if (!entry) continue;
+    if (!state.humans.includes(side)) throw new Error(`c2: ${side} is not a console in this mission`);
+    const bad = entry.agents.filter((a) => !UNIT_ALIASES[side][a]);
+    if (bad.length) throw new Error(`c2: unknown ${side} unit ${bad.join(', ')}. Units: ${Object.keys(UNIT_ALIASES[side]).join(' ')}`);
+  }
+  const hasC2 = c2 && (c2.blue || c2.red);
+  return { state: hasC2 ? { ...state, c2 } : state, turnMin, turn: 0, ended: { blue: false, red: false }, endedUnits: new Set(), unitSince: {}, history: [] };
 }
 
 const sideOf = (q: URLSearchParams): PlayerSide | undefined => {
@@ -122,9 +138,15 @@ function analyse(name: string, side: PlayerSide, q: URLSearchParams): unknown {
   throw new Error(`no such analysis ${name}`);
 }
 
-function waitingFor(g: Game): PlayerSide[] {
+// Who the clock is waiting for: each side's commander ("blue") and each unit agent of a C2 side ("blue/sq1").
+function waitingFor(g: Game): string[] {
   if (g.state.status !== 'running' || g.turnMin <= 0) return [];
-  return g.state.humans.filter((h) => !g.ended[h]);
+  const out: string[] = [];
+  for (const h of g.state.humans) {
+    if (!g.ended[h]) out.push(h);
+    for (const a of g.state.c2?.[h]?.agents ?? []) if (!g.endedUnits.has(`${h}/${a}`)) out.push(`${h}/${a}`);
+  }
+  return out;
 }
 
 // Lines the side's console shows, with a cursor so a client can ask only for what is new.
@@ -186,6 +208,10 @@ function post(g: Game, side: PlayerSide, text: string): { accepted: string[]; re
       rejected.push(`${line}: reveal ends the mission; only the umpire may do that (POST /end)`);
       continue;
     }
+    if (g.state.c2?.[side] && UNIT_COMMANDS.has(p.command.type)) {
+      rejected.push(`${line}: in C2 mode, task units with send <unit>: <order>`);
+      continue;
+    }
     g.history.push({ turn: g.turn, side, line, minute: g.state.minute });
     g.state = issue(g.state, p.command, side);
     accepted.push(line);
@@ -193,13 +219,109 @@ function post(g: Game, side: PlayerSide, text: string): { accepted: string[]; re
   return { accepted, rejected, lines: consoleSince(g, side, before).lines };
 }
 
+// What a commander in C2 mode may not do: every command that tasks one unit directly.
+const UNIT_COMMANDS = new Set(['df', 'move', 'sortie', 'stop', 'power', 'antenna', 'decoy', 'jam', 'uav']);
+// What a unit agent may post, as the first word of a line.
+const UNIT_VERBS = new Set(['df', 'move', 'sortie', 'stop', 'burst', 'hold', 'resume', 'route', 'jam', 'decoy', 'power', 'antenna']);
+
+const seatOf = (g: Game, side: PlayerSide, alias: string): string | undefined => {
+  const agents = g.state.c2?.[side]?.agents;
+  return agents?.includes(alias) ? UNIT_ALIASES[side][alias] : undefined;
+};
+
+// A unit's console lines since a cursor into the full log: its own lines and the mission-wide ones.
+function unitConsoleSince(g: Game, unitId: string, after: number): { lines: string[]; cursor: number } {
+  const log = g.state.log;
+  const mine = new Set(visibleLogFor(g.state, unitId));
+  const lines: string[] = [];
+  for (let i = after; i < log.length; i++) if (mine.has(log[i])) lines.push(`[T+${String(log[i].minute).padStart(2, '0')}] ${log[i].text}`);
+  return { lines, cursor: log.length };
+}
+
+// The side's command list, cut to what one unit can do, without the unit prefix: the unit agent posts "df e 5".
+function unitHelp(side: PlayerSide, alias: string): string[] {
+  const own = HELP[side].flatMap((l) => {
+    const m = /^(<unit>|\w+):\s+(.*)$/.exec(l);
+    return m && (m[1] === '<unit>' || m[1] === alias) ? [m[2]] : [];
+  });
+  return [...own, 'report                             send what this unit has heard so far to HQ now (a transmission)', 'status                             your position, order, link, inbox and what you heard', 'help                               this list'];
+}
+
+// Apply one unit agent's lines. The server prefixes the unit's alias; only unit verbs, report, status and help pass.
+function postUnit(g: Game, side: PlayerSide, alias: string, text: string): { accepted: string[]; rejected: string[]; lines: string[] } {
+  const unitId = UNIT_ALIASES[side][alias];
+  const accepted: string[] = [];
+  const rejected: string[] = [];
+  const extra: string[] = [];
+  const before = g.state.log.length;
+  // Lines the unit's own command produced carry its id, so its console shows them later.
+  const tag = (from: number) => {
+    g.state = { ...g.state, log: g.state.log.map((e, i) => (i >= from && e.side === side && !e.unitId ? { ...e, unitId } : e)) };
+  };
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/#.*$/, '').trim();
+    if (!line) continue;
+    const verb = line.split(/\s+/)[0].toLowerCase();
+    if (g.state.status !== 'running' && verb !== 'status' && verb !== 'help') {
+      rejected.push(`${line}: the mission is over`);
+      continue;
+    }
+    if (verb === 'help') {
+      extra.push(...unitHelp(side, alias));
+      accepted.push(line);
+      continue;
+    }
+    if (verb === 'status') {
+      extra.push(...unitStatusLines(g.state, unitId, g.unitSince[`${side}/${alias}`] ?? 0));
+      accepted.push(line);
+      continue;
+    }
+    const mark = g.state.log.length;
+    if (verb === 'report') {
+      g.history.push({ turn: g.turn, side, line: `${alias}: ${line}`, minute: g.state.minute });
+      g.state = reportNow(g.state, unitId);
+      tag(mark);
+      accepted.push(line);
+      continue;
+    }
+    if (!UNIT_VERBS.has(verb)) {
+      rejected.push(`${line}: a unit may use ${[...UNIT_VERBS].join(' ')} report status help`);
+      continue;
+    }
+    const p = parseCommand(`${alias}: ${line}`, side);
+    if (!p.ok) {
+      rejected.push(`${line}: ${p.error}`);
+      g.state = { ...g.state, log: [...g.state.log, { minute: g.state.minute, kind: 'error', text: p.error, side, unitId }] };
+      continue;
+    }
+    g.history.push({ turn: g.turn, side, line: `${alias}: ${line}`, minute: g.state.minute });
+    g.state = issue(g.state, p.command, side);
+    tag(mark);
+    accepted.push(line);
+  }
+  const lines = g.state.log.slice(before).filter((e) => !e.side || (e.side === side && e.unitId === unitId)).map((e) => `[T+${String(e.minute).padStart(2, '0')}] ${e.text}`);
+  return { accepted, rejected, lines: [...lines, ...extra] };
+}
+
 function endTurn(g: Game, side: PlayerSide): { advanced: boolean; minute: number } {
   g.ended[side] = true;
+  return advanceIfReady(g);
+}
+
+// A unit agent ends its turn. Its view next turn starts from this minute.
+function endUnit(g: Game, side: PlayerSide, alias: string): { advanced: boolean; minute: number } {
+  g.endedUnits.add(`${side}/${alias}`);
+  g.unitSince[`${side}/${alias}`] = g.state.minute;
+  return advanceIfReady(g);
+}
+
+function advanceIfReady(g: Game): { advanced: boolean; minute: number } {
   if (g.turnMin <= 0 || g.state.status !== 'running') return { advanced: false, minute: g.state.minute };
-  if (g.state.humans.some((h) => !g.ended[h])) return { advanced: false, minute: g.state.minute };
+  if (waitingFor(g).length > 0) return { advanced: false, minute: g.state.minute };
   g.state = issue(g.state, { type: 'wait', minutes: g.turnMin }, g.state.side);
   g.turn += 1;
   g.ended = { blue: false, red: false };
+  g.endedUnits = new Set();
   if (g.state.status !== 'running') archive(g);
   return { advanced: true, minute: g.state.minute };
 }
@@ -220,6 +342,8 @@ function archive(g: Game) {
     status: s.status,
     winner: s.winner ?? s.status,
     finishedAt: new Date().toISOString(),
+    c2: s.c2 ?? null,
+    messages: s.messages,
     orders: g.history,
     console: { blue: consoleSince(g, 'blue', 0).lines, red: consoleSince(g, 'red', 0).lines },
     reveal: revealed.log.filter((e) => e.kind === 'info' && /^Reveal:/.test(e.text)).map((e) => e.text),
@@ -255,12 +379,21 @@ const server = createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return send(res, 204, {});
   try {
     if (req.method === 'GET' && url.pathname === '/') {
-      return send(res, 200, { ...summary(game), endpoints: ['GET /state?side=', 'GET /help?side=', 'POST /blue', 'POST /red', 'POST /blue/end', 'POST /red/end', 'POST /new', 'POST /end', 'GET /full', 'GET /history'] });
+      return send(res, 200, { ...summary(game), endpoints: ['GET /state?side=', 'GET /help?side=', 'POST /blue', 'POST /red', 'POST /blue/end', 'POST /red/end', 'GET /state?side=&unit=', 'POST /<side>/<unit>', 'POST /<side>/<unit>/end', 'POST /<side>/<unit>/report', 'POST /new', 'POST /end', 'GET /full', 'GET /history'] });
     }
     if (req.method === 'GET' && url.pathname === '/state') {
       const side = sideOf(q);
       if (!side) return send(res, 400, { error: 'side=blue|red' });
       const after = Number(q.get('after') ?? 0);
+      const alias = q.get('unit');
+      if (alias) {
+        const unitId = seatOf(game, side, alias);
+        if (!unitId) return send(res, 403, { error: `no agent seat for ${alias}` });
+        const u = unitConsoleSince(game, unitId, after);
+        const since = game.unitSince[`${side}/${alias}`] ?? 0;
+        const mine = inbox(game.state, unitId, since).map((o) => ({ n: o.n, text: o.text, sentMin: o.sentMin, arriveMin: o.arriveMin }));
+        return send(res, 200, { ...summary(game, side), yourTurnEnded: game.endedUnits.has(`${side}/${alias}`), unit: alias, console: u.lines, cursor: u.cursor, status_lines: unitStatusLines(game.state, unitId, since), inbox: mine });
+      }
       const c = consoleSince(game, side, after);
       return send(res, 200, { ...summary(game, side), console: c.lines, cursor: c.cursor, status_lines: statusLines(game.state, side), picture: pictureLines(game.state, side) });
     }
@@ -304,10 +437,28 @@ const server = createServer(async (req, res) => {
       const r = endTurn(game, side);
       return send(res, 200, { ...r, ...summary(game, side) });
     }
+    const unitRoute = /^\/(blue|red)\/(\w+)(?:\/(end|report))?$/.exec(url.pathname);
+    if (req.method === 'POST' && unitRoute) {
+      const side = unitRoute[1] as PlayerSide;
+      const alias = unitRoute[2];
+      if (!seatOf(game, side, alias)) return send(res, 403, { error: `no agent seat for ${alias}` });
+      if (unitRoute[3] === 'end') {
+        const r = endUnit(game, side, alias);
+        return send(res, 200, { ...r, ...summary(game, side), yourTurnEnded: true });
+      }
+      const body = unitRoute[3] === 'report' ? 'report' : await readBody(req);
+      const text = req.headers['content-type']?.includes('application/json') ? String((JSON.parse(body) as { lines?: string; text?: string }).lines ?? (JSON.parse(body) as { text?: string }).text ?? '') : body;
+      const r = postUnit(game, side, alias, text);
+      return send(res, 200, { ...r, ...summary(game, side), yourTurnEnded: game.endedUnits.has(`${side}/${alias}`) });
+    }
     if (req.method === 'POST' && url.pathname === '/new') {
       const body = await readBody(req);
       const o = body ? (JSON.parse(body) as Partial<Args>) : {};
-      game = newGame(o.mission ?? game.state.mission, o.seed ?? Math.floor(Math.random() * 1_000_000), o.turn ?? game.turnMin);
+      try {
+        game = newGame(o.mission ?? game.state.mission, o.seed ?? Math.floor(Math.random() * 1_000_000), o.turn ?? game.turnMin, o.c2);
+      } catch (e) {
+        return send(res, 400, { error: e instanceof Error ? e.message : String(e) });
+      }
       return send(res, 200, summary(game));
     }
     if (req.method === 'POST' && url.pathname === '/end') {

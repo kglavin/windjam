@@ -205,6 +205,9 @@ export interface MissionState {
   // Orders over the net (any mission, either side).
   messages: OrderMessage[];
   nextOrderNo: number;
+  // C2 mode, per side (set by the server at /new): the unit aliases that have an agent. Any other unit of a C2 side is auto:
+  // it executes an order's text literally when the order arrives.
+  c2?: Partial<Record<PlayerSide, { agents: string[] }>>;
   // Mission 4.
   uav?: UavState; // Red's UAV (missions 4 and 5)
   blueUav?: UavState; // Blue's UAV (mission 5)
