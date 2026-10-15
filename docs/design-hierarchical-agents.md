@@ -371,7 +371,7 @@ Status, as of the latest merge on main:
 | WP-1.8 | done | auto units execute after the delivery loop; the commander keeps direct control of HQ itself in C2 mode |
 | WP-1.9 | done | `/full` polling is left out of the call audit |
 | WP-1.10 | done | writing the briefs found seven inconsistencies; four become WP-1.11 |
-| WP-1.11 | in progress | |
+| WP-1.11 | done | an EW team not jamming now radiates its acknowledgements (it was silent because a jammer's emissions were only its jam band) |
 | WP-2.1 | done | |
 | WP-2.2 to 2.5 | done | logic in `src/engine/mission/analyse.ts`; `analyseLink` scores the direct path only and uses the side's own jammers only |
 | WP-2.6 | done | |
