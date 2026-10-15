@@ -87,6 +87,12 @@ check "unit df accepted" "$(echo "$R" | jq -e '.accepted == ["df e 5","report"]'
 check "unit send rejected" "$(echo "$R" | jq -e '(.rejected | length) == 1 and (.rejected[0] | test("^send hq: hello"))' >/dev/null; echo $?)"
 R=$(post /blue/sq1 "emcon cmd 5")
 check "unit emcon rejected" "$(echo "$R" | jq -e '(.accepted | length) == 0 and (.rejected | length) == 1' >/dev/null; echo $?)"
+# The engine refuses a line that parses: it comes back in rejected with the engine's text, and the console keeps it.
+# Blue Squad 2 stands on an occupied hex, so a move onto it is refused by the engine.
+TGT=$(get "/state?side=blue" | jq -r '.status_lines[] | select(startswith("sq2 ")) | capture("at (?<p>[0-9]+,[0-9]+)").p')
+R=$(post /blue/sq1 "move $TGT"$'\n'"df e 5")
+check "engine refusal comes back in rejected with the engine's text" "$(echo "$R" | jq -e --arg t "$TGT" '.accepted == ["df e 5"] and (.rejected | length) == 1 and (.rejected[0] | startswith("move \($t): ") and test("no route to \($t) \\(occupied\\)"))' >/dev/null; echo $?)"
+check "engine refusal stays in the unit console" "$(echo "$R" | jq -e --arg t "$TGT" 'any(.lines[]; test("no route to \($t)"))' >/dev/null; echo $?)"
 R=$(post /blue/sq1 "help")
 check "unit help lists df and report" "$(echo "$R" | jq -e 'any(.lines[]; test("^df ")) and any(.lines[]; test("^report"))' >/dev/null; echo $?)"
 R=$(get "/state?side=blue&unit=sq1&after=0")

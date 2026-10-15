@@ -188,6 +188,11 @@ function summary(g: Game, side?: PlayerSide) {
   };
 }
 
+// The error texts the engine logged for a side since a log index: a refusal of the line just issued.
+function engineErrors(g: Game, side: PlayerSide, from: number): string[] {
+  return g.state.log.slice(from).filter((e) => e.kind === 'error' && (!e.side || e.side === side)).map((e) => e.text);
+}
+
 // Apply console lines for a side. In turn mode `wait` is the server's job.
 function post(g: Game, side: PlayerSide, text: string): { accepted: string[]; rejected: string[]; lines: string[] } {
   const accepted: string[] = [];
@@ -222,8 +227,11 @@ function post(g: Game, side: PlayerSide, text: string): { accepted: string[]; re
       continue;
     }
     g.history.push({ turn: g.turn, side, line, minute: g.state.minute });
+    const mark = g.state.log.length;
     g.state = issue(g.state, p.command, side);
-    accepted.push(line);
+    const refused = engineErrors(g, side, mark);
+    if (refused.length) rejected.push(`${line}: ${refused.join(' · ')}`);
+    else accepted.push(line);
   }
   return { accepted, rejected, lines: consoleSince(g, side, before).lines };
 }
@@ -315,7 +323,9 @@ function postUnit(g: Game, side: PlayerSide, alias: string, text: string): { acc
     g.history.push({ turn: g.turn, side, line: `${alias}: ${line}`, minute: g.state.minute });
     g.state = issue(g.state, p.command, side);
     tag(mark);
-    accepted.push(line);
+    const refused = engineErrors(g, side, mark);
+    if (refused.length) rejected.push(`${line}: ${refused.join(' · ')}`);
+    else accepted.push(line);
   }
   const lines = g.state.log.slice(before).filter((e) => !e.side || (e.side === side && e.unitId === unitId)).map((e) => `[T+${String(e.minute).padStart(2, '0')}] ${e.text}`);
   return { accepted, rejected, lines: [...lines, ...extra] };
