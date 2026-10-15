@@ -1,7 +1,8 @@
 # Two squads look east from different places; crossing bearings give fixes.
-# A second pair of bearings from the middle sharpens them, but the fixed site errors keep one fix over 1 km off: no win yet.
+# A second pair of bearings from the middle sharpens them. Each sensor has a fixed site error that listening longer cannot
+# average away, so a third pair, the flanks re-pointed, adds the geometry that brings the last fix under 1 km.
 seed 1234
-expect running
+expect won
 status
 sq1: df e 5
 sq3: df ne 5
@@ -9,5 +10,9 @@ wait 5
 picture
 sq2: df e 5
 uav: df e 5
+wait 5
+picture
+sq1: df se 5
+sq3: df e 5
 wait 5
 picture

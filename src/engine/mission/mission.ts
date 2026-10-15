@@ -1260,8 +1260,7 @@ export function reportNow(state: MissionState, unitId: string): MissionState {
   const o = s.orders[unitId];
   if (o?.kind === 'sortie') log(s, 'error', `${unit.name}: radio silent until it returns.`, undefined, unit.id);
   else if (o?.kind === 'df') {
-    const rng = createRng((s.seed * 1000003 + s.minute * 7919 + 0x7e9) >>> 0);
-    const report = writeReport(s, unit, unit.pos, Object.values(o.heard), rng);
+    const report = writeReport(s, unit, unit.pos, Object.values(o.heard));
     s.orders[unitId] = { ...o, heard: {} };
     file(s, unit, report, `DF ${sectorLabel(o.centreDeg)} report so far`, allLinkBudgets(s.world), unit.name, unit.id, s.minute);
   } else log(s, 'info', 'Nothing to report.', undefined, unit.id);
