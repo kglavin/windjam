@@ -98,6 +98,26 @@ check "unit help lists df and report" "$(echo "$R" | jq -e 'any(.lines[]; test("
 R=$(get "/state?side=blue&unit=sq1&after=0")
 check "unit console shows its own DF order" "$(echo "$R" | jq -e 'any(.console[]; test("Blue Squad 1: DF"))' >/dev/null; echo $?)"
 
+# Analysis routes (WP-2.7) and staff taskings (WP-2.8). Red has no C2 and no tasking yet.
+check "analyse/predict on an unknown track gives 400" "$([ "$(code "$BASE/analyse/predict?side=blue&track=nope")" = 400 ]; echo $?)"
+R=$(get "/analyse/exposure?side=blue&sensor=10,10&sensor=12,8,drone")
+check "analyse/exposure for blue returns units" "$(echo "$R" | jq -e '(.units | type) == "array"' >/dev/null; echo $?)"
+R=$(post /blue/ask '{"role":"es","question":"what is track E1"}')
+check "ask es creates t1" "$(echo "$R" | jq -e '.id == "t1" and .role == "es" and .side == "blue" and (.askedAt | length) > 0' >/dev/null; echo $?)"
+check "ask with unknown role or empty question gets 400" "$([ "$(code -X POST --data-binary '{"role":"cook","question":"x"}' "$BASE/blue/ask")" = 400 ] && [ "$(code -X POST --data-binary '{"role":"es","question":" "}' "$BASE/blue/ask")" = 400 ]; echo $?)"
+R=$(get "/blue/staff?role=es")
+check "staff es lists t1 with status and picture" "$(echo "$R" | jq -e '.open[0].id == "t1" and has("status_lines") and has("picture") and .answered == []' >/dev/null; echo $?)"
+check "staff ewa does not list t1" "$(get "/blue/staff?role=ewa" | jq -e '.open == []' >/dev/null; echo $?)"
+R=$(post /blue/staff/es '{"id":"t1","answer":"E1 is the UAV link."}')
+check "staff es answers t1" "$(echo "$R" | jq -e '.answer == "E1 is the UAV link." and .answeredTurn == 1 and .answeredMinute == 5' >/dev/null; echo $?)"
+check "second answer gets 409" "$([ "$(code -X POST --data-binary '{"id":"t1","answer":"again"}' "$BASE/blue/staff/es")" = 409 ]; echo $?)"
+post /blue/ask '{"role":"ops","question":"plan"}' >/dev/null
+check "answer under the wrong role gets 404" "$([ "$(code -X POST --data-binary '{"id":"t2","answer":"x"}' "$BASE/blue/staff/es")" = 404 ]; echo $?)"
+R=$(get "/state?side=blue")
+check "state shows the answer under staff" "$(echo "$R" | jq -e '(.staff | map(select(.id == "t1"))[0].answer) == "E1 is the UAV link." and (.staff | map(select(.id == "t2"))[0] | has("answer") | not)' >/dev/null; echo $?)"
+check "red staff es does not show blue's tasking" "$(get "/red/staff?role=es" | jq -e '.open == [] and .answered == []' >/dev/null; echo $?)"
+check "red state staff is empty" "$(get "/state?side=red" | jq -e '.staff == []' >/dev/null; echo $?)"
+
 # A second server, mission uav with Red's UAV on an agent seat: launch is a unit verb.
 PORT2=$((PORT + 1))
 while (echo >"/dev/tcp/127.0.0.1/$PORT2") 2>/dev/null; do PORT2=$((PORT2 + 1)); done

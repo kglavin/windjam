@@ -37,6 +37,24 @@ function actionDelay(m: OrderMessage, lines: string[], name: string | undefined)
   return first === undefined ? undefined : first - m.sentMin;
 }
 
+// Per-side count of /analyse calls in the call audit, from the side= parameter of each audited path.
+export function analysisCounts(calls: { path: string }[]): PerSide<number> {
+  const out: PerSide<number> = { blue: 0, red: 0 };
+  for (const c of calls) {
+    if (!c.path.startsWith('/analyse/')) continue;
+    const side = new URLSearchParams(c.path.split('?')[1] ?? '').get('side');
+    if (side === 'blue' || side === 'red') out[side] += 1;
+  }
+  return out;
+}
+
+// Per-side count of staff taskings in an archive record's `staff` list.
+export function askCounts(staff: { side: PlayerSide }[]): PerSide<number> {
+  const out: PerSide<number> = { blue: 0, red: 0 };
+  for (const t of staff) out[t.side] += 1;
+  return out;
+}
+
 export function c2Stats(record: ArchivedC2): C2Stats | undefined {
   const messages = record.messages;
   if (!messages) return undefined;

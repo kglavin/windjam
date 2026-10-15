@@ -1,7 +1,7 @@
 // Tabulate archived games: npm run games [-- games/]
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { c2Stats, type C2Stats, type ArchivedC2, type PerSide } from '../src/engine/mission/c2stats';
+import { askCounts, c2Stats, type C2Stats, type ArchivedC2, type PerSide } from '../src/engine/mission/c2stats';
 
 const dir = process.argv[2] ?? 'games';
 let files: string[] = [];
@@ -25,6 +25,8 @@ interface Record_ extends ArchivedC2 {
   winner: string;
   finishedAt: string;
   orders: { side: string }[];
+  analyses?: PerSide<number>; // /analyse calls per side (records before WP-2.9 lack it)
+  staff?: { side: 'blue' | 'red' }[]; // staff taskings (records before WP-2.8 lack it)
   summary: { blue: string[]; red: string[] };
 }
 
@@ -52,12 +54,12 @@ const cells = (st: C2Stats | undefined) => ({
 
 const pad = (s: string | number, n: number) => String(s).padEnd(n);
 console.log(
-  `${pad('finished', 20)} ${pad('mission', 8)} ${pad('seed', 7)} ${pad('turn', 5)} ${pad('end', 5)} ${pad('winner', 7)} ${pad('orders b/r', 11)} ${pad('sent b/r', 9)} ${pad('on time b/r', 11)} ${pad('late b/r', 9)} ${pad('lost b/r', 9)} ${pad('delay b/r', 11)} blue summary`,
+  `${pad('finished', 20)} ${pad('mission', 8)} ${pad('seed', 7)} ${pad('turn', 5)} ${pad('end', 5)} ${pad('winner', 7)} ${pad('orders b/r', 11)} ${pad('sent b/r', 9)} ${pad('on time b/r', 11)} ${pad('late b/r', 9)} ${pad('lost b/r', 9)} ${pad('delay b/r', 11)} ${pad('analyses b/r', 13)} ${pad('asks b/r', 9)} blue summary`,
 );
 for (const r of rows) {
   const c = cells(r.stats);
   console.log(
-    `${pad(r.finishedAt.slice(0, 19).replace('T', ' '), 20)} ${pad(r.mission, 8)} ${pad(r.seed, 7)} ${pad(r.turnMin, 5)} ${pad(`T+${r.endedAt}`, 5)} ${pad(r.winner, 7)} ${pad(`${r.blueOrders}/${r.redOrders}`, 11)} ${pad(c.sent, 9)} ${pad(c.onTime, 11)} ${pad(c.late, 9)} ${pad(c.lost, 9)} ${pad(c.delay, 11)} ${r.summary.blue[0] ?? ''}`,
+    `${pad(r.finishedAt.slice(0, 19).replace('T', ' '), 20)} ${pad(r.mission, 8)} ${pad(r.seed, 7)} ${pad(r.turnMin, 5)} ${pad(`T+${r.endedAt}`, 5)} ${pad(r.winner, 7)} ${pad(`${r.blueOrders}/${r.redOrders}`, 11)} ${pad(c.sent, 9)} ${pad(c.onTime, 11)} ${pad(c.late, 9)} ${pad(c.lost, 9)} ${pad(c.delay, 11)} ${pad(pair(r.analyses), 13)} ${pad(pair(r.staff ? askCounts(r.staff) : undefined), 9)} ${r.summary.blue[0] ?? ''}`,
   );
 }
 const tally = rows.reduce<Record<string, number>>((a, r) => ({ ...a, [r.winner]: (a[r.winner] ?? 0) + 1 }), {});

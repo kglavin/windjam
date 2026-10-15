@@ -18,7 +18,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { analyseCoverage, analyseDetect, analyseFix, analyseJs, analyseLink, analysePath, type HypothesisParams, type Pos } from '../src/engine/mission/analyse';
+import { analyseCoverage, analyseDetect, analyseExposure, analyseFix, analyseJs, analyseLink, analysePath, analysePredict, type HypothesisParams, type Pos } from '../src/engine/mission/analyse';
+import { analysisCounts } from '../src/engine/mission/c2stats';
 import { HELP, UNIT_ALIASES, parseCommand } from '../src/engine/mission/commands';
 import { createMission, enableC2, inbox, issue, pictureLines, reportNow, statusLines, unitStatusLines, visibleLog, visibleLogFor } from '../src/engine/mission/mission';
 import type { JammerMode, UnitKind } from '../src/engine/units';
@@ -59,7 +60,27 @@ interface Game {
   seenOrders: Record<string, number[]>; // the orders each unit agent had in its view when it ended a turn
   history: { turn: number; side: PlayerSide; line: string; minute: number }[]; // every line posted, for the record
   calls: { turn: number; minute: number; method: string; path: string }[]; // every HTTP call, for the record (never the umpire key)
+  staff: Tasking[]; // the commander's taskings of the staff, with answers
+  staffN: number; // last tasking number
   archived?: boolean;
+}
+
+// The staff roles: ES analyst, EW officer (attack), EW officer (protection and own comms), operations planner.
+const STAFF_ROLES = ['es', 'ewa', 'ewp', 'ops'] as const;
+type StaffRole = (typeof STAFF_ROLES)[number];
+const isRole = (v: unknown): v is StaffRole => typeof v === 'string' && (STAFF_ROLES as readonly string[]).includes(v);
+
+interface Tasking {
+  id: string; // t1, t2, ... one counter per game
+  side: PlayerSide;
+  role: StaffRole;
+  question: string;
+  turn: number;
+  minute: number;
+  askedAt: string;
+  answer?: string;
+  answeredTurn?: number;
+  answeredMinute?: number;
 }
 
 const GAMES_DIR = join(process.cwd(), 'games');
@@ -74,7 +95,7 @@ function newGame(mission: MissionKind, seed: number, turnMin: number, c2?: C2): 
     const entry = c2?.[side];
     if (entry) enableC2(state, side, entry.agents);
   }
-  return { state, turnMin, turn: 0, ended: { blue: false, red: false }, endedUnits: new Set(), unitSince: {}, seenOrders: {}, history: [], calls: [] };
+  return { state, turnMin, turn: 0, ended: { blue: false, red: false }, endedUnits: new Set(), unitSince: {}, seenOrders: {}, history: [], calls: [], staff: [], staffN: 0 };
 }
 
 // The path as the audit keeps it: the query string without the umpire's key.
@@ -114,6 +135,16 @@ const pos = (v: string, k: string): Pos => {
 };
 const needPos = (q: URLSearchParams, k: string): Pos => pos(need(q, k), k);
 const optPos = (q: URLSearchParams, k: string): Pos | undefined => (q.get(k) ? pos(need(q, k), k) : undefined);
+// Repeatable sensor=col,row[,kind] for /analyse/exposure; kind defaults to squad.
+const sensors = (q: URLSearchParams): HypothesisParams[] | undefined => {
+  const all = q.getAll('sensor');
+  if (all.length === 0) return undefined;
+  return all.map((v) => {
+    const m = /^(-?\d+),(-?\d+)(?:,(\w+))?$/.exec(v);
+    if (!m) throw new Error('sensor must be col,row or col,row,kind');
+    return { at: { col: Number(m[1]), row: Number(m[2]) }, kind: (m[3] ?? 'squad') as UnitKind };
+  });
+};
 const hypothesis = (q: URLSearchParams): HypothesisParams => ({
   at: needPos(q, 'at'),
   kind: need(q, 'kind') as UnitKind,
@@ -140,6 +171,10 @@ function analyse(name: string, side: PlayerSide, q: URLSearchParams): unknown {
       const bearings = q.get('bearings');
       return analyseFix(s, side, bearings ? { bearings: JSON.parse(bearings) } : { track: need(q, 'track') }, { add: optPos(q, 'add'), addSigmaDeg: num(q, 'sigma') });
     }
+    case 'predict':
+      return analysePredict(s, side, { track: need(q, 'track') });
+    case 'exposure':
+      return analyseExposure(s, side, { sensors: sensors(q) });
   }
   throw new Error(`no such analysis ${name}`);
 }
@@ -379,6 +414,8 @@ function archive(g: Game) {
     messages: s.messages,
     units: s.world.units.map(({ id, name, side }) => ({ id, name, side })),
     calls: g.calls,
+    analyses: analysisCounts(g.calls),
+    staff: g.staff,
     orders: g.history,
     console: { blue: consoleSince(g, 'blue', 0).lines, red: consoleSince(g, 'red', 0).lines },
     reveal: revealed.log.filter((e) => e.kind === 'info' && /^Reveal:/.test(e.text)).map((e) => e.text),
@@ -416,7 +453,7 @@ const server = createServer(async (req, res) => {
   if (url.pathname !== '/full') game.calls.push({ turn: game.turn, minute: game.state.minute, method: req.method ?? 'GET', path: auditPath(url) });
   try {
     if (req.method === 'GET' && url.pathname === '/') {
-      return send(res, 200, { ...summary(game), endpoints: ['GET /state?side=', 'GET /help?side=', 'POST /blue', 'POST /red', 'POST /blue/end', 'POST /red/end', 'GET /state?side=&unit=', 'POST /<side>/<unit>', 'POST /<side>/<unit>/end', 'POST /<side>/<unit>/report', 'POST /new', 'POST /end', 'GET /full', 'GET /history'] });
+      return send(res, 200, { ...summary(game), endpoints: ['GET /state?side=', 'GET /help?side=', 'POST /blue', 'POST /red', 'POST /blue/end', 'POST /red/end', 'GET /state?side=&unit=', 'POST /<side>/<unit>', 'POST /<side>/<unit>/end', 'POST /<side>/<unit>/report', 'POST /<side>/ask', 'GET /<side>/staff?role=', 'POST /<side>/staff/<role>', 'GET /analyse/<name>?side=', 'POST /new', 'POST /end', 'GET /full', 'GET /history'] });
     }
     if (req.method === 'GET' && url.pathname === '/state') {
       const side = sideOf(q);
@@ -432,7 +469,9 @@ const server = createServer(async (req, res) => {
         return send(res, 200, { ...summary(game, side), yourTurnEnded: game.endedUnits.has(`${side}/${alias}`), hqTurnEnded: game.ended[side], unit: alias, console: u.lines, cursor: u.cursor, status_lines: unitStatusLines(game.state, unitId, news.heard, news.orders), inbox: mine });
       }
       const c = consoleSince(game, side, after);
-      return send(res, 200, { ...summary(game, side), console: c.lines, cursor: c.cursor, status_lines: statusLines(game.state, side), picture: pictureLines(game.state, side) });
+      // The staff the commander has tasked this turn and last, answered or not.
+      const staff = game.staff.filter((t) => t.side === side && t.turn >= game.turn - 1).map(({ id, role, question, answer, turn }) => ({ id, role, question, ...(answer !== undefined ? { answer } : {}), turn }));
+      return send(res, 200, { ...summary(game, side), console: c.lines, cursor: c.cursor, status_lines: statusLines(game.state, side), picture: pictureLines(game.state, side), staff });
     }
     if (req.method === 'GET' && url.pathname === '/help') {
       const side = sideOf(q);
@@ -473,6 +512,63 @@ const server = createServer(async (req, res) => {
       if (!game.state.humans.includes(side)) return send(res, 400, { error: `${side} is not a console in this mission` });
       const r = endTurn(game, side);
       return send(res, 200, { ...r, ...summary(game, side) });
+    }
+    // Staff taskings: the commander asks, an analyst agent polls for its role and answers. Staff never take part in turn gating.
+    const askRoute = /^\/(blue|red)\/ask$/.exec(url.pathname);
+    if (req.method === 'POST' && askRoute) {
+      const side = askRoute[1] as PlayerSide;
+      if (!game.state.humans.includes(side)) return send(res, 400, { error: `${side} is not a console in this mission` });
+      if (game.state.status !== 'running') return send(res, 409, { error: 'the mission is over' });
+      let b: { role?: unknown; question?: unknown };
+      try {
+        b = JSON.parse(await readBody(req)) as typeof b;
+      } catch {
+        return send(res, 400, { error: 'body must be JSON { role, question }' });
+      }
+      if (!isRole(b?.role)) return send(res, 400, { error: `role must be one of ${STAFF_ROLES.join(', ')}` });
+      const question = typeof b.question === 'string' ? b.question.trim() : '';
+      if (!question) return send(res, 400, { error: 'question is required' });
+      const t: Tasking = { id: `t${++game.staffN}`, side, role: b.role, question, turn: game.turn, minute: game.state.minute, askedAt: new Date().toISOString() };
+      game.staff.push(t);
+      return send(res, 200, t);
+    }
+    const staffGet = /^\/(blue|red)\/staff$/.exec(url.pathname);
+    if (req.method === 'GET' && staffGet) {
+      const side = staffGet[1] as PlayerSide;
+      const role = q.get('role');
+      if (!isRole(role)) return send(res, 400, { error: `role must be one of ${STAFF_ROLES.join(', ')}` });
+      const after = Number(q.get('after') ?? 0);
+      const mine = game.staff.filter((t) => t.side === side && t.role === role);
+      const brief = (t: Tasking) => ({ id: t.id, role: t.role, question: t.question, turn: t.turn, minute: t.minute });
+      return send(res, 200, {
+        ...summary(game, side),
+        role,
+        open: mine.filter((t) => t.answer === undefined && Number(t.id.slice(1)) > (Number.isFinite(after) ? after : 0)).map(brief),
+        status_lines: statusLines(game.state, side),
+        picture: pictureLines(game.state, side),
+        answered: mine.filter((t) => t.answer !== undefined).slice(-5).map((t) => ({ ...brief(t), answer: t.answer, answeredTurn: t.answeredTurn, answeredMinute: t.answeredMinute })),
+      });
+    }
+    const staffPost = /^\/(blue|red)\/staff\/(\w+)$/.exec(url.pathname);
+    if (req.method === 'POST' && staffPost) {
+      const side = staffPost[1] as PlayerSide;
+      const role = staffPost[2];
+      if (!isRole(role)) return send(res, 400, { error: `role must be one of ${STAFF_ROLES.join(', ')}` });
+      let b: { id?: unknown; answer?: unknown };
+      try {
+        b = JSON.parse(await readBody(req)) as typeof b;
+      } catch {
+        return send(res, 400, { error: 'body must be JSON { id, answer }' });
+      }
+      const answer = typeof b?.answer === 'string' ? b.answer.trim() : '';
+      if (!answer) return send(res, 400, { error: 'answer is required' });
+      const t = game.staff.find((x) => x.side === side && x.id === b.id && x.role === role);
+      if (!t) return send(res, 404, { error: `no tasking ${String(b.id)} for ${role}` });
+      if (t.answer !== undefined) return send(res, 409, { error: `${t.id} is already answered` });
+      t.answer = answer;
+      t.answeredTurn = game.turn;
+      t.answeredMinute = game.state.minute;
+      return send(res, 200, t);
     }
     const unitRoute = /^\/(blue|red)\/(\w+)(?:\/(end|report))?$/.exec(url.pathname);
     if (req.method === 'POST' && unitRoute) {

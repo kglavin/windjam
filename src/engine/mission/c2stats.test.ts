@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { c2Stats, type ArchivedC2 } from './c2stats';
+import { analysisCounts, askCounts, c2Stats, type ArchivedC2 } from './c2stats';
 import type { OrderMessage } from './types';
 
 const units = [
@@ -50,5 +50,17 @@ describe('c2Stats', () => {
 
   it('returns undefined for a record written before messages existed', () => {
     expect(c2Stats({ console: { blue: [], red: [] } })).toBeUndefined();
+  });
+});
+
+describe('analysisCounts and askCounts', () => {
+  it('counts /analyse calls by their side parameter and ignores other paths and bad sides', () => {
+    const calls = [{ path: '/analyse/fix?side=blue&track=E1' }, { path: '/analyse/exposure?side=blue' }, { path: '/analyse/path?side=red&from=1,1' }, { path: '/analyse/fix' }, { path: '/state?side=blue' }, { path: '/analyse/fix?side=green' }];
+    expect(analysisCounts(calls)).toEqual({ blue: 2, red: 1 });
+  });
+
+  it('counts taskings by side', () => {
+    expect(askCounts([{ side: 'blue' }, { side: 'blue' }, { side: 'red' }])).toEqual({ blue: 2, red: 1 });
+    expect(askCounts([])).toEqual({ blue: 0, red: 0 });
   });
 });

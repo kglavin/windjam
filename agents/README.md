@@ -75,6 +75,27 @@ An order is a transmission. It arrives the same minute when the link is good (it
 
 An order cannot reach a UAV on a silent sortie: `send uav: ...` is refused with `<unit> is on a silent sortie and cannot be reached until it returns.` In C2 mode each side with an EW team also has an EW net (Blue 56 MHz, Red 50 MHz) from HQ with no chatter, so `send ew: jam <net>` works (`jam uavlink` in mission 4, `jam cmd` in the duel). The order and its acknowledgement are short transmissions on that net, and while it jams the EW team is the loudest emitter on the map. Without C2 the EW team is on no net and the commander types `ew: jam <net>` directly.
 
+## Analysis and the staff
+
+`GET /analyse/<name>?side=X` runs an engine calculation on what side X knows (never the truth). A bad parameter answers 400 `{error}`. Anyone on the side may call them freely: they are not transmissions.
+
+| Call | What it answers |
+|---|---|
+| `/analyse/predict?side=&track=` | Transmission times heard, reporting period, next expected transmission, and for a moving track its speed, heading and predicted position |
+| `/analyse/exposure?side=&sensor=col,row[,kind]` | Which of the side's own transmitters hypothesised enemy sensors can hear. `sensor` repeats; `kind` defaults to `squad`; with no `sensor` a squad is assumed at each fix in the side's picture |
+
+(The other analyses are `path`, `link`, `coverage`, `detect`, `js` and `fix`.)
+
+A commander can task a staff of up to four roles: `es` (ES analyst, intelligence cell), `ewa` (EW officer, electronic attack), `ewp` (EW officer, electronic protection and own comms), `ops` (operations planner). Staff agents poll, call `/analyse/*` freely, and never transmit. They take no part in turn gating: the commander waits for the answers it wants before ending its turn.
+
+| Call | What it does |
+|---|---|
+| `POST /blue/ask` `{"role":"es","question":"..."}` | The commander tasks a role. Returns `{id, side, role, question, turn, minute, askedAt}` with `id` `t1`, `t2`, ... 400 for an unknown role or empty question |
+| `GET /blue/staff?role=es&after=N` | The analyst's view: `open` (taskings of that role with no answer, numbered above `N`), `answered` (its last 5 with answers), and the commander's `status`, `minute`, `turn`, `status_lines` and `picture` |
+| `POST /blue/staff/es` `{"id":"t1","answer":"..."}` | Answer a tasking. 404 for an unknown id or another role's tasking, 409 if already answered |
+
+`GET /state?side=blue` gains `staff`: the side's taskings of this turn and the last, each `{id, role, question, answer?, turn}`. The archive records every tasking with its answer (`staff`) and the number of `/analyse` calls per side (`analyses`); `npm run games` prints both as `analyses b/r` and `asks b/r`.
+
 Briefs for mission 4 (`--mission uav`), Blue side:
 
 - [c2/commander-uav.md](c2/commander-uav.md): the commander, sending explicit unit orders.
