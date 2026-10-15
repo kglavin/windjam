@@ -3,7 +3,7 @@
 // the caller states as hypotheses. None reads the other side's units, so none can leak the truth.
 // A bad input throws an Error; serve.ts turns that into HTTP 400.
 import { axialToOffset, hexKey, hexRound, offsetToAxial, type Hex } from '../hex';
-import { bearingDeg, hexToKm, type BearingLine } from '../detect';
+import { bearingDeg, emissions, hexToKm, type BearingLine } from '../detect';
 import {
   analyzePath,
   bearingSigmaDeg,
@@ -20,6 +20,7 @@ import {
 } from '../analysis';
 import { RADIO_PRESETS, type JammerMode, type Unit, type UnitKind } from '../units';
 import { jammers as jammersOf, netById, unitById } from '../world';
+import { motion, nextTransmission, predict, reportingPeriod, type KmFix } from './pattern';
 import { MISSION_RULES, type MissionState, type PlayerSide, type Track } from './types';
 
 // A grid position as the console writes it: offset coordinates, column then row.
@@ -255,4 +256,94 @@ export function analyseFix(
     out.cepWithSite = fixFromBearings(map, [...lines, extra])?.cepKm ?? null;
   }
   return out;
+}
+
+// When the side's picture says an emitter transmits, and where it will be next time (pattern of life, WP-2.6).
+// Only what the picture supports is returned: a part that cannot be worked out is left out.
+export function analysePredict(s: MissionState, side: PlayerSide, p: { track: string }) {
+  const track = (side === 'blue' ? s.tracks : s.redTracks).find((t) => t.id === p.track);
+  if (!track) throw new Error(`no track ${p.track} in your picture`);
+  const heard = track.moving
+    ? track.bearings.map((b) => b.heardMin).filter((m): m is number => m !== undefined)
+    : track.bearings.flatMap((b) => b.samples.map((x) => x.minute));
+  const transmissions = [...new Set(heard)].sort((a, b) => a - b);
+  const period = reportingPeriod(transmissions);
+  // s.minute is the minute about to be played, so the next transmission is after the minute just finished.
+  const nextMinute = nextTransmission(transmissions, s.minute - 1);
+  const map = s.world.map;
+  const kmFixes: KmFix[] = (track.fixes ?? []).map((f) => ({ minute: f.minute, ...hexToKm(map, { q: f.fix.q, r: f.fix.r }) }));
+  const mo = motion(kmFixes);
+  let predictedAt: Pos | undefined;
+  if (mo && nextMinute !== undefined) {
+    const at = predict(kmFixes, nextMinute);
+    if (at) {
+      const r = at.y / ((Math.sqrt(3) / 2) * map.hexSizeKm);
+      predictedAt = toPos(hexRound(at.x / map.hexSizeKm - r / 2, r));
+    }
+  }
+  const heardPart = `${transmissions.length} transmission${transmissions.length === 1 ? '' : 's'}${period ? `, period ${period.period} min` : ''}`;
+  const parts = kmFixes.length ? [heardPart, `${kmFixes.length} fix${kmFixes.length === 1 ? '' : 'es'}`] : [heardPart];
+  return {
+    track: track.id,
+    transmissions,
+    ...(period ? { period: { period: period.period, phase: period.phase, score: period.score } } : {}),
+    ...(nextMinute !== undefined ? { nextMinute } : {}),
+    ...(mo ? { motion: { speedKmPerMin: mo.speedKmPerMin, headingDeg: mo.headingDeg } } : {}),
+    ...(predictedAt ? { predictedAt } : {}),
+    basis: parts.join('; '),
+  };
+}
+
+// Which of the side's own transmitters the enemy can probably hear. The enemy's sensors are hypotheses: the caller's
+// list, or a squad at each fix in the side's picture. Nothing reads the enemy's units.
+export function analyseExposure(s: MissionState, side: PlayerSide, o: { sensors?: HypothesisParams[] } = {}) {
+  const map = s.world.map;
+  let sensors: Hypothesis[];
+  let source: string;
+  if (o.sensors) {
+    if (!Array.isArray(o.sensors)) throw new Error('sensors must be an array');
+    sensors = o.sensors.map((h, i) => hypothesisOf(s, h, `sensor ${i} at`));
+    source = 'stated by the caller';
+  } else {
+    sensors = [];
+    for (const t of side === 'blue' ? s.tracks : s.redTracks) {
+      const f = t.fixes?.length ? t.fixes[t.fixes.length - 1].fix : t.fix;
+      if (!f) continue;
+      const pos = hexRound(f.q, f.r);
+      if (map.tiles[hexKey(pos)]) sensors.push({ pos, kind: 'squad' });
+    }
+    source = 'a squad at each fix in your picture';
+  }
+  const opts = { pfa: 1e-3, noiseEnv: s.world.noiseEnv, limiter: false, seed: s.seed };
+  const transmitters = s.world.units
+    .filter((u) => u.side === side && u.radio.powerW > 0)
+    .map((u) => ({ u, ems: emissions(u, s.world.nets) }))
+    .filter((x) => x.ems.length > 0);
+  const units = transmitters.map(({ u, ems }) => {
+    let best: { at: Hex; snrDb: number; pd: number } | undefined;
+    for (const h of sensors) {
+      const sensor = hypothesisUnit(h);
+      for (const em of ems) {
+        const look = sensorLook(map, u, sensor, em, opts);
+        if (!best || look.pd > best.pd) best = { at: h.pos, snrDb: look.snrDb, pd: look.pd };
+      }
+    }
+    return {
+      unit: u.id,
+      worst: best
+        ? {
+            sensorAt: toPos(best.at),
+            snrDb: best.snrDb,
+            pdPerSweep: best.pd,
+            pdPerMinute: 1 - (1 - best.pd) ** MISSION_RULES.sweepsPerMinute,
+          }
+        : null,
+      sensors: sensors.length,
+    };
+  });
+  units.sort((a, b) => (b.worst?.pdPerMinute ?? -1) - (a.worst?.pdPerMinute ?? -1));
+  const basis = sensors.length
+    ? `${sensors.length} sensor hypothes${sensors.length === 1 ? 'is' : 'es'}, ${source}`
+    : `no sensor hypotheses: ${o.sensors ? 'the list is empty' : 'your picture has no fixes'}, so exposure is unknown`;
+  return { units, basis };
 }

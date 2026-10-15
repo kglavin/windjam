@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { axialToOffset } from '../hex';
 import { unitById } from '../world';
-import { analyseCoverage, analyseDetect, analyseFix, analyseJs, analyseLink, analysePath, type Pos } from './analyse';
-import { createMission } from './mission';
-import type { MissionState } from './types';
+import {
+  analyseCoverage,
+  analyseDetect,
+  analyseExposure,
+  analyseFix,
+  analyseJs,
+  analyseLink,
+  analysePath,
+  analysePredict,
+  type Pos,
+} from './analyse';
+import { parseCommand } from './commands';
+import { advance, createMission, issue } from './mission';
+import type { MissionState, PlayerSide, Track } from './types';
 
 const s = createMission(1234, 'duel');
 const posOf = (st: MissionState, id: string): Pos => axialToOffset(unitById(st.world, id)!.pos);
@@ -90,5 +101,134 @@ describe('analyse', () => {
       analyseFix(st, 'blue', { bearings }, { add: { col: 70, row: 80 } }),
     ];
     expect(run(moved)).toEqual(run(s));
+  });
+});
+
+const type = (st: MissionState, as: PlayerSide, line: string) => {
+  const p = parseCommand(line, as);
+  if (!p.ok) throw new Error(`${line}: ${p.error}`);
+  return issue(st, p.command, as);
+};
+
+// Blue DF on Red's UAV for 15 minutes.
+const uavRun = () => {
+  let st = type(createMission(1234, 'uav'), 'red', 'uav: launch');
+  for (let i = 0; i < 5; i++) {
+    for (const u of ['sq1', 'sq2', 'sq3', 'uav']) st = type(st, 'blue', `${u}: df e 3`);
+    st = advance(st, 3);
+  }
+  return st;
+};
+
+// A moving track heard on minutes 3, 6, 9, 12 and fixed three times, flying east at 2 hexes per 3 minutes.
+const synthetic = (st: MissionState): MissionState => {
+  const bearing = (heardMin: number) => ({
+    emitterId: 'r-uav',
+    signature: 'sig',
+    sensorId: 'b-sq1',
+    sensorPos: { q: 40, r: 40 },
+    bearingDeg: 90,
+    sigmaDeg: 2,
+    measurements: 1,
+    samples: [],
+    minute: heardMin,
+    heardMin,
+  });
+  const fix = (q: number) => ({ q, r: 40, cepKm: 1, ellipse: { aKm: 1, bKm: 1, angleRad: 0 }, missKm: 0 });
+  const track: Track = {
+    id: 'E1',
+    emitterId: 'r-uav',
+    signature: 'sig',
+    bearings: [3, 6, 9, 12].map(bearing),
+    moving: true,
+    fixes: [
+      { minute: 6, fix: fix(50) },
+      { minute: 9, fix: fix(52) },
+      { minute: 12, fix: fix(54) },
+    ],
+  };
+  return { ...st, minute: 13, tracks: [track] };
+};
+
+describe('analyse: predict and exposure', () => {
+  it('predict: a UAV Blue has heard gives its transmissions and, when it repeats, a period and next minute', () => {
+    const st = uavRun();
+    const t = st.tracks.find((x) => x.emitterId === 'r-uav');
+    if (!t) return; // seed never heard: the synthetic test below covers the same path
+    const r = analysePredict(st, 'blue', { track: t.id });
+    expect(r.transmissions.length).toBeGreaterThan(0);
+    expect(r.basis).toContain('transmission');
+    if (r.nextMinute !== undefined) expect(r.nextMinute).toBeGreaterThanOrEqual(st.minute);
+  });
+
+  it('predict: bearings at 3, 6, 9, 12 give period 3, next minute 15 and a point east of the last fix', () => {
+    const st = synthetic(s);
+    const r = analysePredict(st, 'blue', { track: 'E1' });
+    expect(r.transmissions).toEqual([3, 6, 9, 12]);
+    expect(r.period?.period).toBe(3);
+    expect(r.nextMinute).toBe(15);
+    expect(r.motion!.headingDeg).toBeGreaterThan(80);
+    expect(r.motion!.headingDeg).toBeLessThan(100);
+    const last = axialToOffset({ q: 54, r: 40 });
+    expect(r.predictedAt!.col).toBeGreaterThan(last.col);
+    expect(r.basis).toBe('4 transmissions, period 3 min; 3 fixes');
+  });
+
+  it('predict: a track with one bearing leaves out period, motion and prediction', () => {
+    const st = synthetic(s);
+    const lone: MissionState = { ...st, tracks: [{ ...st.tracks[0], bearings: [st.tracks[0].bearings[0]], fixes: undefined }] };
+    const r = analysePredict(lone, 'blue', { track: 'E1' });
+    expect(r).not.toHaveProperty('period');
+    expect(r).not.toHaveProperty('nextMinute');
+    expect(r).not.toHaveProperty('motion');
+    expect(r).not.toHaveProperty('predictedAt');
+  });
+
+  it('predict: another side’s track id and an unknown id throw', () => {
+    const st = synthetic(s);
+    expect(() => analysePredict(st, 'red', { track: 'E1' })).toThrow('no track');
+    expect(() => analysePredict(st, 'blue', { track: 'E99' })).toThrow('no track');
+  });
+
+  it('exposure: a hypothesis sensor 2 km from b-hq hears it better than one 40 km away', () => {
+    const hq = posOf(s, 'b-hq');
+    const km = s.world.map.hexSizeKm;
+    const near = analyseExposure(s, 'blue', { sensors: [{ at: east(hq, Math.round(2 / km)), kind: 'squad' }] });
+    const far = analyseExposure(s, 'blue', { sensors: [{ at: east(hq, Math.round(40 / km)), kind: 'squad' }] });
+    const of = (r: ReturnType<typeof analyseExposure>) => r.units.find((u) => u.unit === 'b-hq')!.worst!;
+    // Both saturate at 1 per minute on this map, so SNR is what separates them.
+    expect(of(near).snrDb).toBeGreaterThan(of(far).snrDb);
+    expect(of(near).pdPerMinute).toBeGreaterThanOrEqual(of(far).pdPerMinute);
+    expect(near.units.every((u, i, a) => i === 0 || a[i - 1].worst!.pdPerMinute >= u.worst!.pdPerMinute)).toBe(true);
+    expect(near.basis).toContain('1 sensor hypothesis');
+    expect(of(near).pdPerMinute).toBeGreaterThanOrEqual(of(near).pdPerSweep);
+  });
+
+  it('exposure: no sensors and an empty picture lists every transmitter with worst null', () => {
+    const r = analyseExposure(s, 'blue');
+    expect(r.units.length).toBeGreaterThan(0);
+    expect(r.units.every((u) => u.worst === null && u.sensors === 0)).toBe(true);
+    expect(r.basis).toContain('no sensor hypotheses');
+  });
+
+  it('exposure: a fix in the picture becomes a squad hypothesis', () => {
+    const st = synthetic(s);
+    const r = analyseExposure(st, 'blue');
+    expect(r.basis).toContain('1 sensor hypothesis');
+    expect(r.units[0].worst).not.toBeNull();
+  });
+
+  it('side limit: moving every unit of the other side changes neither result', () => {
+    const mv = (st: MissionState, side: PlayerSide): MissionState => ({
+      ...st,
+      world: { ...st.world, units: st.world.units.map((u) => (u.side === side ? { ...u, pos: { q: u.pos.q + 7, r: u.pos.r + 3 } } : u)) },
+    });
+    const base = synthetic(s);
+    const run = (st: MissionState) => [
+      analysePredict(st, 'blue', { track: 'E1' }),
+      analyseExposure(st, 'blue'),
+      analyseExposure(st, 'blue', { sensors: [{ at: east(posOf(s, 'b-hq'), 10), kind: 'squad' }] }),
+    ];
+    expect(run(mv(base, 'red'))).toEqual(run(base));
   });
 });
