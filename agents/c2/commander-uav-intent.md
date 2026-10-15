@@ -83,7 +83,7 @@ Any unit line without `send` (`sq1: df e 5`) is rejected. Do not type `wait`.
 
 Facts from games where one agent played Blue with direct control. Your orders arrive with delay, so the opening matters more.
 
-Turn 1: get two sensors onto the UAV's line to Red HQ, east of you. Squads drive about 25 minutes to reach `130,70` and `130,90` (20 km/h). Put sq2 and the UAV on DF east at once (the UAV on a silent sortie to `126,76`, 5 minutes on station, back in about 12 minutes, legs within 6 km of sq2).
+Turn 1: get two sensors onto the UAV's line to Red HQ, east of you. Pick each squad's stop 8 to 12 columns east of where it stands, on open ground. The squad's move line gives the planned minutes (`moving to 128,90, 13 hexes, about 20 min`) or `no route` (a mountain or water: pick a hex next to it). Aim for under 20 minutes: moves route around terrain, and in played games the full drive to column 130 took 26 to 41 minutes, which ended the game before the squads could listen. An agent squad sees its own move line and can adjust within your intent. Put sq2 and the UAV on DF east at once (the UAV on a silent sortie to `126,76`, 5 minutes on station, back in about 12 minutes, legs within 6 km of sq2).
 
 For an agent squad: `send sq1: go to 130,70, then cover the sector east of you; report as soon as you hear 65 MHz`. For an auto squad: `send sq1: move 130,70`, then a `df` order when it has arrived.
 

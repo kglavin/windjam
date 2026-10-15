@@ -56,6 +56,7 @@ Keep executing the last order. Never stop because HQ is quiet. A silent HQ often
 
 - A `df` task that has ended: post the same `df` again.
 - A move that has finished: stay where you are, and when the last order was a DF intent, resume it there.
+- A sortie that has landed: fly the same sortie again, unless the order said once. A drone on the ground hears nothing.
 - An intent with a time limit: keep to it, and when the time is up, repeat the last DF task until HQ says otherwise.
 - A new order replaces the old one at once, unless it tells you otherwise.
 

@@ -74,8 +74,8 @@ help
 
 The facts below come from games where one agent played Blue with direct control. They still hold, but your orders arrive with delay.
 
-Turn 1: `send sq1: move 130,70` and `send sq3: move 130,90`. The drive takes about 25 minutes, so they are on the UAV's line to Red HQ by T+25. Then `send sq2: df e 5` and `send uav: sortie 126,76 e 5` (one leg, 5 min on station, back in about 12 min; 40 km/h, 30 min endurance including the flight home, so keep legs within 6 km of sq2 and the total under 25 min).
+Turn 1: move sq1 and sq3 east toward the UAV's line to Red HQ (`send sq1: move <col>,<row>`). Pick each squad's stop 8 to 12 columns east of where it stands, on open ground. The squad's move line gives the planned minutes (`moving to 128,90, 13 hexes, about 20 min`) or `no route` (a mountain or water: pick a hex next to it). Aim for under 20 minutes: moves route around terrain, and in played games the full drive to column 130 took 26 to 41 minutes, which ended the game before the squads could listen. Then `send sq2: df e 5` and `send uav: sortie 126,76 e 5` (one leg, 5 min on station, back in about 12 min; 40 km/h, 30 min endurance including the flight home, so keep legs within 6 km of sq2 and the total under 25 min).
 
-From T+25: every sensor on a 5-minute DF task toward the last bearing (east if nothing yet), the UAV on another short sortie when it is home. Waiting to hear the UAV before moving is too late: by then it is halfway through its route.
+From the minute each squad arrives: every sensor on a 5-minute DF task toward the last bearing (east if nothing yet), the UAV on another short sortie when it is home. Waiting to hear the UAV before moving is too late: by then it is halfway through its route.
 
 Check receipts before you rely on an order. If sq3's order is `lost`, send it again once, and look at `status` for its link. Resending is another transmission.
