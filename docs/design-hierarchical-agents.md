@@ -393,6 +393,8 @@ WP-1.10 (S) Briefs: `agents/c2/commander-uav.md` (explicit variant), `agents/c2/
 
 WP-2.1 (S) `src/engine/analysis.ts`: a module that re-exports the engine functions the endpoints need and adds `hypothesisUnit(pos, kind, powerW, antennaHeightM, gainDbi)` building a `Unit` for a stated enemy hypothesis (as `probeUnit` does in `coverage.ts`). No side logic yet. Test: a hypothesis unit runs through `sensorLook` without error.
 
+Endpoint logic for WP-2.2 to WP-2.7 lives in `src/engine/mission/analyse.ts` as pure functions `(state, side, params) => result` with their own tests; `serve.ts` only parses query strings and routes to them, and the MCP server (WP-3.4) and the embedded tools (Part 3) call the same functions. None of them edits `mission.ts`.
+
 WP-2.2 (M) `GET /analyse/path` and `GET /analyse/link` in `serve.ts`: parse `from`, `to` as `col,row`; `f` in MHz; for `link`, `a` and `b` must be the side's own unit ids (else 400) and the net the side's; return `analyzePath`'s profile summary (loss, line of sight, worst obstacle) and `linkBudget` plus `orderDelivery`. Depends on WP-2.1. Test: `scripts/smoke-analyse.sh` checks a known pair on seed 1234 returns `lineOfSight` and a finite loss.
 
 WP-2.3 (M) `GET /analyse/coverage` and `GET /analyse/detect`: coverage for an own unit by id, or for a hypothesis (`at`, `powerW`, `antennaM`, `f`); detect takes `sensor` (own unit id) and a hypothesis; return summaries by default (count of hexes above a threshold, the ten strongest, max range) and the full grid only with `full=1`. Depends on WP-2.1. Test: the hypothesis at an own unit's position gives the same numbers as the unit itself.
