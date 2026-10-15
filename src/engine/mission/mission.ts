@@ -25,6 +25,7 @@ import {
   type MissionKind,
   type MissionState,
   type Order,
+  type OrderMessage,
   type PlayerSide,
   type Playbook,
   type Report,
@@ -62,6 +63,8 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
     bursts: [],
     emcon: {},
     redOrders: [],
+    messages: [],
+    nextOrderNo: 1,
   };
   if (mission === 'find') {
     log(state, 'info', `Mission: find the enemy. Fix ${R.fixesToWin} Red emitters to CEP under ${R.winCepKm} km within ${R.limitMin} minutes.`);
@@ -226,6 +229,7 @@ function clone(s: MissionState): MissionState {
     emcon: { ...s.emcon },
     events: [...s.events],
     redOrders: s.redOrders.map((o) => ({ ...o })),
+    messages: s.messages.map((o) => ({ ...o })),
     uav: cloneUav(s.uav),
     blueUav: cloneUav(s.blueUav),
     actor: undefined,
@@ -262,6 +266,10 @@ export function issue(state: MissionState, cmd: MissionCommand, as: PlayerSide =
   if (cmd.type === 'wait') return advance(s, cmd.minutes);
   if (cmd.type === 'send') {
     send(s);
+    return s;
+  }
+  if (cmd.type === 'order') {
+    sendOrder(s, as, cmd.toId, cmd.text);
     return s;
   }
   if (cmd.type === 'emcon') {
@@ -658,6 +666,93 @@ function send(s: MissionState) {
   log(s, 'order', `HQ: order ${order.n} sent to ${to.name} ${view.route === 'relay' ? 'via the relay' : 'direct'}. ${status === 'on time' ? 'Delivered, on time.' : status === 'late' ? `Delivered late (${view.order.latencyS.toFixed(0)} s on a degraded link).` : 'Lost: the link is down.'}`);
 }
 
+// The link HQ uses to reach a unit: the view on the side's hub net whose member is the unit.
+// A drone that is not on the net goes through its parent. Undefined for a unit on no net (the EW teams, HQ itself).
+export function memberLink(s: MissionState, unitId: string, links: LinkView[]): LinkView | undefined {
+  const unit = unitById(s.world, unitId);
+  if (!unit) return undefined;
+  const hubNet = s.world.nets.find((n) => n.side === unit.side && n.topology === 'hub');
+  if (!hubNet) return undefined;
+  const viewOf = (id: string) => links.find((v) => v.link.netId === hubNet.id && v.link.bId === id);
+  return viewOf(unit.id) ?? (unit.kind === 'drone' && unit.parentId ? viewOf(unit.parentId) : undefined);
+}
+
+// Send a free-text order from a side's HQ to one of its units: a one-minute burst on the hub net, and on the retrans net when the relay carries it.
+// Delivery and the unit's acknowledgement are decided in deliverOrders.
+export function sendOrder(s: MissionState, side: PlayerSide, toId: string, text: string) {
+  const to = unitById(s.world, toId);
+  if (!to) {
+    log(s, 'error', `No unit ${toId}`, side);
+    return;
+  }
+  if (to.side !== side) {
+    log(s, 'error', `${to.name} is not yours to command.`, side);
+    return;
+  }
+  const hubNet = s.world.nets.find((n) => n.side === side && n.topology === 'hub')!;
+  const hq = unitById(s.world, hubNet.hubId!)!;
+  const view = memberLink(s, to.id, allLinkBudgets(s.world));
+  if (!view) {
+    log(s, 'error', `${to.name} is on no net HQ can reach.`, side);
+    return;
+  }
+  if (s.orders[hq.id]?.kind === 'move') {
+    log(s, 'error', 'HQ is moving and cannot transmit. Wait until it arrives, or stop it.', side);
+    return;
+  }
+  const n = s.nextOrderNo++;
+  s.messages.push({ n, side, fromId: hq.id, toId: to.id, text, sentMin: s.minute, status: 'pending' });
+  const what = `order ${n}`;
+  s.bursts.push({ minute: s.minute, unitId: hq.id, netId: hubNet.id, what });
+  if (view.route === 'relay' && view.relay) {
+    s.bursts.push({ minute: s.minute, unitId: view.relay.relayId, netId: hubNet.id, what: `${what} relayed` });
+    s.bursts.push({ minute: s.minute, unitId: view.relay.relayId, netId: view.relay.retransNetId, what: `${what} relayed` });
+  }
+  log(s, 'order', `HQ: order ${n} to ${to.name} sent.`, side);
+}
+
+// How long HQ waits for an acknowledgement before it marks an order lost, and the longest a late order is delayed.
+const ACK_TIMEOUT_MIN = 3;
+const ORDER_LATE_CAP_MIN = 5;
+
+// Orders in flight, one minute: decide arrival once at the send minute, hand the order to the unit, send its acknowledgement, and mark orders lost at HQ.
+function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
+  for (const msg of s.messages) {
+    if (m === msg.sentMin) {
+      const view = memberLink(s, msg.toId, links);
+      if (view && view.order.status !== 'lost') {
+        msg.arriveMin = view.order.status === 'on time' ? m : m + Math.min(ORDER_LATE_CAP_MIN, Math.ceil(view.order.latencyS / 60));
+      }
+    }
+    const unit = unitById(s.world, msg.toId)!;
+    if (m === msg.arriveMin) {
+      log(s, 'order', `${unit.name}: order ${msg.n} received: ${msg.text}`, msg.side);
+      const view = memberLink(s, msg.toId, links);
+      const netId = view ? (view.route === 'relay' && view.relay ? view.relay.retransNetId : view.link.netId) : s.world.nets.find((n) => n.side === msg.side && n.topology === 'hub')!.id;
+      s.bursts.push({ minute: m, unitId: unit.id, netId, what: `ack order ${msg.n}` });
+      if (view && view.order.status !== 'lost') {
+        msg.ackMin = m;
+        msg.status = msg.arriveMin === msg.sentMin ? 'on time' : 'late';
+        log(s, 'order', `HQ: order ${msg.n} acknowledged by ${unit.name}.`, msg.side);
+      }
+    }
+    if (msg.status === 'pending' && msg.ackMin === undefined && m - (msg.arriveMin ?? msg.sentMin) >= ACK_TIMEOUT_MIN) {
+      msg.status = 'lost';
+      log(s, 'error', `HQ: order ${msg.n} to ${unit.name}: no acknowledgement, lost.`, msg.side);
+    }
+  }
+}
+
+// The orders that have reached a unit since a minute, for the unit's own view.
+export function inbox(s: MissionState, unitId: string, sinceMin: number): OrderMessage[] {
+  return s.messages.filter((o) => o.toId === unitId && o.arriveMin !== undefined && o.arriveMin >= sinceMin);
+}
+
+// A side's orders and where each stands, for the commander's view.
+export function receipts(s: MissionState, side: PlayerSide): OrderMessage[] {
+  return s.messages.filter((o) => o.side === side);
+}
+
 // Advance the clock one minute at a time.
 export function advance(state: MissionState, minutes: number): MissionState {
   let s = clone(state);
@@ -757,6 +852,9 @@ function tick(s: MissionState): MissionState {
 
   // Held reports retry first: a link may have come back.
   s.held = s.held.filter((r) => !deliver(s, r, links));
+
+  // Orders sent over the net arrive, are acknowledged, or time out.
+  deliverOrders(s, m, links);
 
   // Mission 4: the UAV takes its next leg, and a report is forced if the interval has run out.
   for (const uav of uavStates(s)) {

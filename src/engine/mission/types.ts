@@ -30,6 +30,7 @@ export type MissionCommand =
   | { type: 'replay'; move: 'next' | 'step' | 'back' | 'exit' }
   // Mission 2 (Red): electronic protection and the orders Red must pass.
   | { type: 'send' }
+  | { type: 'order'; toId: string; text: string } // send <unit>: <text>: free text carried to a unit over the net, either side
   | { type: 'emcon'; netId: string; duty: number } // 0..0.2
   | { type: 'power'; unitId: string; watts: number }
   | { type: 'waveform'; netId: string; waveform: Waveform }
@@ -133,6 +134,20 @@ export interface RedOrder {
   status: 'pending' | OrderStatus;
 }
 
+// An order a commander sends to one of its units over the net, with the receipt HQ holds for it.
+// 'pending' until the unit's acknowledgement gets back. 'lost' means HQ heard nothing in time, whether or not the unit got it.
+export interface OrderMessage {
+  n: number;
+  side: PlayerSide;
+  fromId: string;
+  toId: string;
+  text: string;
+  sentMin: number;
+  arriveMin?: number; // set when the order is going to reach the unit; undefined while it is lost on the way
+  ackMin?: number; // the minute the acknowledgement reached HQ
+  status: 'pending' | OrderStatus;
+}
+
 // The opponent's pre-planned commands, from a mission-1 script.
 export interface Playbook {
   name: string;
@@ -185,6 +200,9 @@ export interface MissionState {
   // Mission 2.
   playbook?: Playbook;
   redOrders: RedOrder[];
+  // Orders over the net (any mission, either side).
+  messages: OrderMessage[];
+  nextOrderNo: number;
   // Mission 4.
   uav?: UavState; // Red's UAV (missions 4 and 5)
   blueUav?: UavState; // Blue's UAV (mission 5)

@@ -50,6 +50,7 @@ const WAVEFORMS: Record<string, Waveform> = {
 const COMMON_HELP = [
   '<unit>: move <col>,<row>           move to a grid position (hover a hex to read col,row)',
   '<unit>: stop                       cancel the current order',
+  'send <unit>: <text>                send an order to a unit over the net; the unit acknowledges it, HQ marks it lost after 3 minutes',
   'wait <minutes>                     advance the clock',
   'status                             every unit: position, order, link to HQ, held reports',
   'picture                            tracks: bearings, fixes, CEP',
@@ -87,6 +88,14 @@ export const HELP: Record<PlayerSide, string[]> = {
 export type ParseResult = { ok: true; command: MissionCommand } | { ok: false; error: string };
 
 export function parseCommand(input: string, side: PlayerSide = 'blue'): ParseResult {
+  // send <unit>: <text> passes free text to a unit over the net. The text keeps its case; the bare send is mission 2's.
+  const order = /^send\s+([^\s:]+)\s*:\s*(.*)$/i.exec(input.trim());
+  if (order) {
+    const toId = UNIT_ALIASES[side][order[1].toLowerCase()];
+    if (!toId) return { ok: false, error: `Unknown unit "${order[1].toLowerCase()}". Units: ${Object.keys(UNIT_ALIASES[side]).join(' ')}` };
+    if (!order[2]) return { ok: false, error: 'send needs the order text, e.g. send sq1: df e 5' };
+    return { ok: true, command: { type: 'order', toId, text: order[2] } };
+  }
   const text = input.trim().toLowerCase().replace(/:/g, ' ');
   const tokens = text.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return { ok: false, error: 'Type help for the command list' };
