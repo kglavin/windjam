@@ -154,8 +154,8 @@ describe('analyse: predict and exposure', () => {
   it('predict: a UAV Blue has heard gives its transmissions and, when it repeats, a period and next minute', () => {
     const st = uavRun();
     const t = st.tracks.find((x) => x.emitterId === 'r-uav');
-    if (!t) return; // seed never heard: the synthetic test below covers the same path
-    const r = analysePredict(st, 'blue', { track: t.id });
+    expect(t, 'Blue should hear the UAV in this setup; if a model change stops that, pick a setup where it does').toBeDefined();
+    const r = analysePredict(st, 'blue', { track: t!.id });
     expect(r.transmissions.length).toBeGreaterThan(0);
     expect(r.basis).toContain('transmission');
     if (r.nextMinute !== undefined) expect(r.nextMinute).toBeGreaterThanOrEqual(st.minute);

@@ -341,7 +341,9 @@ export function analyseExposure(s: MissionState, side: PlayerSide, o: { sensors?
       sensors: sensors.length,
     };
   });
-  units.sort((a, b) => (b.worst?.pdPerMinute ?? -1) - (a.worst?.pdPerMinute ?? -1));
+  // At VHF ranges most transmitters are heard every minute (pdPerMinute 1), so SNR decides the order among them:
+  // it is the margin the enemy has, and what lower power or an antenna would have to remove.
+  units.sort((a, b) => (b.worst?.pdPerMinute ?? -1) - (a.worst?.pdPerMinute ?? -1) || (b.worst?.snrDb ?? -Infinity) - (a.worst?.snrDb ?? -Infinity));
   const basis = sensors.length
     ? `${sensors.length} sensor hypothes${sensors.length === 1 ? 'is' : 'es'}, ${source}`
     : `no sensor hypotheses: ${o.sensors ? 'the list is empty' : 'your picture has no fixes'}, so exposure is unknown`;
