@@ -70,10 +70,10 @@ Access: unit agents are given only their unit URL. The umpire key gates `/full` 
 With turn length T (5 minutes recommended):
 
 1. Commander reads receipts, picture, status; posts `send` lines and side-wide settings; ends.
-2. Units read inboxes (orders that arrived during the last T minutes, stamped), local intercepts and task state; post unit orders; end. Units run concurrently.
+2. Units wait until their side's commander has ended its turn, then read inboxes (orders that reached them, including orders on a good link sent this turn), local intercepts and task state; post unit orders; end. Units run concurrently with each other.
 3. Server advances T minutes: bursts go out, deliveries and acknowledgements resolve minute by minute, tasks run, reports flow.
 
-Order latency is therefore at least one turn from the commander's decision to the unit's action, plus the net's own delay, which is the realistic shape of the problem.
+An order on a good link therefore reaches an agent unit in the turn it is sent, so the unit acts in the same game minute as an auto unit would. Late and lost orders, and acknowledgements, still resolve as the clock runs: the delay the experiments measure is the net's, not the turn structure's.
 
 ## 6. Briefs
 
@@ -113,7 +113,7 @@ E5. Scale: the duel with six units per side; the hunt with two UAVs per side (ne
 D-link. A unit whose link is down keeps acting on its last order and queues its reports. The alternative (stop and wait) is safer and uninteresting.
 D-ack. Acknowledgements are real transmissions and can be lost; HQ marks an unacknowledged order lost after 3 minutes whether or not it arrived.
 D-text. Orders are free text to the unit agent; the engine only carries them. Explicit and intent variants differ in the brief, not the engine.
-D-turn. One turn gate for commander and units together, 5 minutes. A two-phase turn (commander first, then units) adds a round trip per turn and is not worth it; the net delay already orders things.
+D-turn (revised after the first C2 game). Two phases per turn: each side's commander first, then its unit agents, and the clock advances when all have ended. The first design, one gate with everyone concurrent, cost every order to an agent unit a full turn (5 game minutes) before the unit could see it, while an auto unit acted at once; that artefact of the turn structure would have swamped the net effects the experiments are meant to measure. The cost is wall-clock time: unit agents start after their commander ends.
 D-auto. Unmanned units execute their inbox literally, so a game can run with fewer agents than units.
 
 ## 11. Open questions
@@ -372,6 +372,7 @@ Status, as of the latest merge on main:
 | WP-1.9 | done | `/full` polling is left out of the call audit |
 | WP-1.10 | done | writing the briefs found seven inconsistencies; four become WP-1.11 |
 | WP-1.11 | done | an EW team not jamming now radiates its acknowledgements (it was silent because a jammer's emissions were only its jam band) |
+| WP-1.12 | in progress | same-turn delivery, from the first C2 game |
 | WP-2.1 | done | |
 | WP-2.2 to 2.5 | done | logic in `src/engine/mission/analyse.ts`; `analyseLink` scores the direct path only and uses the side's own jammers only |
 | WP-2.6 | done | |
@@ -424,6 +425,12 @@ WP-1.11 (M) C2 follow-ups found by writing the briefs (WP-1.10):
 - `sendOrder` refuses a drone on a silent sortie: `<unit> is on a silent sortie and cannot be reached until it returns.`
 - The C2 briefs and the README are updated to match: jamming is available through `send ew: jam <net>`; receipts are in `status`; a UAV with an agent can `launch`.
 Depends on WP-1.8 and WP-1.10. Tests: an order to `ew` in C2 mode is delivered on the EW net and an auto EW team starts jamming; a game without C2 has no EW net; the status lines; an order to a UAV on a sortie is refused; the smoke script gains a check that `send ew: jam cmd` reaches the EW team.
+
+WP-1.12 (M) Same-turn delivery (D-turn revised):
+- `sendOrder`: when `memberLink`'s `order.status` is `'on time'`, set `arriveMin = s.minute` at send, so the order is in `inbox` at once. `deliverOrders` keeps deciding arrival at `m === sentMin` only when `arriveMin` is still undefined (late and lost orders, unchanged), and keeps doing the arrival work (the "received" line, the acknowledgement burst and receipt, auto execution) at `m === arriveMin` during the tick, as now. An order on a good link is therefore visible to an agent unit before the tick and acted on by an auto unit in the tick, both in minute `sentMin`.
+- Server: unit endpoints gate on the commander. `GET /state?side=&unit=` gains `hqTurnEnded: boolean`. `POST /<side>/<alias>` with any line other than `status` or `help`, `POST /<side>/<alias>/report` and `POST /<side>/<alias>/end` answer 409 `{ error: "wait until HQ has ended its turn" }` while the side's commander has not ended the turn. `waitingFor` lists units only once their commander has ended.
+- Briefs: `agents/c2/unit.md` and the unit prompt in `agents/player-prompt.md` add a wait step (`if not hqTurnEnded: sleep 3 and read state again`) before the unit decides; the commander briefs say an order on a good link reaches an agent unit the same turn; `agents/README.md` documents `hqTurnEnded` and the 409.
+Depends on WP-1.11. Tests: an on-time order is in `inbox` immediately after `sendOrder`, before any tick; a late order is not; an auto unit still acts in the tick of `sentMin`; the acknowledgement and status still resolve in the tick; smoke: a unit's line before the commander ends gets 409, after it is accepted, and an order sent this turn is in the unit's `inbox` the same turn.
 
 WP-1.9 (S) Archive: `messages` and the per-call audit (`{ turn, path }`) added to the archive record in `serve.ts`; `scripts/games.ts` gains columns orders sent, on time, late, lost, and mean order-to-action delay (sent minute to the minute the unit's matching order line appears in its log). Depends on WP-1.8.
 
