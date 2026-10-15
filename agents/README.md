@@ -55,9 +55,31 @@ Every finished game is written to `games/` (orders, both consoles, the reveal, t
 
 [player-prompt.md](player-prompt.md) is the prompt a side's agent gets, with the side, brief and server filled in. Launch both sides at once against one server; the game is over when `GET /` says `status` is not `running`.
 
-## Planned: commander and unit agents
+## C2 mode: a commander and unit agents
 
-[../docs/design-hierarchical-agents.md](../docs/design-hierarchical-agents.md) is the specification for splitting a side into a commander at HQ and one agent per unit, with orders carried over the simulated net. The per-unit endpoints described there do not exist yet.
+A side can be split into a commander at HQ and one agent per unit, with orders carried over the simulated net ([design](../docs/design-hierarchical-agents.md)). C2 mode is chosen per side at start: `--c2-blue sq1,uav` (and `--c2-red ...`) on the CLI, or `{"mission":"uav","seed":1234,"turn":5,"c2":{"blue":{"agents":["sq1","uav"]}}}` to `POST /new`. `agents` lists the unit aliases that get an agent. Every other unit of that side is auto: it executes each order's text literally when the order arrives. A side with no `c2` entry plays as above.
+
+In C2 mode the side's endpoints belong to the commander, and units have their own:
+
+| Call | What it does |
+|---|---|
+| `POST /blue` | The commander's lines. A line that tasks a unit directly (`df`, `move`, `sortie`, `stop`, `power`, `antenna`, `decoy`, `jam`, `uav`) is rejected with `in C2 mode, task units with send <unit>: <order>`. `send <unit>: <order>`, `emcon`, `status`, `picture`, `help` and HQ's own settings (`hq: power 20`) are accepted |
+| `GET /state?side=blue&unit=sq1&after=N` | The unit's view: `console` (its own lines), `cursor`, `status_lines` (its line with position, task and link, orders received, bearings heard), `inbox` (orders that reached it since its last turn). No picture |
+| `POST /blue/sq1` | The unit's lines, without its name (`df e 5`). Accepts `df move sortie stop burst hold resume route jam decoy power antenna`, plus `report`, `status`, `help` |
+| `POST /blue/sq1/report` | Send what the unit has heard so far to HQ (a transmission). The same as a `report` line |
+| `POST /blue/sq1/end` | The unit ends its turn |
+
+A unit endpoint for a unit with no agent answers 403 `no agent seat for <alias>`. The clock advances when the commander of each side and every listed unit agent have ended their turn. `GET /` lists them in `waitingFor` as `blue`, `blue/sq1`, and so on.
+
+An order is a transmission. It arrives the same minute when the link is good, later when degraded, never when lost. The unit acknowledges it with another transmission. The commander's console shows `order n ... sent`, `... acknowledged by ...`, or `... no acknowledgement, lost` after 3 minutes. A lost order may still have arrived.
+
+Briefs for mission 4 (`--mission uav`), Blue side:
+
+- [c2/commander-uav.md](c2/commander-uav.md): the commander, sending explicit unit orders.
+- [c2/commander-uav-intent.md](c2/commander-uav-intent.md): the commander, sending intent to agent units and literal orders to auto units.
+- [c2/unit.md](c2/unit.md): any unit agent, with `{SIDE}`, `{UNIT}`, `{KIND}` and `{SERVER}` filled in.
+
+[player-prompt.md](player-prompt.md) has the unit agent's prompt. Launch the commander and each unit agent as separate agents against one server, and tell the commander which units have agents. The commander is never given a unit's URL, and a unit is never given the commander's.
 
 ## Briefs
 
