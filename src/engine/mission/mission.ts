@@ -20,8 +20,10 @@ import {
   MISSION_RULES as R,
   enemyOf,
   type DfAccumulator,
+  type LogEntry,
   type LogKind,
   type MissionCommand,
+  type MissionEvent,
   type MissionKind,
   type MissionState,
   type Order,
@@ -189,9 +191,9 @@ function redOrderSchedule(world: World) {
   }));
 }
 
-// Log lines carry the side whose console shows them. Lines about the mission itself carry none.
-function log(s: MissionState, kind: LogKind, text: string, side: PlayerSide | 'both' = s.actor ?? s.side) {
-  s.log = [...s.log, { minute: s.minute, kind, text, side: side === 'both' ? undefined : side }];
+// Log lines carry the side whose console shows them. Lines about the mission itself carry none. A line a unit's own order produces also carries the unit.
+function log(s: MissionState, kind: LogKind, text: string, side: PlayerSide | 'both' = s.actor ?? s.side, unitId?: string) {
+  s.log = [...s.log, { minute: s.minute, kind, text, side: side === 'both' ? undefined : side, ...(unitId ? { unitId } : {}) }];
 }
 
 const stamp = (deg: number) => `${Math.round(deg)}°`;
@@ -703,6 +705,7 @@ export function sendOrder(s: MissionState, side: PlayerSide, toId: string, text:
   }
   const n = s.nextOrderNo++;
   s.messages.push({ n, side, fromId: hq.id, toId: to.id, text, sentMin: s.minute, status: 'pending' });
+  s.events.push({ kind: 'send', minute: s.minute, orderN: n, fromId: hq.id, toId: to.id, status: 'pending' });
   const what = `order ${n}`;
   s.bursts.push({ minute: s.minute, unitId: hq.id, netId: hubNetId, what });
   if (view.route === 'relay' && view.relay) {
@@ -727,12 +730,13 @@ function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
     }
     const unit = unitById(s.world, msg.toId)!;
     if (m === msg.arriveMin) {
-      log(s, 'order', `${unit.name}: order ${msg.n} received: ${msg.text}`, msg.side);
+      log(s, 'order', `${unit.name}: order ${msg.n} received: ${msg.text}`, msg.side, unit.id);
       const view = memberLink(s, msg.toId, links);
       const netId = view ? (view.route === 'relay' && view.relay ? view.relay.retransNetId : view.link.netId) : s.world.nets.find((n) => n.side === msg.side && n.topology === 'hub')!.id;
       s.bursts.push({ minute: m, unitId: unit.id, netId, what: `ack order ${msg.n}` });
       if (view && view.order.status !== 'lost') {
         msg.ackMin = m;
+        s.events.push({ kind: 'ack', minute: m, unitId: unit.id, side: msg.side, orderN: msg.n });
         msg.status = msg.arriveMin === msg.sentMin ? 'on time' : 'late';
         log(s, 'order', `HQ: order ${msg.n} acknowledged by ${unit.name}.`, msg.side);
       }
@@ -874,7 +878,7 @@ function tick(s: MissionState): MissionState {
       if (leg.stopped || leg.path.length === 0) {
         delete s.orders[unitId];
         const { col, row } = axialToOffset(unitById(s.world, unitId)!.pos);
-        log(s, leg.stopped ? 'error' : 'order', `${unit.name}: ${leg.stopped ? `stopped at ${col},${row}: ${leg.stopped}` : `arrived at ${col},${row}.`}`);
+        log(s, leg.stopped ? 'error' : 'order', `${unit.name}: ${leg.stopped ? `stopped at ${col},${row}: ${leg.stopped}` : `arrived at ${col},${row}.`}`, undefined, unit.id);
         refreshAntennas(s);
         links = allLinkBudgets(s.world);
       } else s.orders[unitId] = { ...order, path: leg.path, progress: leg.progress };
@@ -903,10 +907,10 @@ function tick(s: MissionState): MissionState {
         continue;
       }
       const cur = order.legs[order.legIndex];
-      if (leg.stopped) log(s, 'error', `${unit.name}: leg ${order.legIndex + 1} cut short (${leg.stopped}).`);
+      if (leg.stopped) log(s, 'error', `${unit.name}: leg ${order.legIndex + 1} cut short (${leg.stopped}).`, undefined, unit.id);
       if (cur.minutes > 0) {
         s.orders[unitId] = { ...order, phase: 'df', path: [], progress: 0, dfEndMin: s.minute + cur.minutes, heard: {} };
-        log(s, 'order', `${unit.name}: leg ${order.legIndex + 1}/${order.legs.length} on station, DF ${sectorLabel(cur.centreDeg!)} for ${cur.minutes} min, radio silent.`);
+        log(s, 'order', `${unit.name}: leg ${order.legIndex + 1}/${order.legs.length} on station, DF ${sectorLabel(cur.centreDeg!)} for ${cur.minutes} min, radio silent.`, undefined, unit.id);
       } else {
         s.orders[unitId] = nextLeg(s, unit, { ...order, done: [...order.done] }, here);
       }
@@ -918,7 +922,7 @@ function tick(s: MissionState): MissionState {
       s.orders[unitId] = { ...order, heard };
       if (order.dfEndMin !== undefined && s.minute >= order.dfEndMin) {
         const n = Object.keys(heard).length;
-        log(s, 'order', `${unit.name}: leg ${order.legIndex + 1} done, ${n} emitter${n === 1 ? '' : 's'} heard.`);
+        log(s, 'order', `${unit.name}: leg ${order.legIndex + 1} done, ${n} emitter${n === 1 ? '' : 's'} heard.`, undefined, unit.id);
         s.orders[unitId] = nextLeg(s, unit, { ...order, heard: {}, done: [...order.done, { pos: unit.pos, heard }] }, unit.pos);
       }
       continue;
@@ -944,8 +948,8 @@ function tick(s: MissionState): MissionState {
     links = allLinkBudgets(s.world);
     const bearings = order.done.flatMap((d) => writeReport(s, now, d.pos, Object.values(d.heard), rng).bearings);
     const via = parent && home ? parent : now;
-    if (!home) log(s, 'error', `${unit.name}: back but not within ${R.handoverKm} km of its squad; reporting from where it is.`);
-    file(s, via, { side: via.side as PlayerSide, unitId: via.id, minute: s.minute, bearings }, `back from sortie (${order.done.length} leg${order.done.length === 1 ? '' : 's'}), handed over`, links, unit.name);
+    if (!home) log(s, 'error', `${unit.name}: back but not within ${R.handoverKm} km of its squad; reporting from where it is.`, undefined, unit.id);
+    file(s, via, { side: via.side as PlayerSide, unitId: via.id, minute: s.minute, bearings }, `back from sortie (${order.done.length} leg${order.done.length === 1 ? '' : 's'}), handed over`, links, unit.name, unit.id);
   }
   s.actor = undefined;
 
@@ -1166,10 +1170,10 @@ function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: 
 }
 
 // Log a finished task and send its report to HQ, or hold it if the route is down. Sending is itself a burst.
-function file(s: MissionState, via: Unit, report: Report, what: string, links: LinkView[], who = via.name) {
+function file(s: MissionState, via: Unit, report: Report, what: string, links: LinkView[], who = via.name, ownerId = via.id) {
   const summary = `${report.bearings.length} emitter${report.bearings.length === 1 ? '' : 's'}, ${report.bearings.reduce((a, b) => a + b.measurements, 0)} measurements`;
   if (report.bearings.length === 0) {
-    log(s, 'report', `${who}: ${what}. Nothing heard.`);
+    log(s, 'report', `${who}: ${what}. Nothing heard.`, undefined, ownerId);
     return;
   }
   const hub = s.world.nets.find((n) => n.side === via.side && n.topology === 'hub');
@@ -1177,12 +1181,12 @@ function file(s: MissionState, via: Unit, report: Report, what: string, links: L
   const delivered = routeToHq(s, via.id, links).ok;
   s.events.push({ kind: 'report', minute: s.minute - 1, unitId: via.id, side: via.side as PlayerSide, bearings: report.bearings.length, delivered });
   if (delivered) {
-    log(s, 'report', `${who}: ${what}. ${summary}. Reported to HQ.`);
+    log(s, 'report', `${who}: ${what}. ${summary}. Reported to HQ.`, undefined, ownerId);
     if (hub?.hubId) s.bursts.push({ minute: s.minute - 1, unitId: hub.hubId, netId: hub.id, what: 'report acknowledged' });
     merge(s, report);
   } else {
     s.held = [...s.held, report];
-    log(s, 'report', `${who}: ${what}. ${summary}. Report held: no link to HQ.`);
+    log(s, 'report', `${who}: ${what}. ${summary}. Report held: no link to HQ.`, undefined, ownerId);
   }
 }
 
@@ -1512,6 +1516,29 @@ function replayCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 're
   }
 }
 
+// One unit's status line: where it is, what it is doing, its link to HQ, held reports and radio settings.
+function unitLine(s: MissionState, u: Unit, links: LinkView[]): string {
+  const { col, row } = axialToOffset(u.pos);
+  const o = s.orders[u.id];
+  const order = !o
+    ? 'idle'
+    : o.kind === 'df'
+      ? `DF ${sectorLabel(o.centreDeg)} until T+${o.endMin}`
+      : o.kind === 'move'
+        ? `moving, ${o.path.length} hexes to go`
+        : `sortie leg ${Math.min(o.legIndex + 1, o.legs.length)}/${o.legs.length}, ${o.phase === 'out' ? `flying (${o.path.length} hexes)` : o.phase === 'df' ? `DF ${sectorLabel(o.legs[o.legIndex].centreDeg!)} until T+${o.dfEndMin}` : `returning (${o.path.length} hexes)`}, radio silent`;
+  const route = routeToHq(s, u.id, links);
+  const held = s.held.filter((r) => r.unitId === u.id).length;
+  const link = route.via === 'not on the command net' ? 'no radio net' : `${route.ok ? 'ok' : 'LOST'} (${route.via})`;
+  const ep = [
+    u.radio.powerW > 0 && u.kind !== 'drone' ? `${u.radio.powerW} W` : '',
+    u.antenna ? `antenna → ${unitById(s.world, u.antenna.towardId)?.name ?? '?'}` : '',
+    u.decoy ? `decoy as ${s.world.nets.find((n) => n.id === u.decoy!.netId)?.name}` : '',
+    u.jammer && u.jammer.mode !== 'off' ? `jamming ${u.jammer.targetNetId}` : '',
+  ].filter(Boolean);
+  return `${aliasOf(u.id).padEnd(5)} ${u.name.padEnd(13)} at ${col},${row} · ${order} · link to HQ: ${link}${held ? ` · ${held} report held` : ''}${ep.length ? ` · ${ep.join(', ')}` : ''}`;
+}
+
 export function statusLines(s: MissionState, side: PlayerSide = s.side): string[] {
   const links = allLinkBudgets(s.world);
   const lines: string[] = [];
@@ -1561,27 +1588,7 @@ export function statusLines(s: MissionState, side: PlayerSide = s.side): string[
       lines.push(`net ${netAliasOf(net.id).padEnd(7)} ${net.name.padEnd(16)} ${net.freqMHz} MHz · ${w.kind === 'fixed' ? 'fixed' : w.kind === 'fh' ? `hopping ${w.hopsPerSec}/s` : `DSSS ${w.chipRateMcps} Mcps`} · chatter ${Math.round(dutyOf(s, net) * 100)}%`);
     }
   }
-  for (const u of s.world.units.filter((x) => x.side === side)) {
-    const { col, row } = axialToOffset(u.pos);
-    const o = s.orders[u.id];
-    const order = !o
-      ? 'idle'
-      : o.kind === 'df'
-        ? `DF ${sectorLabel(o.centreDeg)} until T+${o.endMin}`
-        : o.kind === 'move'
-          ? `moving, ${o.path.length} hexes to go`
-          : `sortie leg ${Math.min(o.legIndex + 1, o.legs.length)}/${o.legs.length}, ${o.phase === 'out' ? `flying (${o.path.length} hexes)` : o.phase === 'df' ? `DF ${sectorLabel(o.legs[o.legIndex].centreDeg!)} until T+${o.dfEndMin}` : `returning (${o.path.length} hexes)`}, radio silent`;
-    const route = routeToHq(s, u.id, links);
-    const held = s.held.filter((r) => r.unitId === u.id).length;
-    const link = route.via === 'not on the command net' ? 'no radio net' : `${route.ok ? 'ok' : 'LOST'} (${route.via})`;
-    const ep = [
-      u.radio.powerW > 0 && u.kind !== 'drone' ? `${u.radio.powerW} W` : '',
-      u.antenna ? `antenna → ${unitById(s.world, u.antenna.towardId)?.name ?? '?'}` : '',
-      u.decoy ? `decoy as ${s.world.nets.find((n) => n.id === u.decoy!.netId)?.name}` : '',
-      u.jammer && u.jammer.mode !== 'off' ? `jamming ${u.jammer.targetNetId}` : '',
-    ].filter(Boolean);
-    lines.push(`${aliasOf(u.id).padEnd(5)} ${u.name.padEnd(13)} at ${col},${row} · ${order} · link to HQ: ${link}${held ? ` · ${held} report held` : ''}${ep.length ? ` · ${ep.join(', ')}` : ''}`);
-  }
+  for (const u of s.world.units.filter((x) => x.side === side)) lines.push(unitLine(s, u, links));
   return lines;
 }
 
@@ -1736,6 +1743,26 @@ export function trails(s: MissionState, uptoMinute = Infinity, side: PlayerSide 
 
 // Console lines the player's side should see.
 export const visibleLog = (s: MissionState, side: PlayerSide = s.side) => s.log.filter((e) => !e.side || e.side === side);
+
+// A unit's own console: lines its tasks and orders produced, plus mission-wide notices. Not the side's other lines.
+export const visibleLogFor = (s: MissionState, unitId: string): LogEntry[] => s.log.filter((e) => e.unitId === unitId || !e.side);
+
+// What a unit knows this turn: its own status line, orders that reached it since sinceMin, and what it heard.
+// A capture shows the signal's signature and strength only: the unit cannot know who sent it or where from.
+export function unitStatusLines(s: MissionState, unitId: string, sinceMin: number): string[] {
+  const unit = unitById(s.world, unitId);
+  if (!unit) return [];
+  const lines = [unitLine(s, unit, allLinkBudgets(s.world))];
+  for (const o of inbox(s, unitId, sinceMin)) lines.push(`order ${o.n} at T+${o.arriveMin}: ${o.text}`);
+  const heard = s.events.filter((e): e is Extract<MissionEvent, { kind: 'capture' }> => e.kind === 'capture' && e.sensorId === unitId && e.minute >= sinceMin);
+  for (const e of heard) {
+    const emitter = unitById(s.world, e.emitterId);
+    const signature = emitter?.radio ? emissionsAt(s, emitter, e.minute).find((x) => x.what === e.what)?.signature : undefined;
+    lines.push(`T+${e.minute} heard ${signature ?? e.what}, SNR ${Math.round(e.snrDb)} dB`);
+  }
+  if (heard.length === 0) lines.push('Nothing heard.');
+  return lines;
+}
 
 // When an emitter was heard by the other side, what gave it away, who heard it, and when it was fixed.
 export function heardTimeline(s: MissionState, picture: Track[], emitterId: string, limit = 6): string {

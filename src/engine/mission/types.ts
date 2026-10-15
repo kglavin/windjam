@@ -111,6 +111,7 @@ export interface LogEntry {
   kind: LogKind;
   text: string;
   side?: PlayerSide; // which console sees it; undefined means both (the debrief shows everything)
+  unitId?: string; // set when a unit's own order produced the line: that unit's console shows it
 }
 
 // 'ended' means the player asked for the reveal before the mission resolved. 'draw' is mission 2 only.
@@ -162,6 +163,7 @@ export type MissionEvent =
   | { kind: 'release'; minute: number; unitId: string; side: PlayerSide } // a held report finally reached HQ
   | { kind: 'track'; minute: number; side: PlayerSide; trackId: string; emitterId: string; cepKm?: number; first: boolean } // picture changed
   | { kind: 'send'; minute: number; orderN: number; fromId: string; toId: string; status: string } // Red order transmitted
+  | { kind: 'ack'; minute: number; unitId: string; side: PlayerSide; orderN: number } // a unit's acknowledgement of an order reached HQ
   | { kind: 'busy'; minute: number; unitId: string; task: 'df' | 'sortie' | 'move'; detail: string }; // what a unit was doing this minute
 
 // The picture at the end of one minute, kept for the replay.

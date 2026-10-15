@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { axialToOffset, offsetToAxial } from '../hex';
 import { allLinkBudgets, unitById } from '../world';
 import { parseCommand } from './commands';
-import { advance, createMission, inbox, issue, memberLink, receipts, sendOrder, visibleLog } from './mission';
+import { advance, createMission, inbox, issue, memberLink, receipts, sendOrder, unitStatusLines, visibleLog, visibleLogFor } from './mission';
 import type { MissionState, PlayerSide } from './types';
 
 const start = () => createMission(1234, 'duel');
@@ -165,5 +165,51 @@ describe('orders on a second hub net', () => {
     s = advance(s, 4);
     const line = visibleLog(s, 'blue').find((e) => /no acknowledgement, lost/.test(e.text));
     expect(line?.kind).toBe('hq');
+  });
+});
+
+describe('c2: events', () => {
+  it('an on-time order records a send and an ack with the order number', () => {
+    const s = advance(type(start(), 'send sq1: df e 5'), 1);
+    expect(s.events).toContainEqual({ kind: 'send', minute: 0, orderN: 1, fromId: 'b-hq', toId: 'b-sq1', status: 'pending' });
+    expect(s.events).toContainEqual({ kind: 'ack', minute: 0, unitId: 'b-sq1', side: 'blue', orderN: 1 });
+  });
+
+  it('an order lost on the way has a send and no ack', () => {
+    const s = advance(type(moveFar(start(), 'b-sq1'), 'send sq1: df e 5'), 5);
+    expect(s.events.some((e) => e.kind === 'send' && e.orderN === 1)).toBe(true);
+    expect(s.events.some((e) => e.kind === 'ack')).toBe(false);
+  });
+});
+
+describe('c2: unit view', () => {
+  it('a squad’s log shows its own DF task line and not another squad’s', () => {
+    let s = type(start(), 'sq1: df e 3');
+    s = advance(type(s, 'sq2: df n 3'), 5);
+    const mine = visibleLogFor(s, 'b-sq1');
+    expect(mine.some((e) => /Blue Squad 1: DF .* done/.test(e.text))).toBe(true);
+    expect(mine.some((e) => /Blue Squad 2/.test(e.text))).toBe(false);
+    expect(mine.filter((e) => e.side).every((e) => e.unitId === 'b-sq1')).toBe(true);
+    expect(mine.some((e) => !e.side)).toBe(true);
+  });
+
+  it('unitStatusLines shows the order text after an order arrives', () => {
+    const s = advance(type(start(), 'send sq1: df e 5'), 1);
+    const lines = unitStatusLines(s, 'b-sq1', 0);
+    expect(lines[0]).toMatch(/Blue Squad 1 .* link to HQ: ok/);
+    expect(lines).toContain('order 1 at T+0: df e 5');
+    expect(unitStatusLines(s, 'b-sq1', 1)).not.toContain('order 1 at T+0: df e 5');
+    expect(unitStatusLines(s, 'b-sq2', 0).some((l) => /^order /.test(l))).toBe(false);
+  });
+
+  it('capture lines never name a red unit', () => {
+    let s = start();
+    for (const sq of ['sq1', 'sq2', 'sq3']) s = type(s, `${sq}: df e 20`);
+    s = advance(s, 20);
+    expect(s.events.some((e) => e.kind === 'capture')).toBe(true);
+    const red = s.world.units.filter((u) => u.side === 'red');
+    const all = s.world.units.filter((u) => u.side === 'blue').flatMap((u) => unitStatusLines(s, u.id, 0));
+    expect(all.some((l) => / heard /.test(l))).toBe(true);
+    for (const l of all) for (const r of red) expect(l.includes(r.id) || l.includes(r.name), l).toBe(false);
   });
 });

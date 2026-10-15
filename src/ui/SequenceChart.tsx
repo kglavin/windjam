@@ -93,6 +93,8 @@ export function SequenceChart({ mission: m, replayMinute, onJump }: Props) {
         return `T+${e.minute} ${e.side} HQ: ${e.trackId} ${e.first ? 'new track' : `fix CEP ${e.cepKm?.toFixed(2)} km`} on ${name(e.emitterId)}`;
       case 'send':
         return `T+${e.minute} order ${e.orderN} ${name(e.fromId)} → ${name(e.toId)}: ${e.status}`;
+      case 'ack':
+        return `T+${e.minute} ${name(e.unitId)} acknowledges order ${e.orderN}`;
       case 'busy':
         return `T+${e.minute} ${name(e.unitId)}: ${e.task} ${e.detail}`;
     }
@@ -187,6 +189,23 @@ export function SequenceChart({ mission: m, replayMinute, onJump }: Props) {
                 <g key={`r${i}`} onMouseMove={(ev) => setHover({ x: ev.clientX, y: ev.clientY, text: tip(e) })}>
                   <line x1={x1} y1={yy} x2={x2 - dir * 5} y2={yy} stroke={ok ? '#22c55e' : '#f59e0b'} strokeWidth={1.5} strokeDasharray={ok ? undefined : '3 3'} />
                   <polygon points={`${x2 - dir * 5},${yy - 3} ${x2},${yy} ${x2 - dir * 5},${yy + 3}`} fill={ok ? '#22c55e' : '#f59e0b'} />
+                </g>
+              );
+            })}
+          {/* Order acknowledgements: unit -> its HQ */}
+          {events
+            .filter((e): e is Extract<MissionEvent, { kind: 'ack' }> => e.kind === 'ack')
+            .map((e, i) => {
+              const hq = hubOf(e.side);
+              if (!hq || hq === e.unitId) return null;
+              const x1 = x(e.unitId);
+              const x2 = x(hq);
+              const yy = y(e.minute) + 8;
+              const dir = Math.sign(x2 - x1) || 1;
+              return (
+                <g key={`a${i}`} onMouseMove={(ev) => setHover({ x: ev.clientX, y: ev.clientY, text: tip(e) })}>
+                  <line x1={x1} y1={yy} x2={x2 - dir * 5} y2={yy} stroke="#fbbf24" strokeWidth={1.5} />
+                  <polygon points={`${x2 - dir * 5},${yy - 3} ${x2},${yy} ${x2 - dir * 5},${yy + 3}`} fill="#fbbf24" />
                 </g>
               );
             })}
