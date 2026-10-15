@@ -32,8 +32,8 @@ R=$(get "/")
 check "server answers" "$([ -n "$R" ] && echo "$R" | jq -e '.mission == "duel"' >/dev/null; echo $?)"
 
 # The commander sends orders; sq1 has an agent, sq2 is auto.
-R=$(post /blue $'send sq1: df e 5\nsend sq2: df n 10')
-check "commander send accepted" "$(echo "$R" | jq -e '(.accepted | length) == 2 and (.rejected | length) == 0' >/dev/null; echo $?)"
+R=$(post /blue $'send sq1: df e 5\nsend sq2: df n 10\nsend ew: jam cmd')
+check "commander send accepted" "$(echo "$R" | jq -e '(.accepted | length) == 3 and (.rejected | length) == 0' >/dev/null; echo $?)"
 check "waiting for blue, blue/sq1 and red" "$(echo "$R" | jq -e '.waitingFor == ["blue","blue/sq1","red"]' >/dev/null; echo $?)"
 
 R=$(post /blue/end "")
@@ -55,6 +55,8 @@ check "sq1 view has no picture" "$(echo "$R" | jq -e 'has("picture") | not' >/de
 R=$(get "/state?side=blue")
 check "sq2 (auto) is on a DF task in blue's status" "$(echo "$R" | jq -e 'any(.status_lines[]; test("^sq2 .*DF "))' >/dev/null; echo $?)"
 check "sq1 (agent) is not tasked by the server" "$(echo "$R" | jq -e 'any(.status_lines[]; test("^sq1 .*idle"))' >/dev/null; echo $?)"
+check "send ew: jam cmd reaches the EW team (auto, jamming in blue's status)" "$(echo "$R" | jq -e 'any(.status_lines[]; test("^ew .*jamming red-cmd"))' >/dev/null; echo $?)"
+check "commander status has the unit and order lines" "$(echo "$R" | jq -e 'any(.status_lines[]; test("^Unit agents: sq1\\. Auto: .*ew\\.$")) and any(.status_lines[]; test("^Orders: 3 sent; acknowledged 3 "))' >/dev/null; echo $?)"
 
 # The commander cannot task units, and a unit seat exists only for agents.
 R=$(post /blue "sq1: df e 5")
@@ -76,6 +78,20 @@ R=$(post /blue/sq1 "help")
 check "unit help lists df and report" "$(echo "$R" | jq -e 'any(.lines[]; test("^df ")) and any(.lines[]; test("^report"))' >/dev/null; echo $?)"
 R=$(get "/state?side=blue&unit=sq1&after=0")
 check "unit console shows its own DF order" "$(echo "$R" | jq -e 'any(.console[]; test("Blue Squad 1: DF"))' >/dev/null; echo $?)"
+
+# A second server, mission uav with Red's UAV on an agent seat: launch is a unit verb.
+PORT2=$((PORT + 1))
+while (echo >"/dev/tcp/127.0.0.1/$PORT2") 2>/dev/null; do PORT2=$((PORT2 + 1)); done
+LOG2="$(mktemp)"
+WINDJAM_UMPIRE_KEY=smoke setsid npx tsx scripts/serve.ts --mission uav --seed 1234 --turn 5 --port "$PORT2" --c2-red uav >"$LOG2" 2>&1 &
+SERVER2=$!
+trap 'kill -- -"$SERVER" 2>/dev/null; kill -- -"$SERVER2" 2>/dev/null; rm -f "$LOG" "$LOG2"' EXIT
+for _ in $(seq 1 100); do
+  curl -s "http://127.0.0.1:$PORT2/" >/dev/null 2>&1 && break
+  sleep 0.2
+done
+R=$(curl -s -X POST --data-binary "launch" "http://127.0.0.1:$PORT2/red/uav")
+check "launch accepted on a unit seat (mission uav, red uav)" "$(echo "$R" | jq -e '.accepted == ["launch"] and (.rejected | length) == 0' >/dev/null; echo $?)"
 
 echo
 if [ "$FAILS" -eq 0 ]; then echo "smoke-c2: all checks passed"; else echo "smoke-c2: $FAILS check(s) FAILED"; echo "--- server log"; cat "$LOG"; fi

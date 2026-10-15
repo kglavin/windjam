@@ -17,7 +17,8 @@ Either way, write orders in the unit grammar below.
 
 - Three squads (`sq1`, `sq2`, `sq3`) and a UAV (`uav`, tethered within 5 km of sq2 on a linked DF, free on a silent sortie). Only squads and the UAV can take bearings. HQ (`hq`), the relay and the EW team do not.
 - `status` lists every unit's grid position, current task and link to HQ, as HQ knows them. A unit whose line says `link to HQ: LOST` cannot deliver bearings and, most likely, cannot get orders either.
-- The EW team is on no net HQ can reach. You cannot order it and you cannot jam. Do not plan around jamming.
+- The EW team (`ew`) is on its own net from HQ. `send ew: jam uavlink` spot-jams the UAV's telemetry link and `send ew: jam off` stops it. Jamming makes Red lose reports (Red loses if more than one is lost) but does not help your own fixes, and Red can answer by raising the UAV's power, which makes it easy to hear. The order and its acknowledgement are two short transmissions on the EW net (56 MHz). While it jams, the EW team is the loudest emitter on the map and Red can fix it. A jam order takes effect the minute it arrives.
+- `status` shows your orders: `Unit agents: sq1, uav. Auto: sq2, sq3, ew.` and `Orders: 5 sent; acknowledged 3 (on time 2, late 1); pending 1 (n4 to sq2 since T+10); lost 1 (n2 to sq3).`
 - Red's other emitters (HQ, relay, squads) chatter. You will hear and fix them. They are not the objective. The UAV's signature is `65 MHz UAV link` (or `65 MHz DSSS` if Red spreads it).
 - HQ's own radio you set directly, with no order: `hq: power 20`, `hq: antenna toward relay`, `emcon cmd 0` (quieter chatter on a net, 0 to 20 percent of minutes).
 
@@ -27,9 +28,9 @@ Either way, write orders in the unit grammar below.
 - If sq1's link is good, the order arrives in the same minute. If the link is degraded, it arrives later, up to 5 minutes. If the link is lost, it never arrives.
 - When the unit gets the order it sends an acknowledgement, another one-minute burst Red can hear. When the acknowledgement reaches HQ, the order's receipt is `on time` (arrived the minute you sent it) or `late`.
 - The receipt is `pending` until then. After 3 minutes with no acknowledgement it becomes `lost`. Lost means HQ heard nothing back. The unit may still have the order and may be acting on it. A lost order is not a reason to assume the unit is idle.
-- Your console shows each step: `HQ: order 3 to Blue Squad 1 sent.`, `HQ: order 3 acknowledged by Blue Squad 1.`, `HQ: order 3 to Blue Squad 1: no acknowledgement, lost.` `status` does not list orders, so keep your own list of order numbers, targets and receipts.
+- Your console shows each step: `HQ: order 3 to Blue Squad 1 sent.`, `HQ: order 3 acknowledged by Blue Squad 1.`, `HQ: order 3 to Blue Squad 1: no acknowledgement, lost.` The `Orders:` line in `status` counts every order by state and lists the pending and lost ones as `n<number> to <unit>`, so you do not need your own list.
 - A unit that loses its link keeps executing its last order. A unit that hears nothing from you does not stop. A quiet unit is not a dead unit.
-- A unit on a silent sortie is out of contact until it returns. Do not send it orders then.
+- A unit on a silent sortie is out of contact until it returns. An order to the UAV then is refused (`Blue UAV is on a silent sortie and cannot be reached until it returns.`) and is not sent. Wait until it is home.
 - HQ cannot send while it is moving. It does not move in this mission.
 - Each turn is 5 minutes. Your orders go out, the units act, the clock advances, and the receipts and reports come back as the minutes pass.
 
@@ -58,6 +59,8 @@ send sq1: stop                       cancel its order
 send uav: df e 3                     UAV on a linked DF (within 5 km of sq2)
 send uav: sortie 126,76 e 5          silent sortie, listens on station, reports when back
 send uav: sortie 128,76 e 6; 132,84 e 6
+send ew: jam uavlink                 spot-jam Red's UAV telemetry link
+send ew: jam off                     stop jamming
 hq: power 20                         HQ's own settings are direct
 emcon cmd 0
 status

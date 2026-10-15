@@ -65,13 +65,15 @@ In C2 mode the side's endpoints belong to the commander, and units have their ow
 |---|---|
 | `POST /blue` | The commander's lines. A line that tasks a unit directly (`df`, `move`, `sortie`, `stop`, `power`, `antenna`, `decoy`, `jam`, `uav`) is rejected with `in C2 mode, task units with send <unit>: <order>`. `send <unit>: <order>`, `emcon`, `status`, `picture`, `help` and HQ's own settings (`hq: power 20`) are accepted |
 | `GET /state?side=blue&unit=sq1&after=N` | The unit's view: `console` (its own lines), `cursor`, `status_lines` (its line with position, task and link, orders received, bearings heard), `inbox` (orders that reached it since its last turn). No picture |
-| `POST /blue/sq1` | The unit's lines, without its name (`df e 5`). Accepts `df move sortie stop burst hold resume route jam decoy power antenna`, plus `report`, `status`, `help` |
+| `POST /blue/sq1` | The unit's lines, without its name (`df e 5`). Accepts `df move sortie launch stop burst hold resume route jam decoy power antenna`, plus `report`, `status`, `help`. A UAV with an agent can `launch` |
 | `POST /blue/sq1/report` | Send what the unit has heard so far to HQ (a transmission). The same as a `report` line |
 | `POST /blue/sq1/end` | The unit ends its turn |
 
 A unit endpoint for a unit with no agent answers 403 `no agent seat for <alias>`. The clock advances when the commander of each side and every listed unit agent have ended their turn. `GET /` lists them in `waitingFor` as `blue`, `blue/sq1`, and so on.
 
-An order is a transmission. It arrives the same minute when the link is good, later when degraded, never when lost. The unit acknowledges it with another transmission. The commander's console shows `order n ... sent`, `... acknowledged by ...`, or `... no acknowledgement, lost` after 3 minutes. A lost order may still have arrived.
+An order is a transmission. It arrives the same minute when the link is good, later when degraded, never when lost. The unit acknowledges it with another transmission. The commander's console shows `order n ... sent`, `... acknowledged by ...`, or `... no acknowledgement, lost` after 3 minutes. A lost order may still have arrived. The commander's `status` adds `Unit agents: ... Auto: ...` and an `Orders:` line with the sent, acknowledged (on time, late), pending and lost counts and the pending and lost orders by number and unit.
+
+An order cannot reach a UAV on a silent sortie: `send uav: ...` is refused with `<unit> is on a silent sortie and cannot be reached until it returns.` In C2 mode each side with an EW team also has an EW net (Blue 56 MHz, Red 50 MHz) from HQ with no chatter, so `send ew: jam <net>` works (`jam uavlink` in mission 4, `jam cmd` in the duel). The order and its acknowledgement are short transmissions on that net, and while it jams the EW team is the loudest emitter on the map. Without C2 the EW team is on no net and the commander types `ew: jam <net>` directly.
 
 Briefs for mission 4 (`--mission uav`), Blue side:
 

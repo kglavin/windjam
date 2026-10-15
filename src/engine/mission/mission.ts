@@ -14,7 +14,7 @@ import { linkBudget } from '../budget';
 import { findPath } from '../path';
 import { getTile } from '../map';
 import { TERRAIN, accessLabel, canEnter } from '../terrain';
-import { HELP, aliasOf, netAliasOf, parseCommand } from './commands';
+import { HELP, UNIT_ALIASES, aliasOf, netAliasOf, parseCommand } from './commands';
 import { PLAYBOOKS } from './playbooks';
 import {
   MISSION_RULES as R,
@@ -97,6 +97,34 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
   }
   state.history = [snapshot(state)];
   return state;
+}
+
+// Put a side in C2 mode: the unit aliases in `agents` get an agent, every other unit of the side executes its orders itself.
+// A side with an EW team also gets an EW net (Blue 56 MHz, Red 50 MHz): a hub net from HQ with no chatter, so it carries
+// orders and acknowledgements and nothing else. Games without C2 keep the nets they had.
+export function enableC2(s: MissionState, side: PlayerSide, agents: string[]): void {
+  if (!s.humans.includes(side)) throw new Error(`c2: ${side} is not a console in this mission`);
+  const bad = agents.filter((a) => !UNIT_ALIASES[side][a]);
+  if (bad.length) throw new Error(`c2: unknown ${side} unit ${bad.join(', ')}. Units: ${Object.keys(UNIT_ALIASES[side]).join(' ')}`);
+  s.c2 = { ...s.c2, [side]: { agents } };
+  const hq = s.world.units.find((u) => u.side === side && u.kind === 'hq');
+  const ew = s.world.units.find((u) => u.side === side && u.kind === 'jammer');
+  const id = `${side}-ew`;
+  if (!hq || !ew || s.world.nets.some((n) => n.id === id)) return;
+  const net: Net = {
+    id,
+    name: `${side === 'blue' ? 'Blue' : 'Red'} EW Net`,
+    side,
+    topology: 'hub',
+    hubId: hq.id,
+    memberIds: [hq.id, ew.id],
+    freqMHz: side === 'blue' ? 56 : 50,
+    bandwidthKHz: 25,
+    dataRateKbps: 16,
+    waveform: { kind: 'fixed' },
+  };
+  s.world = { ...s.world, nets: [...s.world.nets, net] };
+  s.emcon[id] = 0; // no chatter: the net radiates only for orders and acknowledgements
 }
 
 // Mission 4: Red's reconnaissance UAV, its telemetry net, and a seeded route over the contested middle.
@@ -692,6 +720,10 @@ export function sendOrder(s: MissionState, side: PlayerSide, toId: string, text:
     log(s, 'error', `${to.name} is not yours to command.`, side);
     return;
   }
+  if (to.kind === 'drone' && s.orders[to.id]?.kind === 'sortie') {
+    log(s, 'error', `${to.name} is on a silent sortie and cannot be reached until it returns.`, side);
+    return;
+  }
   const view = memberLink(s, to.id, allLinkBudgets(s.world));
   if (!view) {
     log(s, 'error', `${to.name} is on no net HQ can reach.`, side);
@@ -849,7 +881,8 @@ export function emissionsAt(s: MissionState, u: Unit, m: number): { em: Emission
     return out;
   }
   if (u.radio.powerW <= 0) return out;
-  for (const em of emissions(u, nets)) {
+  // A jammer that is not jamming still answers on the EW net (its own emissions are the jam band, so ask as a plain radio).
+  for (const em of emissions({ ...u, jammer: undefined }, nets)) {
     const net = nets.find((n) => n.memberIds.includes(u.id) && n.freqMHz === em.freqMHz);
     if (!net) continue;
     const burst = s.bursts.find((b) => b.minute === m && b.unitId === u.id && b.netId === net.id);
@@ -1644,6 +1677,18 @@ export function statusLines(s: MissionState, side: PlayerSide = s.side): string[
       const w = net.waveform;
       lines.push(`net ${netAliasOf(net.id).padEnd(7)} ${net.name.padEnd(16)} ${net.freqMHz} MHz · ${w.kind === 'fixed' ? 'fixed' : w.kind === 'fh' ? `hopping ${w.hopsPerSec}/s` : `DSSS ${w.chipRateMcps} Mcps`} · chatter ${Math.round(dutyOf(s, net) * 100)}%`);
     }
+  }
+  const c2 = s.c2?.[side];
+  if (c2) {
+    const mine = s.world.units.filter((x) => x.side === side && x.kind !== 'hq').map((x) => aliasOf(x.id));
+    const auto = mine.filter((a) => !c2.agents.includes(a));
+    lines.push(`Unit agents: ${c2.agents.length ? c2.agents.join(', ') : 'none'}. Auto: ${auto.length ? auto.join(', ') : 'none'}.`);
+    const sent = receipts(s, side);
+    const acked = sent.filter((o) => o.ackMin !== undefined);
+    const item = (o: OrderMessage, since: boolean) => `n${o.n} to ${aliasOf(o.toId)}${since ? ` since T+${o.sentMin}` : ''}`;
+    const group = (label: string, list: OrderMessage[], since: boolean) => `${label} ${list.length}${list.length ? ` (${list.map((o) => item(o, since)).join(', ')})` : ''}`;
+    const ackText = acked.length ? ` (on time ${acked.filter((o) => o.status === 'on time').length}, late ${acked.filter((o) => o.status === 'late').length})` : '';
+    lines.push(`Orders: ${sent.length} sent; acknowledged ${acked.length}${ackText}; ${group('pending', sent.filter((o) => o.status === 'pending'), true)}; ${group('lost', sent.filter((o) => o.status === 'lost'), false)}.`);
   }
   for (const u of s.world.units.filter((x) => x.side === side)) lines.push(unitLine(s, u, links));
   return lines;

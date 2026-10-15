@@ -20,7 +20,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { analyseCoverage, analyseDetect, analyseFix, analyseJs, analyseLink, analysePath, type HypothesisParams, type Pos } from '../src/engine/mission/analyse';
 import { HELP, UNIT_ALIASES, parseCommand } from '../src/engine/mission/commands';
-import { createMission, inbox, issue, pictureLines, reportNow, statusLines, unitStatusLines, visibleLog, visibleLogFor } from '../src/engine/mission/mission';
+import { createMission, enableC2, inbox, issue, pictureLines, reportNow, statusLines, unitStatusLines, visibleLog, visibleLogFor } from '../src/engine/mission/mission';
 import type { JammerMode, UnitKind } from '../src/engine/units';
 import type { LogEntry, MissionKind, MissionState, PlayerSide } from '../src/engine/mission/types';
 
@@ -71,13 +71,9 @@ function newGame(mission: MissionKind, seed: number, turnMin: number, c2?: C2): 
   const state = createMission(seed, mission);
   for (const side of ['blue', 'red'] as const) {
     const entry = c2?.[side];
-    if (!entry) continue;
-    if (!state.humans.includes(side)) throw new Error(`c2: ${side} is not a console in this mission`);
-    const bad = entry.agents.filter((a) => !UNIT_ALIASES[side][a]);
-    if (bad.length) throw new Error(`c2: unknown ${side} unit ${bad.join(', ')}. Units: ${Object.keys(UNIT_ALIASES[side]).join(' ')}`);
+    if (entry) enableC2(state, side, entry.agents);
   }
-  const hasC2 = c2 && (c2.blue || c2.red);
-  return { state: hasC2 ? { ...state, c2 } : state, turnMin, turn: 0, ended: { blue: false, red: false }, endedUnits: new Set(), unitSince: {}, history: [], calls: [] };
+  return { state, turnMin, turn: 0, ended: { blue: false, red: false }, endedUnits: new Set(), unitSince: {}, history: [], calls: [] };
 }
 
 // The path as the audit keeps it: the query string without the umpire's key.
@@ -233,7 +229,7 @@ function post(g: Game, side: PlayerSide, text: string): { accepted: string[]; re
 // What a commander in C2 mode may not do: every command that tasks one unit directly.
 const UNIT_COMMANDS = new Set(['df', 'move', 'sortie', 'stop', 'power', 'antenna', 'decoy', 'jam', 'uav']);
 // What a unit agent may post, as the first word of a line.
-const UNIT_VERBS = new Set(['df', 'move', 'sortie', 'stop', 'burst', 'hold', 'resume', 'route', 'jam', 'decoy', 'power', 'antenna']);
+const UNIT_VERBS = new Set(['df', 'move', 'sortie', 'launch', 'stop', 'burst', 'hold', 'resume', 'route', 'jam', 'decoy', 'power', 'antenna']);
 
 const seatOf = (g: Game, side: PlayerSide, alias: string): string | undefined => {
   const agents = g.state.c2?.[side]?.agents;

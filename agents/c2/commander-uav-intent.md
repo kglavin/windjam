@@ -31,7 +31,8 @@ Keep it to one or two sentences. The unit has no picture and does not know where
 
 - Three squads (`sq1`, `sq2`, `sq3`) and a UAV (`uav`, tethered within 5 km of sq2 on a linked DF, free on a silent sortie). Only squads and the UAV can take bearings. HQ (`hq`), the relay and the EW team do not.
 - `status` lists every unit's grid position, current task and link to HQ, as HQ knows them. A unit whose line says `link to HQ: LOST` cannot deliver bearings and, most likely, cannot get orders either.
-- The EW team is on no net HQ can reach. You cannot order it and you cannot jam.
+- The EW team (`ew`) is on its own net from HQ. `send ew: jam uavlink` spot-jams the UAV's telemetry link and `send ew: jam off` stops it. Jamming makes Red lose reports but does not help your own fixes, and Red can answer by raising the UAV's power. The order and its acknowledgement are two short transmissions on the EW net (56 MHz). While it jams, the EW team is the loudest emitter on the map and Red can fix it.
+- `status` shows your orders: `Unit agents: sq1, uav. Auto: sq2, sq3, ew.` and `Orders: 5 sent; acknowledged 3 (on time 2, late 1); pending 1 (n4 to sq2 since T+10); lost 1 (n2 to sq3).`
 - Red's other emitters (HQ, relay, squads) chatter. They are not the objective. The UAV's signature is `65 MHz UAV link` (or `65 MHz DSSS` if Red spreads it).
 - HQ's own radio you set directly: `hq: power 20`, `hq: antenna toward relay`, `emcon cmd 0`.
 
@@ -40,8 +41,8 @@ Keep it to one or two sentences. The unit has no picture and does not know where
 - `send sq1: ...` is a one-minute burst from HQ on the command net. Red's sensors can hear it. Every order costs you.
 - If the unit's link is good, the order arrives in the same minute. If degraded, up to 5 minutes later. If lost, never.
 - The unit acknowledges with another one-minute burst Red can hear. The receipt is `pending` until the acknowledgement reaches HQ, then `on time` or `late`. After 3 minutes with no acknowledgement it becomes `lost`. Lost means HQ heard nothing. The unit may still have the order.
-- Your console shows each step: `HQ: order 3 to Blue Squad 1 sent.`, `... acknowledged by ...`, `... no acknowledgement, lost.` `status` does not list orders, so keep your own list.
-- A unit that loses its link keeps executing its last order, and an agent unit keeps working inside its intent. A unit on a silent sortie is out of contact until it returns.
+- Your console shows each step: `HQ: order 3 to Blue Squad 1 sent.`, `... acknowledged by ...`, `... no acknowledgement, lost.` The `Orders:` line in `status` counts every order by state and lists the pending and lost ones as `n<number> to <unit>`, so you do not need your own list.
+- A unit that loses its link keeps executing its last order, and an agent unit keeps working inside its intent. A unit on a silent sortie is out of contact until it returns: an order to the UAV then is refused (`Blue UAV is on a silent sortie and cannot be reached until it returns.`) and is not sent.
 - Each turn is 5 minutes.
 
 ## How fixes work here
@@ -67,6 +68,8 @@ send uav: fly a short silent sortie to 126,76, listen east for 5 minutes, report
 send sq2: df e 5                     for an auto unit: a literal unit order
 send sq1: move 130,70                for an auto unit
 send uav: sortie 126,76 e 5          for an auto uav
+send ew: jam uavlink                 spot-jam Red's UAV telemetry link (an auto ew team obeys it as written)
+send ew: jam off
 hq: power 20                         HQ's own settings are direct
 emcon cmd 0
 status

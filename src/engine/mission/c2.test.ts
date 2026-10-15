@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { axialToOffset, offsetToAxial } from '../hex';
 import { allLinkBudgets, unitById } from '../world';
 import { parseCommand } from './commands';
-import { advance, createMission, inbox, issue, memberLink, receipts, reportNow, sendOrder, unitStatusLines, visibleLog, visibleLogFor } from './mission';
+import { advance, createMission, emissionsAt, enableC2, inbox, issue, memberLink, receipts, reportNow, sendOrder, statusLines, unitStatusLines, visibleLog, visibleLogFor } from './mission';
 import type { MissionState, PlayerSide } from './types';
 
 const start = () => createMission(1234, 'duel');
@@ -311,5 +311,110 @@ describe('c2: auto units', () => {
 
   it('clone keeps c2 across turns', () => {
     expect(advance(c2(start(), ['sq1']), 3).c2).toEqual({ blue: { agents: ['sq1'] } });
+  });
+});
+
+describe('c2: EW net and commander status (WP-1.11)', () => {
+  const c2 = (agents: string[], mission: 'duel' | 'uav' = 'duel') => {
+    const s = createMission(1234, mission);
+    for (const side of s.humans) enableC2(s, side, agents);
+    return s;
+  };
+
+  it('enableC2 sets c2 and adds one EW net per side with no chatter', () => {
+    const s = c2(['sq1']);
+    expect(s.c2).toEqual({ blue: { agents: ['sq1'] }, red: { agents: ['sq1'] } });
+    const net = s.world.nets.find((n) => n.id === 'blue-ew')!;
+    expect(net).toMatchObject({ topology: 'hub', hubId: 'b-hq', memberIds: ['b-hq', 'b-ew'], freqMHz: 56, bandwidthKHz: 25, dataRateKbps: 16, waveform: { kind: 'fixed' } });
+    expect(s.world.nets.find((n) => n.id === 'red-ew')!.freqMHz).toBe(50);
+    expect(s.emcon['blue-ew']).toBe(0);
+    enableC2(s, 'blue', ['sq1']);
+    expect(s.world.nets.filter((n) => n.id === 'blue-ew')).toHaveLength(1);
+    expect(memberLink(s, 'b-ew', allLinkBudgets(s.world))?.link.netId).toBe('blue-ew');
+  });
+
+  it('enableC2 refuses an unknown unit and a side with no console', () => {
+    expect(() => enableC2(createMission(1234, 'duel'), 'blue', ['sq9'])).toThrow(/unknown blue unit sq9/);
+    expect(() => enableC2(createMission(1234, 'find'), 'red', [])).toThrow(/red is not a console/);
+  });
+
+  it('a game without C2 has exactly the nets it had', () => {
+    for (const mission of ['find', 'hide', 'duel', 'uav', 'hunt'] as const) {
+      const plain = createMission(1234, mission);
+      expect(plain.world.nets.some((n) => n.id.endsWith('-ew'))).toBe(false);
+      const withC2 = createMission(1234, mission);
+      for (const side of withC2.humans) enableC2(withC2, side, []);
+      const ids = withC2.world.nets.map((n) => n.id);
+      expect(ids.filter((id) => !id.endsWith('-ew'))).toEqual(plain.world.nets.map((n) => n.id));
+    }
+  });
+
+  it('an order to ew is delivered on the EW net and an auto EW team starts jamming', () => {
+    let s = type(c2([]), 'send ew: jam cmd');
+    expect(s.bursts.find((b) => b.what === 'order 1')).toMatchObject({ unitId: 'b-hq', netId: 'blue-ew' });
+    s = advance(s, 1);
+    expect(s.messages[0]).toMatchObject({ status: 'on time', arriveMin: 0, ackMin: 0 });
+    expect(s.bursts).toContainEqual({ minute: 0, unitId: 'b-ew', netId: 'blue-ew', what: 'ack order 1' });
+    expect(unitById(s.world, 'b-ew')!.jammer).toMatchObject({ mode: 'spot', targetNetId: 'red-cmd' });
+  });
+
+  it('an auto EW team jams uavlink in mission 4', () => {
+    const s = advance(type(c2([], 'uav'), 'send ew: jam uavlink'), 1);
+    expect(unitById(s.world, 'b-ew')!.jammer).toMatchObject({ mode: 'spot', targetNetId: 'red-uav' });
+  });
+
+  it('the EW net has no chatter: it radiates only for orders and acknowledgements', () => {
+    const quiet = advance(c2([]), 6);
+    for (let m = 0; m < 6; m++) {
+      expect(emissionsAt(quiet, unitById(quiet.world, 'b-ew')!, m)).toEqual([]);
+      expect(emissionsAt(quiet, unitById(quiet.world, 'b-hq')!, m).filter((e) => e.em.freqMHz === 56)).toEqual([]);
+    }
+    const sent = advance(type(c2([]), 'send ew: jam off'), 1);
+    expect(emissionsAt(sent, unitById(sent.world, 'b-hq')!, 0).filter((e) => e.em.freqMHz === 56).map((e) => e.what)).toEqual(['order 1']);
+    expect(emissionsAt(sent, unitById(sent.world, 'b-ew')!, 0).map((e) => e.what)).toEqual(['ack order 1']);
+  });
+
+  it('the jammer’s emissions while jamming are the jam band, as without C2', () => {
+    const jamming = (s: MissionState) => {
+      const j = advance(type(s, 'ew: jam cmd'), 1);
+      return emissionsAt(j, unitById(j.world, 'b-ew')!, 0).map((e) => [e.em, e.what]);
+    };
+    expect(jamming(c2([]))).toEqual(jamming(start()));
+    expect(jamming(start())[0][1]).toBe('jamming');
+  });
+
+  it('the commander’s status lines appear only in C2 mode', () => {
+    expect(statusLines(start(), 'blue').some((l) => /^Unit agents|^Orders:/.test(l))).toBe(false);
+    const s = c2(['sq1']);
+    const lines = statusLines(s, 'blue');
+    expect(lines).toContain('Unit agents: sq1. Auto: relay, sq2, sq3, uav, ew.');
+    expect(lines).toContain('Orders: 0 sent; acknowledged 0; pending 0; lost 0.');
+    const oneSide = createMission(1234, 'duel');
+    enableC2(oneSide, 'blue', []);
+    expect(statusLines(oneSide, 'red').some((l) => /^Unit agents/.test(l))).toBe(false);
+  });
+
+  it('the orders line counts sent, acknowledged, pending and lost orders', () => {
+    let s = moveFar(c2(['sq1', 'sq2', 'sq3']), 'b-sq3');
+    s = type(s, 'send sq1: df e 5');
+    s = type(s, 'send sq3: df e 5');
+    s = advance(s, 1);
+    s = type(s, 'send sq2: df e 5');
+    const mid = statusLines(s, 'blue').find((l) => l.startsWith('Orders:'))!;
+    expect(mid).toBe('Orders: 3 sent; acknowledged 1 (on time 1, late 0); pending 2 (n2 to sq3 since T+0, n3 to sq2 since T+1); lost 0.');
+    s = advance(s, 4);
+    const end = statusLines(s, 'blue').find((l) => l.startsWith('Orders:'))!;
+    expect(end).toBe('Orders: 3 sent; acknowledged 2 (on time 2, late 0); pending 0; lost 1 (n2 to sq3).');
+  });
+
+  it('an order to a UAV on a sortie is refused', () => {
+    let s = createMission(1234, 'hunt');
+    s = type(s, 'uav: sortie 30,30 e 4');
+    s = advance(s, 1);
+    expect(s.orders['b-uav']?.kind).toBe('sortie');
+    const before = s.messages.length;
+    sendOrder(s, 'blue', 'b-uav', 'hold');
+    expect(s.messages).toHaveLength(before);
+    expect(visibleLog(s, 'blue').at(-1)).toMatchObject({ kind: 'error', text: 'Blue UAV is on a silent sortie and cannot be reached until it returns.' });
   });
 });

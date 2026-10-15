@@ -22,6 +22,8 @@ df e 5                      listen for signals in a 90° sector centred east for
 move 130,70                 go to a grid position
 stop                        cancel your current order
 sortie 126,76 e 5           drone only: silent sortie, see below
+launch                      UAV with a route only (mission 4 Red, hunt): start flying the route
+jam uavlink                 EW team only: spot-jam an enemy net (jam off to stop). While jamming you are the loudest emitter on the map
 power 5                     transmit power in watts
 antenna toward hq           directional antenna (hq and relay units); antenna omni to undo
 report                      send what you have heard so far to HQ now
