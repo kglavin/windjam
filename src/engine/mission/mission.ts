@@ -666,14 +666,14 @@ function send(s: MissionState) {
   log(s, 'order', `HQ: order ${order.n} sent to ${to.name} ${view.route === 'relay' ? 'via the relay' : 'direct'}. ${status === 'on time' ? 'Delivered, on time.' : status === 'late' ? `Delivered late (${view.order.latencyS.toFixed(0)} s on a degraded link).` : 'Lost: the link is down.'}`);
 }
 
-// The link HQ uses to reach a unit: the view on the side's hub net whose member is the unit.
-// A drone that is not on the net goes through its parent. Undefined for a unit on no net (the EW teams, HQ itself).
+// The link HQ uses to reach a unit: the view on a hub net of the side whose member is the unit. A side can have
+// several hub nets (the command net, a UAV's own link), so look in each. A drone on none goes through its parent.
+// Undefined for a unit on no net (the EW teams, HQ itself).
 export function memberLink(s: MissionState, unitId: string, links: LinkView[]): LinkView | undefined {
   const unit = unitById(s.world, unitId);
   if (!unit) return undefined;
-  const hubNet = s.world.nets.find((n) => n.side === unit.side && n.topology === 'hub');
-  if (!hubNet) return undefined;
-  const viewOf = (id: string) => links.find((v) => v.link.netId === hubNet.id && v.link.bId === id);
+  const hubNets = s.world.nets.filter((n) => n.side === unit.side && n.topology === 'hub');
+  const viewOf = (id: string) => links.find((v) => hubNets.some((n) => n.id === v.link.netId) && v.link.bId === id);
   return viewOf(unit.id) ?? (unit.kind === 'drone' && unit.parentId ? viewOf(unit.parentId) : undefined);
 }
 
@@ -689,13 +689,14 @@ export function sendOrder(s: MissionState, side: PlayerSide, toId: string, text:
     log(s, 'error', `${to.name} is not yours to command.`, side);
     return;
   }
-  const hubNet = s.world.nets.find((n) => n.side === side && n.topology === 'hub')!;
-  const hq = unitById(s.world, hubNet.hubId!)!;
   const view = memberLink(s, to.id, allLinkBudgets(s.world));
   if (!view) {
     log(s, 'error', `${to.name} is on no net HQ can reach.`, side);
     return;
   }
+  // The order goes out on the net that reaches the unit, from that net's hub.
+  const hubNetId = view.link.netId;
+  const hq = unitById(s.world, view.link.aId)!;
   if (s.orders[hq.id]?.kind === 'move') {
     log(s, 'error', 'HQ is moving and cannot transmit. Wait until it arrives, or stop it.', side);
     return;
@@ -703,9 +704,9 @@ export function sendOrder(s: MissionState, side: PlayerSide, toId: string, text:
   const n = s.nextOrderNo++;
   s.messages.push({ n, side, fromId: hq.id, toId: to.id, text, sentMin: s.minute, status: 'pending' });
   const what = `order ${n}`;
-  s.bursts.push({ minute: s.minute, unitId: hq.id, netId: hubNet.id, what });
+  s.bursts.push({ minute: s.minute, unitId: hq.id, netId: hubNetId, what });
   if (view.route === 'relay' && view.relay) {
-    s.bursts.push({ minute: s.minute, unitId: view.relay.relayId, netId: hubNet.id, what: `${what} relayed` });
+    s.bursts.push({ minute: s.minute, unitId: view.relay.relayId, netId: hubNetId, what: `${what} relayed` });
     s.bursts.push({ minute: s.minute, unitId: view.relay.relayId, netId: view.relay.retransNetId, what: `${what} relayed` });
   }
   log(s, 'order', `HQ: order ${n} to ${to.name} sent.`, side);
@@ -738,7 +739,7 @@ function deliverOrders(s: MissionState, m: number, links: LinkView[]) {
     }
     if (msg.status === 'pending' && msg.ackMin === undefined && m - (msg.arriveMin ?? msg.sentMin) >= ACK_TIMEOUT_MIN) {
       msg.status = 'lost';
-      log(s, 'error', `HQ: order ${msg.n} to ${unit.name}: no acknowledgement, lost.`, msg.side);
+      log(s, 'hq', `HQ: order ${msg.n} to ${unit.name}: no acknowledgement, lost.`, msg.side); // an event, not a rejected command
     }
   }
 }

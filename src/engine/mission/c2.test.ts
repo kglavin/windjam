@@ -146,3 +146,24 @@ describe('c2: console grammar', () => {
     expect(visibleLog(s, 'blue').at(-1)!.text).toBe('Blue EW Team is on no net HQ can reach.');
   });
 });
+
+describe('orders on a second hub net', () => {
+  // Mission 4: Red's UAV is on its own hub net, not the command net, so the order travels on red-uav.
+  it('reaches a UAV on its own link and is acknowledged there', () => {
+    let s = createMission(1234, 'uav');
+    s = type(s, 'send uav: hold at waypoint 3', 'red');
+    expect(s.messages).toHaveLength(1);
+    expect(s.bursts.find((b) => b.what === 'order 1')).toMatchObject({ unitId: 'r-hq', netId: 'red-uav' });
+    s = advance(s, 1);
+    expect(s.messages[0].status).toBe('on time');
+    expect(s.bursts.find((b) => b.what === 'ack order 1')).toMatchObject({ unitId: 'r-uav', netId: 'red-uav' });
+    expect(memberLink(s, 'r-uav', allLinkBudgets(s.world))?.link.netId).toBe('red-uav');
+  });
+  it('logs a lost order as an event, not an error', () => {
+    let s = moveFar(start(), 'b-sq1');
+    s = type(s, 'send sq1: df e 5');
+    s = advance(s, 4);
+    const line = visibleLog(s, 'blue').find((e) => /no acknowledgement, lost/.test(e.text));
+    expect(line?.kind).toBe('hq');
+  });
+});
