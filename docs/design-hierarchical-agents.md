@@ -223,6 +223,7 @@ E9. Cost: tokens and wall time per turn with a full staff; the point at which a 
 Q5. Should the ES analyst be allowed to run its own data association (we give it perfect association today, tracks grouped by true emitter)? Realistic association is a separate piece of work; the analyst role is where it would live.
 Q6. Should analysts see the sequence chart's event record for their own side (captures by own sensors with SNR)? Probably yes: that is what an ES cell sees.
 Q7. One ops planner or none: the commander may be enough with three analysts. E7 answers it.
+Q9. Access. Every side, unit and staff endpoint is open to anyone who knows the server URL; only `/full` and `/history` need the umpire key. Players are kept honest by their prompts and the call audit. The staff view returns the commander's whole picture, so it is the most sensitive endpoint yet. A per-seat token issued at `/new` (commander, each unit, each staff role) and checked on every call would close it; the audit already records enough to detect a cross-side call after the fact. Decide before running games whose results matter.
 
 ## Part 3: the agent harness, tools and TTPs
 
@@ -376,6 +377,10 @@ Status, as of the latest merge on main:
 | WP-2.1 | done | |
 | WP-2.2 to 2.5 | done | logic in `src/engine/mission/analyse.ts`; `analyseLink` scores the direct path only and uses the side's own jammers only |
 | WP-2.6 | done | |
+| WP-2.7 | done | exposure ranks by SNR where per-minute detection saturates at 1 (most VHF ranges) |
+| WP-2.8, 2.9 | done | staff state is server-side; `/ask` closes when the mission ends; ids are global across sides |
+| WP-2.10 | in progress | |
+| A1 (from C2 game 2) | done | an engine refusal moves a parsed line to `rejected`; `wait` is exempt |
 | WP-5.1 | done | |
 | everything else | not started | |
 
