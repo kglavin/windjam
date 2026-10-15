@@ -170,6 +170,17 @@ describe('detection (notes section 2)', () => {
     expect(detectionProbability(-60, 1e-3)).toBeCloseTo(1e-3, 6);
   });
 
+  it('Pd never falls as SNR rises, up to strong signals', () => {
+    // The tail integral used to under-resolve the peak at high SNR: 0.995 at 55 dB, below the value at 15 dB.
+    let prev = 0;
+    for (let snr = -10; snr <= 80; snr += 1) {
+      const pd = detectionProbability(snr, 1e-3);
+      expect(pd).toBeGreaterThanOrEqual(prev - 1e-12);
+      prev = pd;
+    }
+    expect(detectionProbability(55, 1e-3)).toBeCloseTo(1, 9);
+  });
+
   const world = createScenario(1234);
   it('Blue sensors are its squads and the drone in control range', () => {
     expect(sensorsOf(world.units, 'blue', world.map).map((u) => u.id).sort()).toEqual(['b-sq1', 'b-sq2', 'b-sq3', 'b-uav']);
@@ -254,7 +265,10 @@ describe('T7: DSSS', () => {
     const before = detectEmitters(world.map, world.units, world.nets, 'red', OPTS).emitters.find((e) => e.emitterId === 'b-hq')!;
     const w = step(world, [{ type: 'setWaveform', netId: 'blue-cmd', waveform: dsss }]).world;
     const after = detectEmitters(w.map, w.units, w.nets, 'red', OPTS).emitters.find((e) => e.emitterId === 'b-hq')!;
-    expect(before.best!.snrDb - after.best!.snrDb).toBeCloseTo(23, 0);
+    // Same sensor in both cases: several sensors can reach Pd 1, so the best look may switch sensor.
+    const sensor = before.best!.sensorId;
+    const snrAfter = after.looks.find((l) => l.sensorId === sensor)!.snrDb;
+    expect(before.best!.snrDb - snrAfter).toBeCloseTo(23, 0);
   });
 
   it('a smart sync jammer loses whole packets and radiates 15 dB less on average than spot', () => {

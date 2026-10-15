@@ -35,14 +35,18 @@ export function marcumQ1(a: number, b: number): number {
   if (b <= 0) return 1;
   if (a === 0) return Math.exp(-(b * b) / 2);
   // Integrand rewritten as x·exp(-(x - a)²/2)·I0e(a·x) to avoid overflow; it is negligible past a + 12.
-  const upper = Math.max(b, a) + 12;
-  if (b >= upper) return 0;
-  const n = 800; // even, Simpson's rule
-  const h = (upper - b) / n;
   const f = (x: number) => x * Math.exp(-((x - a) ** 2) / 2) * besselI0e(a * x);
-  let sum = f(b) + f(upper);
-  for (let i = 1; i < n; i++) sum += f(b + i * h) * (i % 2 === 0 ? 2 : 4);
-  return Math.min(1, Math.max(0, (sum * h) / 3));
+  const simpson = (lo: number, hi: number) => {
+    const n = 800; // even
+    const h = (hi - lo) / n;
+    let sum = f(lo) + f(hi);
+    for (let i = 1; i < n; i++) sum += f(lo + i * h) * (i % 2 === 0 ? 2 : 4);
+    return (sum * h) / 3;
+  };
+  // Above threshold, integrate the miss probability over [0, b] instead: the tail runs to a + 12, and at high SNR a
+  // is in the hundreds, so 800 steps across it are wider than the peak and the result came out low (0.995 at 55 dB).
+  if (a > b) return Math.min(1, Math.max(0, 1 - simpson(0, b)));
+  return Math.min(1, Math.max(0, simpson(b, b + 12)));
 }
 
 // Threshold (in noise standard deviations) that noise alone exceeds with probability pfa: Pfa = exp(-b²/2).
