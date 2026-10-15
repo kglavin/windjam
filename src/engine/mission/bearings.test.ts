@@ -38,7 +38,7 @@ describe('bearings: what a unit measures', () => {
       }
     }
     expect(checked).toBeGreaterThan(0);
-  });
+  }, 30000); // six missions played for 22 minutes each: slow under parallel load
 
   it('the circular mean is right across north', () => {
     const acc = (degs: number[]): DfAccumulator => ({

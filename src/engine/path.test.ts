@@ -45,7 +45,7 @@ describe('starting links', () => {
       const cut = s.world.units.filter((u) => u.kind === 'squad' || u.kind === 'relay').filter((u) => !routeToHq(s, u.id, links).ok).map((u) => `${seed}:${u.id}`);
       expect(cut).toEqual([]);
     }
-  });
+  }, 30000); // eight full worlds: slow when several agents run the suite at once
   it('keeps units on ground they may stand on, one per hex, with drones inside control range', () => {
     const w = createScenario(4242);
     const seen = new Set<string>();

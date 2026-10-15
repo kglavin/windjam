@@ -229,7 +229,8 @@ function post(g: Game, side: PlayerSide, text: string): { accepted: string[]; re
     g.history.push({ turn: g.turn, side, line, minute: g.state.minute });
     const mark = g.state.log.length;
     g.state = issue(g.state, p.command, side);
-    const refused = engineErrors(g, side, mark);
+    // A wait runs the clock, and errors logged while it runs (a move stopped by terrain) are not the wait's refusal.
+    const refused = p.command.type === 'wait' ? [] : engineErrors(g, side, mark);
     if (refused.length) rejected.push(`${line}: ${refused.join(' · ')}`);
     else accepted.push(line);
   }
