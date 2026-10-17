@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { capture, despreadCapture } from '../../engine/lab/capture';
 import type { LinkParams } from '../../engine/lab/dsss';
 import type { JammerSpec } from '../../engine/lab/jammers';
@@ -68,19 +68,42 @@ export function LabChapter({ level }: { level?: number }) {
   const [jamKey, setJamKey] = useState('bbn');
   const [jsDb, setJsDb] = useState(10);
   const [seed, setSeed] = useState(1);
-  const [shot, setShot] = useState(() => ({ ...capture({ link: LINK, s: S, nBits: N_BITS, seed: 1 }) }));
-  const [points, setPoints] = useState<CurvePoint[]>([]);
   const [scene, setScene] = useState<Scene>(DEFAULT_SCENE);
-  const sceneJsDb = useMemo(() => sceneBudget(scene).jsDb, [scene]);
-
+  const budget = useMemo(() => sceneBudget(scene), [scene]);
+  const sceneJsDb = budget.jsDb;
   const spec = JAMMERS[jamKey];
   const jam = spec ? { spec, js: undb(jsDb) } : undefined;
+
+  // Instruments listen at the intercept: its Eb/N0 gives its chip SNR, and with a jammer its own J/S.
+  const icLink: LinkParams = { ...LINK, ebN0: undb(budget.intercept.ebN0Db) };
+  const icJam = spec ? { spec, js: undb(budget.intercept.jsDb) } : undefined;
+  const takeShot = (shotSeed: number) => capture({ link: icLink, jammer: icJam, s: S, nBits: N_BITS, seed: shotSeed });
+
+  const [shot, setShot] = useState(() => takeShot(1));
+  const [points, setPoints] = useState<CurvePoint[]>([]);
+  const shotSeed = useRef(1);
 
   const doCapture = () => {
     const next = seed + 1;
     setSeed(next);
-    setShot(capture({ link: LINK, jammer: jam, s: S, nBits: N_BITS, seed: next }));
+    shotSeed.current = next;
+    setShot(takeShot(next));
   };
+
+  // Re-capture when the scene or the jammer type changes, after the player pauses.
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const id = setTimeout(() => {
+      shotSeed.current += 1;
+      setShot(takeShot(shotSeed.current));
+    }, 300);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene, jamKey]);
 
   const corr = useMemo(() => despreadCapture(shot, LINK).corr, [shot]);
   const request: RunRequest | undefined = useMemo(
@@ -130,6 +153,9 @@ export function LabChapter({ level }: { level?: number }) {
         <button type="button" onClick={doCapture}>Capture</button>
         <span>Link: 63-chip m-sequence, 1 Mcps, Eb/N0 8 dB, s = 4. Capture: {N_BITS} bits.</span>
       </div>
+      <p className="lab-instruments-line">
+        Instruments: intercept receiver, chip SNR {budget.intercept.chipSnrDb.toFixed(1)} dB, J/S {budget.intercept.jsDb.toFixed(1)} dB
+      </p>
       <div className="inst-grid-layout">
         <Spectrum x={shot.rx} sampleRateHz={rate} />
         <Trace x={shot.rx} sampleRateHz={rate} />

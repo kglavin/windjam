@@ -9,6 +9,8 @@ const base: Scene = {
   tx: { xKm: 0, yKm: 0, heightM: 10, powerW: 5, gainDbi: 0 },
   rx: { xKm: 10, yKm: 0, heightM: 2, powerW: 0, gainDbi: 0 },
   jammer: { xKm: 10, yKm: 20, heightM: 10, powerW: 100, gainDbi: 0 },
+  intercept: { xKm: 2, yKm: 1, heightM: 5, powerW: 0, gainDbi: 3 },
+  interceptPaths: { fromTx: { model: 'free-space' }, fromJammer: { model: 'free-space' } },
   rxAntenna: 'omni',
   txPath: { model: 'free-space' },
   jamPath: { model: 'free-space' },
@@ -144,5 +146,32 @@ describe('jammerDistanceForJs', () => {
   it('jammer on the receiver uses +x', () => {
     const scene: Scene = { ...base, jammer: { ...base.jammer, xKm: base.rx.xKm, yKm: base.rx.yKm } };
     expect(jammerDistanceForJs(scene, 20)).toBeGreaterThan(0.1);
+  });
+});
+
+describe('intercept station', () => {
+  it('S at the intercept is tx power + gains - path loss', () => {
+    const b = sceneBudget(base);
+    const pl = pathLossDb(50, base.tx, base.intercept, base.interceptPaths.fromTx).totalDb;
+    expect(b.intercept.sDbm).toBeCloseTo(wattsToDbm(5) + 0 + 3 - pl, 9);
+    const pj = pathLossDb(50, base.jammer, base.intercept, base.interceptPaths.fromJammer).totalDb;
+    expect(b.intercept.jDbm).toBeCloseTo(wattsToDbm(100) + 3 - pj, 9);
+    expect(b.intercept.jsDb).toBeCloseTo(b.intercept.jDbm - b.intercept.sDbm, 9);
+  });
+
+  it('chip SNR is S - N and Eb/N0 adds the processing gain', () => {
+    const b = sceneBudget(base);
+    expect(b.intercept.chipSnrDb).toBeCloseTo(b.intercept.sDbm - b.nDbm, 9);
+    expect(b.intercept.ebN0Db).toBeCloseTo(b.intercept.chipSnrDb + b.gpDb, 9);
+    expect(b.interceptLadder.find((s) => s.label === 'Chip SNR')!.db).toBeCloseTo(b.intercept.chipSnrDb, 9);
+  });
+
+  it('moving the intercept closer raises chip SNR by the path-loss difference', () => {
+    const far = sceneBudget(base);
+    const near = sceneBudget({ ...base, intercept: { ...base.intercept, xKm: 0.5, yKm: 0.2 } });
+    const plFar = pathLossDb(50, base.tx, base.intercept, base.interceptPaths.fromTx).totalDb;
+    const plNear = pathLossDb(50, base.tx, { ...base.intercept, xKm: 0.5, yKm: 0.2 }, base.interceptPaths.fromTx).totalDb;
+    expect(near.intercept.chipSnrDb - far.intercept.chipSnrDb).toBeCloseTo(plFar - plNear, 9);
+    expect(near.intercept.chipSnrDb).toBeGreaterThan(far.intercept.chipSnrDb);
   });
 });

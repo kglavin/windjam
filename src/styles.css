@@ -1180,3 +1180,9 @@ select {
   gap: 8px 16px;
   font-size: 13px;
 }
+
+.lab-instruments-line {
+  margin: 8px 0;
+  color: #f59e0b;
+  font-variant-numeric: tabular-nums;
+}

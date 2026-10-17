@@ -11,10 +11,11 @@ import {
   sceneBudget,
 } from '../../engine/lab/scene';
 import { NumberField } from '../NumberField';
-import { type SceneView, fitView, scaleBarKm, toKm, toPx } from './sceneView';
+import { type SceneView, fitView, sceneFitPoints, scaleBarKm, toKm, toPx } from './sceneView';
 
 export type SceneField =
   | 'positions'
+  | 'intercept'
   | 'freq'
   | 'txPower'
   | 'jamPower'
@@ -27,7 +28,7 @@ export type SceneField =
   | 'rates';
 
 const ALL_FIELDS: SceneField[] = [
-  'positions', 'freq', 'txPower', 'jamPower', 'heights', 'gains', 'rxAntenna', 'paths', 'obstacles', 'noise', 'rates',
+  'positions', 'intercept', 'freq', 'txPower', 'jamPower', 'heights', 'gains', 'rxAntenna', 'paths', 'obstacles', 'noise', 'rates',
 ];
 
 const W = 520;
@@ -35,18 +36,26 @@ const H = 300;
 const MARGIN = 56;
 const POS_LIMIT_KM = 200;
 
-type StationKey = 'tx' | 'rx' | 'jammer';
+type StationKey = 'tx' | 'rx' | 'jammer' | 'intercept';
 const STATIONS: { key: StationKey; name: string; color: string }[] = [
   { key: 'tx', name: 'Transmitter', color: '#60a5fa' },
   { key: 'rx', name: 'Receiver', color: '#22c55e' },
   { key: 'jammer', name: 'Jammer', color: '#ef4444' },
 ];
+const INTERCEPT = { key: 'intercept' as StationKey, name: 'Intercept', color: '#f59e0b' };
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const fmt = (v: number) => (Number.isFinite(v) ? v.toFixed(1) : '-');
 
-function fitScene(scene: Scene): SceneView {
-  return fitView([scene.tx, scene.rx, scene.jammer], W, H, MARGIN);
+// Radius of the target J/S circle, drawn only when it is a real distance (not clamped at the limits).
+function circleRadius(scene: Scene, targetJsDb?: number): number {
+  if (targetJsDb === undefined) return 0;
+  const r = jammerDistanceForJs(scene, targetJsDb);
+  return r > 0.1 && r < 1000 ? r : 0;
+}
+
+function fitScene(scene: Scene, circleKm: number): SceneView {
+  return fitView(sceneFitPoints(scene, circleKm), W, H, MARGIN);
 }
 
 export function LinkScene({ scene, onChange, editable, targetJsDb }: {
@@ -60,7 +69,8 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
   // Fit frozen for the duration of a drag, so the stations do not move under the pointer.
   const [frozen, setFrozen] = useState<SceneView | null>(null);
   const [dragging, setDragging] = useState<StationKey | null>(null);
-  const view = frozen ?? fitScene(scene);
+  const targetR = targetJsDb === undefined ? 0 : jammerDistanceForJs(scene, targetJsDb);
+  const view = frozen ?? fitScene(scene, circleRadius(scene, targetJsDb));
   const budget = sceneBudget(scene);
 
   const setStation = (key: StationKey, patch: Partial<Station>) =>
@@ -83,9 +93,9 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
   };
 
   const onDown = (key: StationKey) => (e: React.PointerEvent) => {
-    if (!can('positions')) return;
+    if (!can(key === 'intercept' ? 'intercept' : 'positions')) return;
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    setFrozen(fitScene(scene));
+    setFrozen(fitScene(scene, circleRadius(scene, targetJsDb)));
     setDragging(key);
   };
   const onMove = (e: React.PointerEvent) => {
@@ -101,6 +111,8 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
   const pos = (s: Station) => toPx(view, s.xKm, s.yKm);
   const rxP = pos(scene.rx);
   const txP = pos(scene.tx);
+  const icP = pos(scene.intercept);
+  const jamP = pos(scene.jammer);
   const bar = scaleBarKm(view, 120);
 
   const pathLine = (a: Station, b: Station, setup: PathSetup, dashed: boolean, color: string) => {
@@ -141,12 +153,11 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
   };
 
   const inBeam = rxGainDbi(scene, scene.jammer) === BEAM_GAIN_DBI && scene.rxAntenna === 'directional';
-  const targetR = targetJsDb === undefined ? 0 : jammerDistanceForJs(scene, targetJsDb);
 
   const labelOf = (k: StationKey) => {
     const s = scene[k];
     const extra = k === 'jammer' && scene.rxAntenna === 'directional' ? (inBeam ? ' (in beam)' : ' (sidelobe)') : '';
-    return { top: STATIONS.find((x) => x.key === k)!.name + extra, sub: `${s.heightM} m` };
+    return { top: [...STATIONS, INTERCEPT].find((x) => x.key === k)!.name + extra, sub: `${s.heightM} m` };
   };
 
   const rows = budget.ladder;
@@ -162,6 +173,10 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
       <td className="num">{fmt(r.db)} {r.unit}</td>
     </tr>
   );
+
+  const icRows = budget.interceptLadder;
+  const icKey = new Set(['Signal S at intercept', 'Jamming J at intercept', 'Noise floor N']);
+  const icRatio = new Set(['Chip SNR', 'J/S at intercept']);
 
   const stationInputs = (k: StationKey, name: string) => (
     <div className="scene-row" key={k}>
@@ -225,16 +240,22 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
           {scene.rxAntenna === 'directional' && wedge()}
           {pathLine(scene.tx, scene.rx, scene.txPath, false, '#60a5fa')}
           {pathLine(scene.jammer, scene.rx, scene.jamPath, true, '#ef4444')}
-          {STATIONS.map(({ key, color }) => {
+          <line x1={txP.x} y1={txP.y} x2={icP.x} y2={icP.y} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="1 4" strokeLinecap="round" />
+          <text x={(txP.x + icP.x) / 2} y={(txP.y + icP.y) / 2 - 6} className="axis" textAnchor="middle" fill="#f59e0b">
+            {budget.intercept.txDistanceKm.toFixed(1)} km, chip SNR {fmt(budget.intercept.chipSnrDb)} dB
+          </text>
+          <line x1={jamP.x} y1={jamP.y} x2={icP.x} y2={icP.y} stroke="#f59e0b" strokeWidth={1} strokeDasharray="1 4" strokeLinecap="round" opacity={0.35} />
+          {[...STATIONS, INTERCEPT].map(({ key, color }) => {
             const p = pos(scene[key]);
             const l = labelOf(key);
             return (
-              <g key={key} className={can('positions') ? 'scene-station draggable' : 'scene-station'}
+              <g key={key} className={can(key === 'intercept' ? 'intercept' : 'positions') ? 'scene-station draggable' : 'scene-station'}
                 onPointerDown={onDown(key)}>
                 <circle cx={p.x} cy={p.y} r={16} fill="transparent" />
                 {key === 'tx' && <polygon points={`${p.x},${p.y - 10} ${p.x - 8},${p.y + 7} ${p.x + 8},${p.y + 7}`} fill={color} />}
                 {key === 'rx' && <rect x={p.x - 7} y={p.y - 7} width={14} height={14} fill={color} />}
                 {key === 'jammer' && <circle cx={p.x} cy={p.y} r={8} fill={color} />}
+                {key === 'intercept' && <polygon points={`${p.x},${p.y - 9} ${p.x + 9},${p.y} ${p.x},${p.y + 9} ${p.x - 9},${p.y}`} fill={color} />}
                 <text x={p.x} y={p.y + 22} className="axis" textAnchor="middle" fill={color}>{l.top}</text>
                 <text x={p.x} y={p.y + 33} className="axis" textAnchor="middle">{l.sub}</text>
               </g>
@@ -255,6 +276,13 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
               {noiseRows.map((r) => ladderRow(r))}
               <tr className="head"><th colSpan={2}>Ratios</th></tr>
               {ratioRows.map((r) => ladderRow(r, 'ratio'))}
+              <tr className="head"><th colSpan={2}>At the intercept</th></tr>
+              {icRows.map((r) => (
+                <tr key={r.label} className={`${icKey.has(r.label) ? 'key' : ''} ${icRatio.has(r.label) ? 'ratio' : ''}`}>
+                  <td>{r.label}</td>
+                  <td className="num">{fmt(r.db)} {r.unit}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -265,6 +293,17 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
           <div className="scene-group">
             <h4>Positions</h4>
             {STATIONS.map((s) => stationInputs(s.key, s.name))}
+          </div>
+        )}
+        {can('intercept') && (
+          <div className="scene-group">
+            <h4>Intercept station</h4>
+            <div className="scene-row">
+              <NumberField label="x km" value={scene.intercept.xKm} min={-POS_LIMIT_KM} max={POS_LIMIT_KM} step={0.1} onChange={(v) => setStation('intercept', { xKm: v })} />
+              <NumberField label="y km" value={scene.intercept.yKm} min={-POS_LIMIT_KM} max={POS_LIMIT_KM} step={0.1} onChange={(v) => setStation('intercept', { yKm: v })} />
+              <NumberField label="height m" value={scene.intercept.heightM} min={1} max={100} step={1} onChange={(v) => setStation('intercept', { heightM: v })} />
+              <NumberField label="dBi" value={scene.intercept.gainDbi} min={-10} max={30} step={0.5} onChange={(v) => setStation('intercept', { gainDbi: v })} />
+            </div>
           </div>
         )}
         {can('freq') && (

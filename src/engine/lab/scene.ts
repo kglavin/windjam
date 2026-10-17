@@ -41,6 +41,8 @@ export interface Scene {
   tx: Station;
   rx: Station;
   jammer: Station;
+  intercept: Station; // the player's intercept receiver: omni, powerW unused
+  interceptPaths: { fromTx: PathSetup; fromJammer: PathSetup };
   rxAntenna: 'omni' | 'directional'; // directional: boresight at the transmitter
   txPath: PathSetup;
   jamPath: PathSetup;
@@ -75,6 +77,17 @@ export interface SceneBudget {
   ebJ0Db: number;
   ebN0J0Db: number; // Eb/(N0+J0)
   ladder: LadderStep[];
+  intercept: {
+    txDistanceKm: number;
+    jamDistanceKm: number;
+    sDbm: number;
+    jDbm: number;
+    nDbm: number;
+    chipSnrDb: number; // S - N in the chip bandwidth
+    jsDb: number;
+    ebN0Db: number; // chipSnrDb + gpDb, so signal.ts's normalisation gives the intercept's chip SNR
+  };
+  interceptLadder: LadderStep[];
 }
 
 const MIN_DISTANCE_KM = 0.1;
@@ -142,6 +155,23 @@ export function sceneBudget(scene: Scene): SceneBudget {
   const ebJ0Db = gpDb - jsDb;
   const ebN0J0Db = -10 * Math.log10(10 ** (-ebN0Db / 10) + 10 ** (-ebJ0Db / 10));
 
+  const icPathTx = pathLossDb(freqMHz, tx, scene.intercept, scene.interceptPaths.fromTx);
+  const icPathJam = pathLossDb(freqMHz, jammer, scene.intercept, scene.interceptPaths.fromJammer);
+  const icS = txPowerDbm + tx.gainDbi + scene.intercept.gainDbi - icPathTx.totalDb;
+  const icJ = jamPowerDbm + jammer.gainDbi + scene.intercept.gainDbi - icPathJam.totalDb;
+  const icChipSnr = icS - nDbm; // same noise figure, environment and bandwidth as the receiver
+  const icJs = icJ - icS;
+  const interceptLadder: LadderStep[] = [
+    { label: 'Tx power', db: txPowerDbm, unit: 'dBm' },
+    { label: 'Path loss to intercept', db: -icPathTx.totalDb, unit: 'dB' },
+    { label: 'Intercept antenna', db: scene.intercept.gainDbi, unit: 'dBi' },
+    { label: 'Signal S at intercept', db: icS, unit: 'dBm' },
+    { label: 'Noise floor N', db: nDbm, unit: 'dBm' },
+    { label: 'Chip SNR', db: icChipSnr, unit: 'dB' },
+    { label: 'Jamming J at intercept', db: icJ, unit: 'dBm' },
+    { label: 'J/S at intercept', db: icJs, unit: 'dB' },
+  ];
+
   const ladder: LadderStep[] = [
     { label: 'Tx power', db: txPowerDbm, unit: 'dBm' },
     { label: 'Tx antenna', db: tx.gainDbi, unit: 'dBi' },
@@ -181,6 +211,17 @@ export function sceneBudget(scene: Scene): SceneBudget {
     ebJ0Db,
     ebN0J0Db,
     ladder,
+    intercept: {
+      txDistanceKm: icPathTx.distanceKm,
+      jamDistanceKm: icPathJam.distanceKm,
+      sDbm: icS,
+      jDbm: icJ,
+      nDbm,
+      chipSnrDb: icChipSnr,
+      jsDb: icJs,
+      ebN0Db: icChipSnr + gpDb,
+    },
+    interceptLadder,
   };
 }
 

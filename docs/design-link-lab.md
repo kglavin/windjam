@@ -59,6 +59,8 @@ An SVG drawing of three stations on a flat plane: transmitter, receiver and jamm
 
 From these the scene computes S, J and N at the receiver input, and from them Eb/N0, J/S and Eb/J0 after processing gain. A budget ladder beside the drawing shows each term in dB, so the player sees how the geometry becomes the numbers the signal-level simulation runs on. It reuses the map-free functions in `rf.ts` (`fsplDb`, `twoRayLossDb`, `knifeEdgeLossDb`, `noiseFloorDbm`, `manMadeNoiseFigureDb`).
 
+A fourth station, the player's intercept receiver, is where the instruments listen (D8). At the friendly receiver a DSSS signal sits well below the noise (Eb/N0 8 dB with Gp 63 is about −10 dB per chip), so its spectrum and the preamble's autocorrelation cannot be seen there. The intercept's chip SNR and J/S come from the scene, through its own paths from the transmitter and the jammer, so the player has to move it close enough to the transmitter to see the signal. A second budget section shows the terms at the intercept.
+
 A level sets which scene parameters the player may change. Levels about the code fix the scene and let the player sweep jammer power; levels about the J/S equation free the positions and powers.
 
 ### 4.2 The signal
@@ -132,7 +134,7 @@ Attack efficiency, shown in every debrief: the average J/S and the peak J/S each
 
 | Level | Link | Attacks | Teaches |
 |---|---|---|---|
-| 1. A quiet signal | short code (N = 63), no repetition | none | chip rate and bandwidth from spectrum and autocorrelation; code length from the preamble and the fluctuation display; Gp = N |
+| 1. A quiet signal | short code (N = 63), no repetition; intercept starts too far away to see the signal | none | moving the intercept until the signal rises out of the noise; chip rate and bandwidth from spectrum and autocorrelation; code length from the preamble and the fluctuation display; Gp = N |
 | 2. Processing gain | long code, bit rate given; two links with Gp 10 dB apart; jammer position and power free | BBN | J/S from the scene (distances, powers, path models); measured BER against `Gp/(J/S)`; a 10 dB increase in Gp moves the curve 10 dB and shortens the jammer's effective range; why the lab's BPSK curve sits 4 dB left of the map game's |
 | 3. Where to put the power | long code, no repetition | BBN, partial-band, pulsed with pulse duration from well under to over a bit | frequency concentration does nothing; time concentration works when pulses cover whole bits; the worst-case ρ |
 | 4. Tones | short code (N = 31), then a long code | single tone at swept offsets, multitone | line spectrum of a short code; tone phase; PAPR and compression. A multitone run's BER depends on its tone phases, which stay fixed for the run (spread between runs about ten times the counting noise), so each point averages several runs with fresh phases and shows their spread |
@@ -207,6 +209,7 @@ D4. Every transmission starts with an unmodulated preamble; a fluctuation displa
 D5. No hex map. The lab draws one link as a scene whose physical assumptions the player varies; J/S and Eb/N0 come from that scene through `rf.ts`.
 D6. The front end blanks its output for a recovery time after overload (section 4.2).
 D7. J/S is measured within ±Rc/2 of the carrier (section 5).
+D8. The instruments listen at an intercept station in the scene, not at the friendly receiver; the player moves it to get a usable chip SNR (section 4.1).
 
 Risks:
 

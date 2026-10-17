@@ -12,6 +12,20 @@ export interface KmPoint {
 
 const MIN_SPAN_KM = 1;
 
+// Everything the drawing must keep in view: the four stations and, if given, the J/S circle around the receiver.
+export function sceneFitPoints(
+  scene: { tx: KmPoint; rx: KmPoint; jammer: KmPoint; intercept: KmPoint },
+  circleRadiusKm = 0,
+): KmPoint[] {
+  const pts: KmPoint[] = [scene.tx, scene.rx, scene.jammer, scene.intercept];
+  const r = circleRadiusKm;
+  if (r > 0) {
+    const { xKm, yKm } = scene.rx;
+    pts.push({ xKm: xKm - r, yKm }, { xKm: xKm + r, yKm }, { xKm, yKm: yKm - r }, { xKm, yKm: yKm + r });
+  }
+  return pts;
+}
+
 // Fit the points inside the box with a margin on every side, centred.
 export function fitView(points: KmPoint[], widthPx: number, heightPx: number, marginPx: number): SceneView {
   const xs = points.map((p) => p.xKm);
