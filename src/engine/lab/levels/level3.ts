@@ -175,6 +175,7 @@ export const LEVEL_3: LevelDef = {
           kind: 'lesson',
           id: 'A1',
           title: 'Three ways to spend the same power',
+          video: 'level3-A1',
           visual: { kind: 'threeJammers' },
           paragraphs: [
             'All three jammers have the same average power.',
@@ -251,6 +252,7 @@ export const LEVEL_3: LevelDef = {
           kind: 'lesson',
           id: 'C1',
           title: 'Example: the same power in bursts',
+          video: 'level3-C1',
           visual: {
             kind: 'berCurve',
             marks: [
@@ -366,6 +368,7 @@ export const LEVEL_3: LevelDef = {
           kind: 'lesson',
           id: 'E1',
           title: 'Example: how short should the pulses be?',
+          video: 'level3-E1',
           visual: { kind: 'berCurve', marks: [{ db: -1.5, label: 'in-pulse −1.5 dB' }] },
           paragraphs: [
             'Shorter pulses are stronger but hit fewer bits. The best pulse is just strong enough to break the bits it hits, which happens when Eb/J0 during the pulse is about −1.5 dB. Any stronger is wasted on bits that were already broken.',

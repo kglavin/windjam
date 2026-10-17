@@ -85,6 +85,19 @@ def db(v, floor=1e-12):
     return 10 * np.log10(max(v, floor))
 
 
+def ber_bpsk(eb_j0):
+    """BPSK bit error rate Q(√(2·Eb/J0)) for Eb/J0 as a ratio, as theory.ts berBpsk."""
+    from scipy.special import erfc
+    return 0.5 * erfc(np.sqrt(max(eb_j0, 0.0)))
+
+
+def sci(v, digits=2):
+    """A probability as the lessons print it: 0.0081, 0.0000049."""
+    if v >= 0.001:
+        return f"{v:.{digits}g}"
+    return f"{v:.{-int(np.floor(np.log10(v))) + digits - 1}f}"
+
+
 class Plot:
     """A plain plot frame (no LaTeX): x from x0 over width, y from y0 over height, mapping data ranges xr and yr."""
 
@@ -114,6 +127,47 @@ class Plot:
     def curve(self, xs, ys, color, width=3):
         return VMobject(stroke_color=color, stroke_width=width).set_points_as_corners(
             [[self.px(x), self.py(y), 0] for x, y in zip(xs, ys)])
+
+
+def copy_timeline(count, x0, width, y, per_bit=3, h=0.42):
+    """Copies of bits on a time line: one box per copy, and above each bit's copies a bracket and 'bit k'.
+    Returns (boxes, bit_marks, copy_width)."""
+    w = width / count
+    boxes = VGroup(*[Rectangle(width=w, height=h, stroke_color=GREY, stroke_width=1.5).move_to([x0 + (i + 0.5) * w, y, 0])
+                     for i in range(count)])
+    marks = VGroup()
+    for b in range(count // per_bit):
+        br = bracket(x0 + b * per_bit * w + 0.04, x0 + (b + 1) * per_bit * w - 0.04, y + h / 2 + 0.12, UP, GREY)
+        marks.add(VGroup(br, label(f"bit {b + 1}", GREY, 18).next_to(br, UP, buff=0.05)))
+    return boxes, marks, w
+
+
+SUPER = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def ber_tick(exp):
+    """A BER axis label for 10^exp: 0.1, 0.01, 0.001, then 10⁻⁴ and smaller."""
+    return {0: "1", -1: "0.1", -2: "0.01", -3: "0.001"}.get(exp, "10" + str(exp).translate(SUPER))
+
+
+def ber_waterfall(P, color=BLUE_C1):
+    """BPSK BER against Eb/J0 on a Plot whose x range is dB and y range is log10(BER): axes, ticks, names, curve."""
+    xs = np.linspace(P.xr[0], P.xr[1], 400)
+    ys = [np.log10(max(ber_bpsk(10 ** (x / 10)), 1e-30)) for x in xs]
+    lo, hi = int(np.ceil(P.yr[0])), int(np.floor(P.yr[1]))
+    return VGroup(
+        P.axes(),
+        P.x_ticks(range(int(np.ceil(P.xr[0] / 4) * 4), int(P.xr[1]) + 1, 4)),
+        VGroup(*[label(ber_tick(e), GREY, 18).next_to([P.x0, P.py(e), 0], LEFT, buff=0.12) for e in range(lo, hi + 1)]),
+        label("Eb/J0 (dB)", GREY, 20).next_to([P.x0 + P.width / 2, P.y0, 0], DOWN, buff=0.45),
+        label("BER", GREY, 20).move_to([P.x0, P.y0 + P.height + 0.25, 0], aligned_edge=LEFT),
+        P.curve(xs, ys, color, 3),
+    )
+
+
+def ber_point(P, eb_db):
+    """Scene point on the waterfall at Eb/J0 in dB."""
+    return np.array([P.px(eb_db), P.py(np.log10(ber_bpsk(10 ** (eb_db / 10)))), 0])
 
 
 class LessonScene(Scene):

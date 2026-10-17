@@ -263,6 +263,7 @@ export const LEVEL_5: LevelDef = {
           kind: 'lesson',
           id: 'A1',
           title: 'Example: the majority vote',
+          video: 'level5-A1',
           visual: { kind: 'majorityVote' },
           paragraphs: [
             'The link sends every bit three times: three copies. The receiver decides each copy, then takes a vote: whichever value at least two copies agree on wins.',
@@ -329,6 +330,7 @@ export const LEVEL_5: LevelDef = {
           kind: 'lesson',
           id: 'B1',
           title: 'Example: one copy of every bit, or every copy of some bits',
+          video: 'level5-B1',
           visual: {
             kind: 'berRunDemo',
             jsDb: EX_JS5_DB,
@@ -425,6 +427,7 @@ export const LEVEL_5: LevelDef = {
           kind: 'lesson',
           id: 'C1',
           title: 'Example: a receiver that needs time to recover',
+          video: 'level5-C1',
           visual: {
             kind: 'blinding',
             demo: {

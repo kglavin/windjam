@@ -68,15 +68,15 @@ reads a number off a plot. Definitions and tables do not. A video runs 1 to 3 mi
 | V3 | L2 B1, What the decoder sees | Spectra before and after despreading: the signal collapses into a peak and gains Gp, the jammer stays spread; the bit filter keeps 1/Gp of it; Eb/J0 = Gp − J/S | Published |
 | V4 | L3 B1, A quarter of the band | The receiver's multiply by the code spreads the partial-band jammer back over the whole band (numerical convolution, matching the engine's sinc² weighting) | Published |
 | V5 | L3 D1, Long pulses or short ones | Chip sums with pulses: one-chip pulses averaged over the bit, one-bit pulses break bits; 0.1 × 0.22 on a scratchpad | Published |
-| V6 | L4 B1, The code turns the tone into noise | A tone × a long code; short code against long code; tone × long code in time; the spike smears into a sinc² at the noise level | In review |
-| V7 | L4 D1, Peaks | Eight tones as phasors: in phase they peak at 8× the average, random and Newman phases lower (the engine's phases); a front-end limit squashing the peaks | In review |
-| V8 | L3 A1, Three ways to spend the same power | One block of power reshaped: wide and low, narrow and tall, short and tall | Tier 2 |
-| V9 | L3 C1, The same power in bursts | Bit timeline with pulses; hit bits break, the rest are clean; 0.1 × 0.081 on a scratchpad | Tier 2 |
-| V10 | L3 E1, How short should the pulses be | Duty cycle sweep: the overall BER rises to a peak and falls | Tier 2 |
-| V11 | L4 C1, Keep off the carrier | A tone sliding across the short code's line spectrum while the BER follows | Tier 2 |
-| V12 | L5 A1, The majority vote | Three copies, the two-or-more-wrong cases, 3p² on a scratchpad | Tier 2 |
-| V13 | L5 B1, Every copy of some bits | Copy timeline: pulses on one copy of every bit against all copies of one bit | Tier 2 |
-| V14 | L5 C1, Blinding the receiver | Pulse plus recovery time as a shaded blind stretch; blind copies are coin tosses | Tier 2 |
+| V6 | L4 B1, The code turns the tone into noise | A tone × a long code; short code against long code; tone × long code in time; the spike smears into a sinc² at the noise level | Published |
+| V7 | L4 D1, Peaks | Eight tones as phasors: in phase they peak at 8× the average, random and Newman phases lower (the engine's phases); a front-end limit squashing the peaks | Published |
+| V8 | L3 A1, Three ways to spend the same power | Power over time and across the band; squeezing keeps the area and raises the height by 1 ÷ the fraction | In review |
+| V9 | L3 C1, The same power in bursts | The operating point drops 10 dB down the BER waterfall for hit bits; 0.1 × 0.081 on a scratchpad | In review |
+| V10 | L3 E1, How short should the pulses be | Duty sweep: in-pulse point on the waterfall and overall BER d·Q(√(2·d·Eb/J0)) traced; peak at 7% | In review |
+| V11 | L4 C1, Keep off the carrier | The code's one-bit spectrum through its lines; a tone slid from the carrier, BER traced; phase spread on a line | In review |
+| V12 | L5 A1, The majority vote | All eight copy outcomes with their chances; 0.027 + 0.001 on a scratchpad; 3p² | In review |
+| V13 | L5 B1, Every copy of some bits | Copy timeline: pulses on one copy of every bit (outvoted) against all copies of every third bit (lost) | In review |
+| V14 | L5 C1, Blinding the receiver | Overload pulse, then 10 blind copies; bits with two or more blind copies are coin tosses | In review |
 
 Not planned: L1 B1, L1 E1, L1 F1, L2 A1, L2 C1, L2 D1, L2 E1, L4 A1. They are side-by-side comparisons, a table,
 reading a plot, or already interactive (the BER meter, the scene); a video would repeat the figure.

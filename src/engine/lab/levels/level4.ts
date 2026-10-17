@@ -313,6 +313,7 @@ export const LEVEL_4: LevelDef = {
           id: 'C1',
           title: 'Example: keep off the carrier',
           visual: { kind: 'toneSweep' },
+          video: 'level4-C1',
           paragraphs: [
             'A short code repeats every bit, so its spectrum is made of thin lines one bit rate apart: the fine bumps you saw in level 1. For the example link that is 1000 kHz ÷ 31 = 32.3 kHz.',
             'The code has almost as many +1 chips as −1 chips, so on the carrier itself it has almost nothing. A tone there is wiped out by despreading: {exCarrierBer}, against {exNoJamBer} with no jammer at all.',
