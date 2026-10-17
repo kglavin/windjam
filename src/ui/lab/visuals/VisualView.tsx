@@ -18,6 +18,10 @@ export interface HiddenShot {
   chipRateMcps?: number; // draws the envelope on the spectrum when set
 }
 
+// The smallest max-lag choice that shows three peaks, so the known links open on a readable plot.
+const LAG_CHOICES = [50, 100, 200, 500, 1000];
+export const startLagUs = (periodUs: number): number => LAG_CHOICES.find((l) => l >= 3.1 * periodUs) ?? 1000;
+
 const trim = (v: number) => String(Number(v.toFixed(1)));
 
 // Null lines at ± the chip rate.
@@ -68,7 +72,7 @@ export function VisualView({ visual, links, hidden }: {
           sampleRateHz={shot.sampleRateHz}
           preambleSamples={shot.preambleSamples}
           annotations={visual.annotate ? periodNotes(info.periodUs) : undefined}
-          initialMaxLagUs={100}
+          initialMaxLagUs={startLagUs(info.periodUs)}
         />
       );
     }

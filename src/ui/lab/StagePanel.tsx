@@ -10,7 +10,8 @@ import {
   fillText,
   flatSteps,
 } from '../../engine/lab/levels';
-import type { Score, StepState } from './levelState';
+import type { FactsCard } from './knownFacts';
+import type { FieldResult, Score, StepState } from './levelState';
 
 export interface StagePanelProps {
   level: LevelDef;
@@ -23,7 +24,12 @@ export interface StagePanelProps {
   onCheckLesson: (stepIndex: number, value: number) => void;
   onCheckPractice: (stepIndex: number, entered: Record<string, number>) => void;
   onShowWorked: (stepIndex: number) => void;
-  onSubmitFields: (stepIndex: number, entered: Record<string, number>) => void;
+  onTryAnother: (stepIndex: number) => void;
+  onSubmitFields: (stepIndex: number, entered: Record<string, number>) => void; // one group of an apply step
+  onRetryStart: (stepIndex: number) => void;
+  onCheckRetry: (stepIndex: number, entered: Record<string, number>) => void;
+  onBack: () => void;
+  card: FactsCard | null; // the "What you know" card, units C to F
   onAnswer: (stepIndex: number, questionId: string, choice: number) => void;
   onContinue: () => void;
   score: Score;
@@ -65,7 +71,7 @@ export function StagePanel(p: StagePanelProps) {
                   {steps.map(({ index, step }) => {
                     const done = states[index]?.done;
                     const on = index === shown && !showDebrief;
-                    const reachable = done || index === current;
+                    const reachable = done || index <= current;
                     return (
                       <li key={step.id} className={`${done ? 'done' : ''} ${on ? 'active' : ''}`}>
                         <button type="button" disabled={!reachable} onClick={() => p.onView(index === current ? null : index)}>
@@ -86,15 +92,16 @@ export function StagePanel(p: StagePanelProps) {
         </li>
       </ol>
 
+      {!showDebrief && p.card && <KnownCard card={p.card} />}
+
       {showDebrief ? (
         <Debrief {...p} />
       ) : (
         <StepBody
-          key={flat[shown].step.id}
+          key={`${flat[shown].step.id}-${p.values.pN}-${p.values.pChipRate}`}
           step={flat[shown].step}
           index={shown}
           state={states[shown] ?? { done: false }}
-          readOnly={shown !== current}
           last={shown === flat.length - 1}
           {...p}
         />
@@ -127,8 +134,33 @@ function Hint({ text, values }: { text?: string; values: Record<string, string> 
   );
 }
 
-function StepBody(p: StagePanelProps & { step: StepDef; index: number; state: StepState; readOnly: boolean; last: boolean }) {
-  const { step, index, state, readOnly } = p;
+function KnownCard({ card }: { card: FactsCard }) {
+  return (
+    <section className="stage-known" aria-label={card.heading}>
+      <h4>{card.heading}</h4>
+      <table>
+        <tbody>
+          {card.rows.map((r) => (
+            <tr key={r.label} className={r.value === null ? 'unknown' : ''}>
+              <td>{r.label}</td>
+              <td className="num">
+                {r.value ?? '?'}
+                {r.you && (
+                  <small className={`stage-you ${r.you.ok ? 'ok' : 'bad'}`}>
+                    {' '}{r.you.text} {r.you.ok ? '✓' : '✗'}
+                  </small>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function StepBody(p: StagePanelProps & { step: StepDef; index: number; state: StepState; last: boolean }) {
+  const { step, index, state } = p;
   const canContinue = step.kind === 'lesson' ? !step.check || !!state.checkRight : state.done;
   return (
     <section className="stage-step">
@@ -150,21 +182,23 @@ function StepBody(p: StagePanelProps & { step: StepDef; index: number; state: St
       {step.kind === 'questions' && (
         <>
           <p className="stage-task">{fillText(step.task, p.values)}</p>
-          <QuestionsGoal
-            questions={step.questions}
-            state={state}
-            readOnly={readOnly}
-            onAnswer={(qid, c) => p.onAnswer(index, qid, c)}
-          />
+          <QuestionsGoal questions={step.questions} state={state} onAnswer={(qid, c) => p.onAnswer(index, qid, c)} />
         </>
       )}
 
-      {canContinue && !readOnly && (
-        <button type="button" className="stage-continue" onClick={p.onContinue}>
-          {p.last ? 'See debrief' : 'Continue'}
-        </button>
-      )}
-      {readOnly && (
+      <div className="stage-nav">
+        {index > 0 && (
+          <button type="button" className="stage-back" onClick={p.onBack}>
+            Back
+          </button>
+        )}
+        {canContinue && (
+          <button type="button" className="stage-continue" onClick={p.onContinue}>
+            {p.last ? 'See debrief' : 'Continue'}
+          </button>
+        )}
+      </div>
+      {p.viewing !== null && (
         <button type="button" className="link-button" onClick={() => p.onView(null)}>
           Back to current step
         </button>
@@ -173,7 +207,7 @@ function StepBody(p: StagePanelProps & { step: StepDef; index: number; state: St
   );
 }
 
-function Lesson(p: StagePanelProps & { step: LessonStep; index: number; state: StepState; readOnly: boolean }) {
+function Lesson(p: StagePanelProps & { step: LessonStep; index: number; state: StepState }) {
   const { step, state } = p;
   return (
     <>
@@ -182,22 +216,14 @@ function Lesson(p: StagePanelProps & { step: LessonStep; index: number; state: S
       ))}
       {step.steps && <Numbered items={step.steps} values={p.values} className="stage-worked stage-example" />}
       {step.rule && <p className="stage-rule">{fillText(step.rule, p.values)}</p>}
-      {step.check && (
-        <CheckBox
-          check={step.check}
-          state={state}
-          readOnly={p.readOnly}
-          onCheck={(v) => p.onCheckLesson(p.index, v)}
-        />
-      )}
+      {step.check && <CheckBox check={step.check} state={state} onCheck={(v) => p.onCheckLesson(p.index, v)} />}
     </>
   );
 }
 
-function CheckBox({ check, state, readOnly, onCheck }: {
+function CheckBox({ check, state, onCheck }: {
   check: NonNullable<LessonStep['check']>;
   state: StepState;
-  readOnly: boolean;
   onCheck: (value: number) => void;
 }) {
   const [text, setText] = useState('');
@@ -208,7 +234,7 @@ function CheckBox({ check, state, readOnly, onCheck }: {
       className="stage-check"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!Number.isFinite(value) || right || readOnly) return;
+        if (!Number.isFinite(value) || right) return;
         onCheck(value);
       }}
     >
@@ -218,12 +244,12 @@ function CheckBox({ check, state, readOnly, onCheck }: {
           type="number"
           step="any"
           aria-label="Your answer"
-          disabled={right || readOnly}
+          disabled={right}
           value={right && !text ? String(state.fields?.answer?.value ?? '') : text}
           onChange={(e) => setText(e.target.value)}
         />
         {check.unit && <span className="stage-unit">{check.unit}</span>}
-        {!right && !readOnly && <button type="submit" disabled={!Number.isFinite(value)}>Check</button>}
+        {!right && <button type="submit" disabled={!Number.isFinite(value)}>Check</button>}
       </span>
       {right && <p className="stage-feedback ok">Right.</p>}
       {!right && state.checkWrong && <p className="stage-feedback bad">{check.wrong}</p>}
@@ -231,7 +257,7 @@ function CheckBox({ check, state, readOnly, onCheck }: {
   );
 }
 
-function Practice(p: StagePanelProps & { step: PracticeStep; index: number; state: StepState; readOnly: boolean }) {
+function Practice(p: StagePanelProps & { step: PracticeStep; index: number; state: StepState }) {
   const { step, state } = p;
   return (
     <>
@@ -239,12 +265,14 @@ function Practice(p: StagePanelProps & { step: PracticeStep; index: number; stat
       <Hint text={step.hint} values={p.values} />
       <FieldsForm
         fields={step.fields}
-        state={state}
-        readOnly={p.readOnly}
-        practice
+        results={state.fields}
+        mode="practice"
+        done={state.done}
+        worked={!!state.worked}
+        values={p.values}
         onSubmit={(e) => p.onCheckPractice(p.index, e)}
       />
-      {!p.readOnly && !state.worked && (
+      {!state.worked && (
         <button type="button" className="link-button" onClick={() => p.onShowWorked(p.index)}>
           Show the worked answer
         </button>
@@ -255,93 +283,140 @@ function Practice(p: StagePanelProps & { step: PracticeStep; index: number; stat
           <Numbered items={step.worked} values={p.values} className="stage-worked stage-example" />
         </>
       )}
+      {state.done && (
+        <div>
+          <button type="button" onClick={() => p.onTryAnother(p.index)}>Try another</button>
+        </div>
+      )}
     </>
   );
 }
 
-function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState; readOnly: boolean }) {
+function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState }) {
   const { step, state } = p;
   return (
     <>
       <p className="stage-task">{fillText(step.task, p.values)}</p>
       <Hint text={step.hint} values={p.values} />
-      <FieldsForm fields={step.fields} state={state} readOnly={p.readOnly} onSubmit={(e) => p.onSubmitFields(p.index, e)} />
+      <FieldsForm
+        fields={step.fields}
+        results={state.fields}
+        mode="apply"
+        done={state.done}
+        values={p.values}
+        onSubmit={(e) => p.onSubmitFields(p.index, e)}
+      />
       {state.done && (
         <>
           <p className="stage-subhead">Worked answer</p>
           <Numbered items={step.reveal} values={p.values} className="stage-worked stage-example" />
+          {!state.retrying ? (
+            <button type="button" onClick={() => p.onRetryStart(p.index)}>Retry (not scored)</button>
+          ) : (
+            <div className="stage-retry">
+              <p className="stage-subhead">Retry (not scored)</p>
+              <FieldsForm
+                fields={step.fields}
+                results={state.retry}
+                mode="retry"
+                done={false}
+                values={p.values}
+                onSubmit={(e) => p.onCheckRetry(p.index, e)}
+              />
+            </div>
+          )}
         </>
       )}
     </>
   );
 }
 
-// Apply: one scored submission that shows the true value. Practice: unlimited checks, the true value stays hidden
-// until the worked answer is shown.
-function FieldsForm({ fields, state, readOnly, practice = false, onSubmit }: {
+// Fields in groups, each its own form. Apply: one scored submission per group, the next group opens once the
+// earlier one is submitted, and the true value is shown. Practice: unlimited checks, the next group opens when the
+// earlier one is right or the worked answer is shown, and the true value stays hidden until then. Retry: all
+// fields at once, unscored, right or wrong only.
+function FieldsForm({ fields, results, mode, done, worked = false, values, onSubmit }: {
   fields: FieldDef[];
-  state: StepState;
-  readOnly: boolean;
-  practice?: boolean;
+  results?: Record<string, FieldResult>;
+  mode: 'apply' | 'practice' | 'retry';
+  done: boolean;
+  worked?: boolean;
+  values: Record<string, string>;
   onSubmit: (entered: Record<string, number>) => void;
 }) {
   const [text, setText] = useState<Record<string, string>>({});
-  const locked = practice ? state.done : !!state.fields;
+  const groupOf = (f: FieldDef) => (mode === 'retry' ? 0 : (f.group ?? 0));
+  const groups = [...new Set(fields.map(groupOf))].sort((a, b) => a - b);
   const parsed = (id: string) => (text[id] === undefined || text[id].trim() === '' ? NaN : Number(text[id]));
-  const ready = fields.every((f) => Number.isFinite(parsed(f.id)));
+  const settled = (f: FieldDef) =>
+    mode === 'apply' ? !!results?.[f.id] : mode === 'practice' ? !!results?.[f.id]?.ok || worked : false;
+
   return (
-    <form
-      className="stage-fields"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!ready || locked || readOnly) return;
-        onSubmit(Object.fromEntries(fields.map((f) => [f.id, parsed(f.id)])));
-      }}
-    >
-      {fields.map((f) => {
-        const r = state.fields?.[f.id];
-        const typed = text[f.id] ?? (r ? String(r.value) : '');
+    <>
+      {groups.map((g) => {
+        const inGroup = fields.filter((f) => groupOf(f) === g);
+        const visible = groups.filter((x) => x < g).every((x) => fields.filter((f) => groupOf(f) === x).every(settled));
+        if (!visible) return null;
+        const locked = mode === 'retry' ? false : mode === 'apply' ? inGroup.every((f) => !!results?.[f.id]) : done || inGroup.every(settled);
+        const ready = inGroup.every((f) => Number.isFinite(parsed(f.id)));
         return (
-          <div className="stage-field" key={f.id}>
-            <label>
-              <span>{f.label}</span>
-              <span className="stage-input">
-                <input
-                  type="number"
-                  step="any"
-                  disabled={locked || readOnly}
-                  value={typed}
-                  onChange={(e) => setText((t) => ({ ...t, [f.id]: e.target.value }))}
-                />
-                <span className="stage-unit">{f.unit}</span>
-              </span>
-            </label>
-            {r && !practice && (
-              <span className={`stage-result ${r.ok ? 'ok' : r.points > 0 ? 'partial' : 'bad'}`}>
-                {r.ok ? '✓' : r.points > 0 ? '~' : '✗'} true value {sig(r.truth)} {f.unit}
-                {f.points > 0 ? `, ${r.points}/${f.points} pts` : ', not scored'}
-              </span>
-            )}
-            {r && practice && (
-              <span className={`stage-result ${r.ok ? 'ok' : 'bad'}`}>
-                {r.ok ? '✓ Right' : '✗ Not yet'}
-                {state.worked && ` (true value ${sig(r.truth)} ${f.unit})`}
-              </span>
-            )}
-          </div>
+          <form
+            key={g}
+            className="stage-fields"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!ready || locked) return;
+              // Practice re-checks only the fields not yet right.
+              const todo = mode === 'practice' ? inGroup.filter((f) => !results?.[f.id]?.ok) : inGroup;
+              onSubmit(Object.fromEntries(todo.map((f) => [f.id, parsed(f.id)])));
+            }}
+          >
+            {inGroup.map((f) => {
+              const r = results?.[f.id];
+              const typed = text[f.id] ?? (r ? String(r.value) : '');
+              const fieldLocked = locked || (mode === 'practice' && !!r?.ok);
+              return (
+                <div className="stage-field" key={f.id}>
+                  {f.prompt && <p className="stage-prompt">{fillText(f.prompt, values)}</p>}
+                  <label>
+                    <span>{f.label}</span>
+                    <span className="stage-input">
+                      <input
+                        type="number"
+                        step="any"
+                        disabled={fieldLocked}
+                        value={typed}
+                        onChange={(e) => setText((t) => ({ ...t, [f.id]: e.target.value }))}
+                      />
+                      <span className="stage-unit">{f.unit}</span>
+                    </span>
+                  </label>
+                  {r && mode === 'apply' && (
+                    <span className={`stage-result ${r.ok ? 'ok' : r.points > 0 ? 'partial' : 'bad'}`}>
+                      {r.ok ? '✓' : r.points > 0 ? '~' : '✗'} true value {sig(r.truth)} {f.unit}
+                      {f.points > 0 ? `, ${r.points}/${f.points} pts` : ', not scored'}
+                    </span>
+                  )}
+                  {r && mode !== 'apply' && (
+                    <span className={`stage-result ${r.ok ? 'ok' : 'bad'}`}>
+                      {r.ok ? '✓ Right' : '✗ Not yet'}
+                      {worked && ` (true value ${sig(r.truth)} ${f.unit})`}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            {!locked && <button type="submit" disabled={!ready}>{mode === 'apply' ? 'Submit' : 'Check'}</button>}
+          </form>
         );
       })}
-      {!locked && !readOnly && (
-        <button type="submit" disabled={!ready}>{practice ? 'Check' : 'Submit'}</button>
-      )}
-    </form>
+    </>
   );
 }
 
-function QuestionsGoal({ questions, state, readOnly, onAnswer }: {
+function QuestionsGoal({ questions, state, onAnswer }: {
   questions: Question[];
   state: StepState;
-  readOnly: boolean;
   onAnswer: (qid: string, choice: number) => void;
 }) {
   const [pick, setPick] = useState<Record<string, number>>({});
@@ -351,7 +426,7 @@ function QuestionsGoal({ questions, state, readOnly, onAnswer }: {
         const answered = state.answers?.[q.id];
         const done = answered !== undefined;
         return (
-          <fieldset key={q.id} disabled={done || readOnly}>
+          <fieldset key={q.id} disabled={done}>
             <legend>{qi + 1}. {q.text}</legend>
             {q.options.map((o, oi) => (
               <label key={o} className={done && oi === q.correct ? 'ok' : done && oi === answered ? 'bad' : ''}>
@@ -364,7 +439,7 @@ function QuestionsGoal({ questions, state, readOnly, onAnswer }: {
                 <span>{o}</span>
               </label>
             ))}
-            {!done && !readOnly && (
+            {!done && (
               <button type="button" disabled={pick[q.id] === undefined} onClick={() => onAnswer(q.id, pick[q.id])}>
                 Submit
               </button>
@@ -405,6 +480,7 @@ function Debrief(p: StagePanelProps) {
           </tr>
         </tbody>
       </table>
+      <p className="stage-note">Scores count your first attempt at each step.</p>
       <p className={score.passed ? 'stage-pass' : 'stage-fail'}>
         {score.passed ? 'Passed' : 'Not passed'} (pass mark {p.level.passMark})
       </p>

@@ -13,6 +13,7 @@ import {
   flatSteps,
   knownLinkInfo,
   level1Truth,
+  practiceLinkAt,
   textValues,
   withinTol,
 } from './levels';
@@ -127,7 +128,7 @@ describe('LEVEL_1 structure', () => {
     expect(total).toBe(100);
     expect(LEVEL_1.passMark).toBe(60);
     const pts = (id: string, fid: string) => (allSteps().find((s) => s.id === id) as ApplyStep).fields.find((f) => f.id === fid)!.points;
-    expect([pts('C3', 'chipRate'), pts('D3', 'length'), pts('E3', 'gpDb'), pts('E3', 'bitRate'), pts('F2', 'rxEbN0')]).toEqual([15, 15, 15, 5, 20]);
+    expect([pts('C3', 'chipRate'), pts('D3', 'period'), pts('D3', 'length'), pts('E3', 'gpDb'), pts('E3', 'bitRate'), pts('F2', 'rxEbN0')]).toEqual([15, 5, 10, 15, 5, 20]);
   });
 
   it('practice truths come from the practice link', () => {
@@ -137,20 +138,21 @@ describe('LEVEL_1 structure', () => {
     };
     expect(truth('C2', 'chipRate')).toBe(2);
     expect(truth('D2', 'length')).toBe(63);
+    expect(truth('D2', 'period')).toBe(31.5);
     expect(truth('E2', 'gpDb')).toBeCloseTo(17.99, 2);
     expect(truth('E2', 'bitRate')).toBeCloseTo(31.75, 2);
   });
 
   it('every placeholder in every text resolves', () => {
-    const v = textValues(t, { interceptSnrDb: 3.4, rxSnrDb: -6.2, rxEbN0Db: 11 });
+    const v = textValues(t, { interceptSnrDb: 3.4, rxSnrDb: -6.2, rxEbN0Db: 11 }, knownLinkInfo(practiceLinkAt(4)));
     const texts: string[] = [LEVEL_1.intro, LEVEL_1.debrief];
     for (const s of allSteps()) {
       texts.push(s.title);
       if (s.kind === 'lesson') {
         texts.push(...(s.paragraphs ?? []), ...(s.steps ?? []), s.rule ?? '');
         if (s.check) texts.push(s.check.question, s.check.wrong);
-      } else if (s.kind === 'practice') texts.push(s.task, s.hint, ...s.worked);
-      else if (s.kind === 'apply') texts.push(s.task, s.hint ?? '', ...s.reveal);
+      } else if (s.kind === 'practice') texts.push(s.task, s.hint, ...s.worked, ...s.fields.map((f) => f.prompt ?? ''));
+      else if (s.kind === 'apply') texts.push(s.task, s.hint ?? '', ...s.reveal, ...s.fields.map((f) => f.prompt ?? ''));
       else if (s.kind === 'find') texts.push(s.task, s.hint, ...s.reveal);
       else for (const q of s.questions) texts.push(q.text, q.explain, ...q.options);
     }
@@ -198,8 +200,34 @@ describe('numbers written in the texts agree with the known links', () => {
     expect(pr.gpDb.toFixed(1)).toBe('18.0');
     expect(pr.bitRateKbps.toFixed(1)).toBe('31.7');
     const worked = (id: string) => (allSteps().find((x) => x.id === id) as PracticeStep).worked.join(' ');
-    expect(worked('E2')).toContain('18.0 dB');
-    expect(worked('E2')).toContain('31.7 kbps');
-    expect(worked('D2')).toContain('31.5 µs × 2.0 Mcps = 63 chips');
+    // The default texts read as before for the first practice link.
+    const v = textValues(t, { rxSnrDb: -6, rxEbN0Db: 15 });
+    expect(fillText(worked('D2'), v)).toContain('31.5 µs × 2.0 Mcps = 63 chips');
+    expect(fillText(worked('C2'), v)).toBe('The nulls are at −2.0 MHz and +2.0 MHz. Bandwidth = 2.0 − (−2.0) = 4.0 MHz. Chip rate = 4.0 ÷ 2 = 2.0 Mcps.');
+    expect(fillText(worked('E2'), v)).toBe('Gp = 63 → 10 × log10(63) = 18.0 dB. Bit rate = 2000 kchips/s ÷ 63 = 31.7 kbps.');
+    expect(fillText(worked('D2'), v)).toBe('The first peak after 0 is at 31.5 µs. Code length = 31.5 µs × 2.0 Mcps = 63 chips.');
+  });
+});
+
+describe('practiceLinkAt', () => {
+  it('starts at degree 6, 2 Mcps, is deterministic, and never repeats the pair before it', () => {
+    expect(practiceLinkAt(0)).toEqual({ degree: 6, chipRateMcps: 2 });
+    const seen = new Set<string>();
+    for (let c = 1; c <= 60; c++) {
+      const a = practiceLinkAt(c);
+      expect(practiceLinkAt(c)).toEqual(a);
+      expect([5, 6]).toContain(a.degree);
+      expect([0.5, 1, 2]).toContain(a.chipRateMcps);
+      expect(a).not.toEqual(practiceLinkAt(c - 1));
+      seen.add(`${a.degree}:${a.chipRateMcps}`);
+    }
+    expect(seen.size).toBeGreaterThan(3);
+  });
+  it('practice truths follow ctx.practice', () => {
+    const other = knownLinkInfo({ degree: 5, chipRateMcps: 0.5 });
+    const step = allSteps().find((x) => x.id === 'E2') as PracticeStep;
+    const c: Ctx = { rxSnrDb: 0, rxEbN0Db: 0, practice: other };
+    expect(step.fields[0].truth(t, c)).toBeCloseTo(10 * Math.log10(31), 9);
+    expect(step.fields[1].truth(t, c)).toBeCloseTo(500 / 31, 9);
   });
 });

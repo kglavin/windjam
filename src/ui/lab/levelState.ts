@@ -16,6 +16,9 @@ export interface StepState {
   checkRight?: boolean; // lesson check answered right
   checkWrong?: boolean; // the last lesson check was wrong
   worked?: boolean; // practice: the worked answer has been shown
+  first?: Record<string, { value: number; ok: boolean }>; // practice: the first entry for each field
+  retrying?: boolean; // apply: an unscored retry is open
+  retry?: Record<string, FieldResult>; // apply: the latest retry; the score keeps the first submission
 }
 
 export interface ScorePart {

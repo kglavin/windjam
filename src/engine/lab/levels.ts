@@ -39,12 +39,17 @@ export function level1Truth(seed: number): Truth {
 export interface Ctx {
   rxSnrDb: number;
   rxEbN0Db: number;
+  practice?: KnownLinkInfo; // the practice link in play; the first one when absent
 }
 
 export interface FieldDef {
   id: string;
   label: string;
   unit: string;
+  // Fields come in groups submitted one after the other: a later group appears once the earlier one is confirmed.
+  group?: number;
+  prompt?: string; // shown above the input, may quote confirmed values
+
   truth: (t: Truth, ctx: Ctx) => number;
   check: Tol;
   points: number;
@@ -220,7 +225,24 @@ export function flatSteps(level: LevelDef): FlatStep[] {
 
 const EXAMPLE: KnownLink = { degree: 5, chipRateMcps: 1 };
 const PRACTICE: KnownLink = { degree: 6, chipRateMcps: 2 };
-const practiceLink = knownLinkInfo(PRACTICE);
+const firstPractice = knownLinkInfo(PRACTICE);
+const pr = (ctx: Ctx): KnownLinkInfo => ctx.practice ?? firstPractice;
+
+const PRACTICE_DEGREES = [5, 6];
+const PRACTICE_RATES = [0.5, 1, 2];
+
+// The practice link for a "Try another" counter: 0 is the first (degree 6, 2 Mcps), each later one is seeded
+// from the counter and differs from the one before.
+export function practiceLinkAt(counter: number): KnownLink {
+  let prev: KnownLink = PRACTICE;
+  for (let c = 1; c <= counter; c++) {
+    const rng = createRng((Math.imul(c, 0x9e3779b1) ^ 0x51ed27) >>> 0);
+    const pairs = PRACTICE_DEGREES.flatMap((degree) => PRACTICE_RATES.map((chipRateMcps) => ({ degree, chipRateMcps })));
+    const choices = pairs.filter((x) => x.degree !== prev.degree || x.chipRateMcps !== prev.chipRateMcps);
+    prev = choices[Math.floor(rng() * choices.length)];
+  }
+  return prev;
+}
 
 export const LEVEL_1: LevelDef = {
   id: 1,
@@ -356,15 +378,15 @@ export const LEVEL_1: LevelDef = {
               id: 'chipRate',
               label: 'Chip rate',
               unit: 'Mcps',
-              truth: () => practiceLink.chipRateMcps,
+              truth: (_t, ctx) => pr(ctx).chipRateMcps,
               check: { rel: 0.05 },
               points: 0,
             },
           ],
           worked: [
-            'The nulls are at −2.0 MHz and +2.0 MHz.',
-            'Bandwidth = 2.0 − (−2.0) = 4.0 MHz.',
-            'Chip rate = 4.0 ÷ 2 = 2.0 Mcps.',
+            'The nulls are at −{pChipRate} MHz and +{pChipRate} MHz.',
+            'Bandwidth = {pChipRate} − (−{pChipRate}) = {pBandwidth} MHz.',
+            'Chip rate = {pBandwidth} ÷ 2 = {pChipRate} Mcps.',
           ],
         },
         {
@@ -419,19 +441,32 @@ export const LEVEL_1: LevelDef = {
           title: 'Try it: practice link',
           link: 'practice',
           visual: { kind: 'autocorr', link: 'practice' },
-          task: 'Move over the plot to read the delay of the first peak after 0. Enter the code length in chips.',
-          hint: "You measured this link's chip rate: 2.0 Mcps. Length = period × chip rate.",
+          task:
+            "This practice link's chip rate is {pChipRate} Mcps (you measured it in C2). Move over the plot to find the code period, then the code length.",
+          hint: 'Length = period × chip rate.',
           fields: [
+            {
+              id: 'period',
+              label: 'Code period',
+              unit: 'µs',
+              group: 0,
+              prompt: 'Read the delay of the first peak after 0.',
+              truth: (_t, ctx) => pr(ctx).periodUs,
+              check: { rel: 0.03 },
+              points: 0,
+            },
             {
               id: 'length',
               label: 'Code length',
               unit: 'chips',
-              truth: () => practiceLink.n,
+              group: 1,
+              prompt: 'Code length = {pPeriodUs} µs × {pChipRate} Mcps =',
+              truth: (_t, ctx) => pr(ctx).n,
               check: { exact: true },
               points: 0,
             },
           ],
-          worked: ['The first peak after 0 is at 31.5 µs.', 'Code length = 31.5 µs × 2.0 Mcps = 63 chips.'],
+          worked: ['The first peak after 0 is at {pPeriodUs} µs.', 'Code length = {pPeriodUs} µs × {pChipRate} Mcps = {pN} chips.'],
         },
         {
           kind: 'apply',
@@ -439,16 +474,29 @@ export const LEVEL_1: LevelDef = {
           title: 'Your turn: the enemy link',
           instruments: ['autocorr'],
           annotate: 'codePeriods',
-          task: 'Same method on the enemy link. Use the chip rate you measured for it.',
+          task:
+            "The enemy link's chip rate is {chipRate} Mcps (confirmed in C3). Same method: find the code period, then the code length.",
           hint: 'Choose a shorter maximum lag if the peaks are crowded, a longer one if you see none after 0.',
           fields: [
+            {
+              id: 'period',
+              label: 'Code period',
+              unit: 'µs',
+              group: 0,
+              prompt: 'Read the delay of the first peak after 0.',
+              truth: (t) => t.n / t.chipRateMcps,
+              check: { rel: 0.03 },
+              points: 5,
+            },
             {
               id: 'length',
               label: 'Code length',
               unit: 'chips',
+              group: 1,
+              prompt: 'Code length = {periodUs} µs × {chipRate} Mcps =',
               truth: (t) => t.n,
               check: { exact: true },
-              points: 15,
+              points: 10,
             },
           ],
           reveal: ['The peaks are every {periodUs} µs.', 'Code length = {periodUs} µs × {chipRate} Mcps = {n} chips.'],
@@ -479,14 +527,14 @@ export const LEVEL_1: LevelDef = {
           title: 'Try it: practice link',
           link: 'practice',
           visual: { kind: 'dbTable' },
-          task: 'The practice link has 63 chips per bit at 2.0 Mcps. Enter its Gp in dB and its bit rate.',
-          hint: 'Use the table, or 10 × log10(63). Bit rate = 2000 ÷ 63 kbps.',
+          task: 'The practice link has {pN} chips per bit at {pChipRate} Mcps. Enter its Gp in dB and its bit rate.',
+          hint: 'Use the table, or 10 × log10({pN}). Bit rate = {pChipRateK} ÷ {pN} kbps.',
           fields: [
             {
               id: 'gpDb',
               label: 'Processing gain',
               unit: 'dB',
-              truth: () => practiceLink.gpDb,
+              truth: (_t, ctx) => pr(ctx).gpDb,
               check: { abs: 0.5 },
               points: 0,
             },
@@ -494,12 +542,12 @@ export const LEVEL_1: LevelDef = {
               id: 'bitRate',
               label: 'Bit rate',
               unit: 'kbps',
-              truth: () => practiceLink.bitRateKbps,
+              truth: (_t, ctx) => pr(ctx).bitRateKbps,
               check: { rel: 0.05 },
               points: 0,
             },
           ],
-          worked: ['Gp = 63 → 10 × log10(63) = 18.0 dB.', 'Bit rate = 2000 kchips/s ÷ 63 = 31.7 kbps.'],
+          worked: ['Gp = {pN} → 10 × log10({pN}) = {pGpDb} dB.', 'Bit rate = {pChipRateK} kchips/s ÷ {pN} = {pBitRate} kbps.'],
         },
         {
           kind: 'apply',
@@ -507,7 +555,7 @@ export const LEVEL_1: LevelDef = {
           title: 'Your turn: the enemy link',
           instruments: [],
           visual: { kind: 'dbTable' },
-          task: 'The enemy link also sends one code period per bit. Enter its Gp in dB and its bit rate.',
+          task: 'The enemy link has {n} chips per bit at {chipRate} Mcps (confirmed in C3 and D3). Enter its Gp in dB and its bit rate.',
           fields: [
             {
               id: 'gpDb',
@@ -553,7 +601,7 @@ export const LEVEL_1: LevelDef = {
           instruments: [],
           prediction: true,
           task:
-            'Read the SNR under Signal path in the budget, add the Gp you measured, and enter the Eb/N0.',
+            "The friendly receiver's SNR is under Signal path in the budget; its Gp is {gpDb} dB (confirmed in E3). Enter its Eb/N0.",
           fields: [
             {
               id: 'rxEbN0',
@@ -634,10 +682,15 @@ export function fillText(template: string, values: Record<string, string>): stri
 }
 
 const fixed = (v: number, d: number) => v.toFixed(d);
+const trim1 = (v: number) => String(Number(v.toFixed(1)));
 const sig3 = (v: number) => String(Number(v.toPrecision(3)));
 
 // Placeholder values for the level texts: the hidden truth plus live scene values.
-export function textValues(t: Truth, live: { interceptSnrDb?: number; rxSnrDb: number; rxEbN0Db: number }): Record<string, string> {
+export function textValues(
+  t: Truth,
+  live: { interceptSnrDb?: number; rxSnrDb: number; rxEbN0Db: number },
+  practice: KnownLinkInfo = firstPractice,
+): Record<string, string> {
   const period = t.n / t.chipRateMcps;
   // Eb/N0 is shown as the sum of the rounded SNR and Gp, so the reveal's arithmetic adds up on screen.
   const shownEbN0 = Number(fixed(live.rxSnrDb, 1)) + Number(fixed(t.gpDb, 1));
@@ -646,14 +699,21 @@ export function textValues(t: Truth, live: { interceptSnrDb?: number; rxSnrDb: n
     rxSnr: fixed(live.rxSnrDb, 1),
     rxEbN0: fixed(shownEbN0, 1),
     margin: fixed(shownEbN0 - 9.6, 1),
-    chipRate: fixed(t.chipRateMcps, 2),
+    chipRate: fixed(t.chipRateMcps, 1),
     chipRateK: String(Math.round(t.chipRateMcps * 1000)),
-    bandwidth: fixed(2 * t.chipRateMcps, 2),
+    bandwidth: fixed(2 * t.chipRateMcps, 1),
     chipUs: fixed(1 / t.chipRateMcps, 1),
     n: String(t.n),
     degree: String(t.degree),
-    periodUs: fixed(period, 1),
+    periodUs: trim1(period),
     gpDb: fixed(t.gpDb, 1),
     bitRate: sig3(t.bitRateKbps),
+    pChipRate: fixed(practice.chipRateMcps, 1),
+    pBandwidth: fixed(2 * practice.chipRateMcps, 1),
+    pN: String(practice.n),
+    pPeriodUs: trim1(practice.periodUs),
+    pGpDb: fixed(practice.gpDb, 1),
+    pBitRate: sig3(practice.bitRateKbps),
+    pChipRateK: String(Math.round(practice.chipRateMcps * 1000)),
   };
 }

@@ -1,12 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { capture } from '../../engine/lab/capture';
 import type { LinkParams } from '../../engine/lab/dsss';
-import { type Ctx, type FieldDef, type LevelDef, checkField, flatSteps, level1Truth, textValues, withinTol } from '../../engine/lab/levels';
+import {
+  type Ctx,
+  type FieldDef,
+  type LevelDef,
+  checkField,
+  flatSteps,
+  knownLinkInfo,
+  level1Truth,
+  practiceLinkAt,
+  textValues,
+  withinTol,
+} from '../../engine/lab/levels';
 import { mSequence } from '../../engine/lab/pn';
 import { type Scene, sceneBudget } from '../../engine/lab/scene';
 import { undb } from '../../engine/lab/theory';
 import { Autocorr } from './instruments/Autocorr';
 import { Spectrum } from './instruments/Spectrum';
+import { Calculator } from './Calculator';
+import { factsOfTruth, knownFacts } from './knownFacts';
 import { LinkScene } from './LinkScene';
 import { level1Scene } from './levelScene';
 import { type StepState, scoreLevel } from './levelState';
@@ -39,10 +52,14 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const [current, setCurrent] = useState(0);
   const [viewing, setViewing] = useState<number | null>(null);
   const [interceptSnrDb, setInterceptSnrDb] = useState<number | undefined>();
+  // "Try another" counter: the practice link persists across the practice steps until it changes.
+  const [practiceN, setPracticeN] = useState(0);
+  const practiceLink = useMemo(() => practiceLinkAt(practiceN), [practiceN]);
+  const practiceInfo = useMemo(() => knownLinkInfo(practiceLink), [practiceLink]);
 
   const patch = (i: number, p: Partial<StepState>) =>
     setStates((all) => all.map((s, j) => (j === i ? { ...s, ...p } : s)));
-  const ctx: Ctx = { rxSnrDb: budget.snrDb, rxEbN0Db: budget.ebN0Db };
+  const ctx: Ctx = { rxSnrDb: budget.snrDb, rxEbN0Db: budget.ebN0Db, practice: practiceInfo };
 
   // The find step completes by itself when the intercept's chip SNR reaches the target.
   const step = flat[current]?.step;
@@ -83,14 +100,27 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const acNotes = annotated('codePeriods') ? periodNotes(periodUs) : undefined;
 
   const debrief = current >= flat.length;
-  const shown = debrief && viewing === null ? undefined : flat[viewing ?? current].step;
+  const shownIdx = viewing ?? current;
+  const shown = shownIdx >= flat.length ? undefined : flat[shownIdx].step;
   const hiddenRows = [...JAMMER_ROWS, ...(doneStep('F2') ? [] : LATE_ROWS)];
 
-  const values = textValues(truth, {
-    interceptSnrDb,
-    rxSnrDb: budget.snrDb,
-    rxEbN0Db: budget.ebN0Db,
-  });
+  const values = textValues(
+    truth,
+    { interceptSnrDb, rxSnrDb: budget.snrDb, rxEbN0Db: budget.ebN0Db },
+    practiceInfo,
+  );
+
+  // The "What you know" card in units C to F: the practice link's values on practice steps, else the enemy link's.
+  const card =
+    shown && 'CDEF'.includes(flat[shownIdx].unit.id)
+      ? knownFacts(
+          shown.kind === 'practice' ? 'practice' : 'enemy',
+          flat,
+          states,
+          shownIdx,
+          shown.kind === 'practice' ? practiceInfo : factsOfTruth(truth),
+        )
+      : null;
 
   const score = scoreLevel(level, states);
   const reported = useRef(false);
@@ -102,10 +132,11 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   }, [debrief, level.id, score.total, score.passed, onFinish]);
 
   const entries = (def: FieldDef[], entered: Record<string, number>) =>
-    Object.fromEntries(def.map((f) => [f.id, { value: entered[f.id], ...checkField(f, entered[f.id], truth, ctx) }]));
+    Object.fromEntries(def.filter((f) => f.id in entered).map((f) => [f.id, { value: entered[f.id], ...checkField(f, entered[f.id], truth, ctx) }]));
 
   // Lessons and practice show their figure alone; the scene appears with the steps on the real link.
   const showScene = !shown || shown.kind === 'find' || shown.kind === 'apply' || shown.kind === 'questions';
+  const showCalc = !!shown && (shown.kind === 'lesson' || shown.kind === 'practice' || shown.kind === 'apply');
   const instruments = shown && (shown.kind === 'find' || shown.kind === 'apply') ? shown.instruments : [];
   const visual = shown && (shown.kind === 'lesson' || shown.kind === 'practice' || shown.kind === 'apply') ? shown.visual : undefined;
 
@@ -137,15 +168,29 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         onCheckPractice={(i, entered) => {
           const st = flat[i].step;
           if (st.kind !== 'practice' || states[i].done) return;
-          const fields = entries(st.fields, entered);
-          const allOk = Object.values(fields).every((f) => f.ok);
-          patch(i, { fields, done: allOk, tries: allOk ? states[i].tries : (states[i].tries ?? 0) + 1 });
+          const fields = { ...states[i].fields, ...entries(st.fields, entered) };
+          const first = { ...states[i].first };
+          for (const f of st.fields) if (f.id in entered && !first[f.id]) first[f.id] = { value: entered[f.id], ok: fields[f.id].ok };
+          const allOk = st.fields.every((f) => fields[f.id]?.ok);
+          patch(i, { fields, first, done: allOk, tries: allOk ? states[i].tries : (states[i].tries ?? 0) + 1 });
         }}
         onShowWorked={(i) => patch(i, { worked: true, done: true })}
+        onTryAnother={() => {
+          setPracticeN((n) => n + 1);
+          setStates((all) => all.map((s, j) => (flat[j].step.kind === 'practice' ? { done: false } : s)));
+        }}
         onSubmitFields={(i, entered) => {
           const st = flat[i].step;
-          if (st.kind !== 'apply' || states[i].fields) return;
-          patch(i, { fields: entries(st.fields, entered), done: true });
+          if (st.kind !== 'apply') return;
+          const fresh = Object.fromEntries(Object.entries(entered).filter(([id]) => !states[i].fields?.[id]));
+          const fields = { ...states[i].fields, ...entries(st.fields, fresh) };
+          patch(i, { fields, done: st.fields.every((f) => fields[f.id]) });
+        }}
+        onRetryStart={(i) => patch(i, { retrying: true, retry: undefined })}
+        onCheckRetry={(i, entered) => {
+          const st = flat[i].step;
+          if (st.kind !== 'apply') return;
+          patch(i, { retry: entries(st.fields, entered) });
         }}
         onAnswer={(i, qid, choice) => {
           const st = flat[i].step;
@@ -154,11 +199,20 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           patch(i, { answers, done: st.questions.every((q) => answers[q.id] !== undefined) });
         }}
         onContinue={() => {
+          if (shownIdx >= flat.length) return;
           // A lesson without a check is finished when the player moves on.
-          if (current < flat.length) patch(current, { done: true });
-          setViewing(null);
-          setCurrent((c) => c + 1);
+          if (flat[shownIdx].step.kind === 'lesson') patch(shownIdx, { done: true });
+          if (shownIdx === current) {
+            setViewing(null);
+            setCurrent((c) => c + 1);
+          } else {
+            setViewing(shownIdx + 1 === current ? null : shownIdx + 1);
+          }
         }}
+        onBack={() => {
+          if (shownIdx > 0) setViewing(shownIdx - 1);
+        }}
+        card={card}
         score={score}
         onReplay={onReplay}
         onExit={onExit}
@@ -174,10 +228,10 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           />
         )}
         {visual && (
-          <div className="level-instruments" key={shown?.id}>
+          <div className="level-instruments" key={`${shown?.id}-${practiceN}`}>
             <VisualView
               visual={visual}
-              links={level.links}
+              links={{ example: level.links.example, practice: practiceLink }}
               hidden={{
                 x: shot.rx,
                 sampleRateHz,
@@ -202,6 +256,9 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
             )}
           </div>
         )}
+        <div className="calc-dock" hidden={!showCalc}>
+          <Calculator />
+        </div>
       </div>
     </main>
   );
