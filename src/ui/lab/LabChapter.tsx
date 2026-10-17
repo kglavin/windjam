@@ -4,11 +4,6 @@ import { Bench } from './Bench';
 import { LevelView } from './LevelView';
 import { type Progress, loadProgress, recordScore } from './progress';
 
-// Level 5 from design section 8: not built yet.
-const COMING = [
-  { id: 5, title: 'Saturation and timing', blurb: 'Front-end overload and pulses aligned to repetition groups.' },
-];
-
 const newSeed = () => 1 + Math.floor(Math.random() * 0x7ffffffe);
 
 type View = { kind: 'list' } | { kind: 'bench' } | { kind: 'level'; id: number; seed: number };
@@ -53,13 +48,6 @@ export function LabChapter({ level }: { level?: number }) {
             </section>
           );
         })}
-        {COMING.map((c) => (
-          <section className="home-card level-coming" key={c.id}>
-            <h2>Level {c.id}: {c.title}</h2>
-            <p>{c.blurb}</p>
-            <button type="button" disabled>coming</button>
-          </section>
-        ))}
       </div>
       <p>
         <button type="button" onClick={() => setView({ kind: 'bench' })}>Instrument bench</button>

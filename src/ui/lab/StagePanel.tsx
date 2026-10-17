@@ -20,13 +20,13 @@ import {
 import type { FactsCard } from './knownFacts';
 import type { FieldResult, Score, StepState } from './levelState';
 import { RunBox } from './RunBox';
+import { canContinue, isSkipped, notDone } from './levelNav';
 
 export interface StagePanelProps {
   level: LevelDef;
   states: StepState[]; // indexed like flatSteps(level)
-  current: number; // flat index of the step in play; flat.length means the debrief
-  viewing: number | null; // a finished step reopened read-only
-  onView: (i: number | null) => void;
+  current: number; // flat index of the step shown; flat.length means the debrief
+  onView: (i: number) => void; // jump to any step, or flat.length for the debrief
   chipSnrDb: number; // live chip SNR at the intercept
   values: Record<string, string>; // placeholder values for the texts
   onCheckLesson: (stepIndex: number, value: number) => void;
@@ -40,6 +40,7 @@ export interface StagePanelProps {
   runPlan: (stepIndex: number, mode?: 'main' | 'retry') => RunPlan | undefined; // the BER run a step offers, from the scene now
   runNote?: (stepIndex: number, mode?: 'main' | 'retry') => string | undefined; // a line about the run's jammer
   onRunStart: (stepIndex: number, mode: 'main' | 'retry', prediction?: number) => void;
+  onRunInput?: (stepIndex: number, value: number) => void; // edits the run's runInput field between runs
   onRunDone: (stepIndex: number, mode: 'main' | 'retry', summary: RunSummary) => void;
   onPredictAgain: (stepIndex: number) => void; // practice: unlock the prediction for another run
   card: FactsCard | null; // the "What you know" card
@@ -57,8 +58,8 @@ export function StagePanel(p: StagePanelProps) {
   const { level, states, current } = p;
   const flat = flatSteps(level);
   const debrief = current >= flat.length;
-  const shown = p.viewing ?? current;
-  const showDebrief = p.viewing === null && debrief;
+  const shown = current;
+  const showDebrief = debrief;
   const activeUnit = showDebrief ? -1 : flat[shown].unitIndex;
 
   return (
@@ -74,21 +75,22 @@ export function StagePanel(p: StagePanelProps) {
           const steps = flat.filter((f) => f.unitIndex === ui);
           const allDone = steps.every((f) => states[f.index]?.done);
           const active = ui === activeUnit;
+          const firstIndex = steps[0].index;
           return (
             <li key={u.id} className="stage-unit-group">
               <details key={`${u.id}-${active}`} open={active}>
-                <summary className={allDone ? 'done' : active ? 'active' : ''}>
+                <summary className={allDone ? 'done' : active ? 'active' : ''} onClick={() => { if (!active) p.onView(firstIndex); }}>
                   <span className="stage-tick">{allDone ? '✓' : active ? '▸' : '○'}</span> {u.id}. {u.title}
                 </summary>
                 <ol className="stage-steps">
                   {steps.map(({ index, step }) => {
                     const done = states[index]?.done;
                     const on = index === shown && !showDebrief;
-                    const reachable = done || index <= current;
+                    const skipped = isSkipped(states[index]);
                     return (
-                      <li key={step.id} className={`${done ? 'done' : ''} ${on ? 'active' : ''}`}>
-                        <button type="button" disabled={!reachable} onClick={() => p.onView(index === current ? null : index)}>
-                          <span className="stage-tick">{done ? '✓' : index === current ? '▸' : '○'}</span> {step.id}. {step.title}
+                      <li key={step.id} className={`${done ? 'done' : ''} ${skipped ? 'skipped' : ''} ${on ? 'active' : ''}`}>
+                        <button type="button" onClick={() => p.onView(index)}>
+                          <span className="stage-tick">{done ? '✓' : skipped ? '–' : on ? '▸' : '○'}</span> {step.id}. {step.title}
                         </button>
                       </li>
                     );
@@ -99,7 +101,7 @@ export function StagePanel(p: StagePanelProps) {
           );
         })}
         <li className={`stage-unit-group ${debrief ? 'active' : ''}`}>
-          <button type="button" className="stage-debrief-link" disabled={!debrief} onClick={() => p.onView(null)}>
+          <button type="button" className="stage-debrief-link" onClick={() => p.onView(flat.length)}>
             <span className="stage-tick">{debrief ? '▸' : '○'}</span> Debrief
           </button>
         </li>
@@ -174,7 +176,7 @@ function KnownCard({ card }: { card: FactsCard }) {
 
 function StepBody(p: StagePanelProps & { step: StepDef; index: number; state: StepState; last: boolean }) {
   const { step, index, state } = p;
-  const canContinue = step.kind === 'lesson' ? !step.check || !!state.checkRight : state.done;
+  const forward = canContinue(step, state);
   return (
     <section className="stage-step">
       <h3>{step.id}. {step.title}</h3>
@@ -205,17 +207,10 @@ function StepBody(p: StagePanelProps & { step: StepDef; index: number; state: St
             Back
           </button>
         )}
-        {canContinue && (
-          <button type="button" className="stage-continue" onClick={p.onContinue}>
-            {p.last ? 'See debrief' : 'Continue'}
-          </button>
-        )}
-      </div>
-      {p.viewing !== null && (
-        <button type="button" className="link-button" onClick={() => p.onView(null)}>
-          Back to current step
+        <button type="button" className={forward ? 'stage-continue' : 'stage-continue stage-skip'} onClick={p.onContinue}>
+          {forward ? (p.last ? 'See debrief' : 'Continue') : 'Skip'}
         </button>
-      )}
+      </div>
     </section>
   );
 }
@@ -479,6 +474,13 @@ function DenyRun(p: StagePanelProps & { step: ApplyStep; index: number; state: S
         Goal: a measured BER of at least {berText(need)} ({berText(goal.berAtLeast)} less 20% for counting noise). Full points if you get there
         within {DENY_FULL_RUNS} runs, half after.
       </p>
+      {p.step.run?.runInput && state.fields?.[p.step.run.runInput.field] && (
+        <RunInput
+          spec={p.step.run.runInput}
+          value={state.runInput ?? state.fields[p.step.run.runInput.field].value}
+          onChange={(v) => p.onRunInput?.(p.index, v)}
+        />
+      )}
       <RunBox
         plan={p.runPlan(p.index)}
         needsPrediction={false}
@@ -495,11 +497,34 @@ function DenyRun(p: StagePanelProps & { step: ApplyStep; index: number; state: S
       ) : (
         last && (
           <p className="stage-result bad">
-            ✗ Run {runs.length}: J/S {last.jsDb.toFixed(1)} dB gave BER {berText(last.ber)}. Not there yet: more J/S, then run again.
+            ✗ Run {runs.length}: J/S {last.jsDb.toFixed(1)} dB gave BER {berText(last.ber)}. {goal.notYet ?? 'Not there yet: more J/S, then run again.'}
           </p>
         )
       )}
     </div>
+  );
+}
+
+// The editable input of a run: starts at the submitted value and can change between runs.
+function RunInput({ spec, value, onChange }: { spec: { label: string; unit: string }; value: number; onChange: (v: number) => void }) {
+  const [text, setText] = useState(String(Number.isFinite(value) ? value : ''));
+  return (
+    <label className="stage-field">
+      <span>{spec.label}</span>
+      <span className="stage-input">
+        <input
+          type="number"
+          step="any"
+          aria-label={spec.label}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            onChange(e.target.value.trim() === '' ? NaN : Number(e.target.value));
+          }}
+        />
+        <span className="stage-unit">{spec.unit}</span>
+      </span>
+    </label>
   );
 }
 
@@ -637,6 +662,7 @@ function QuestionsGoal({ questions, state, onAnswer }: {
 
 function Debrief(p: StagePanelProps) {
   const { score } = p;
+  const missing = notDone(flatSteps(p.level), p.states);
   const row = (name: string, part: { got: number; max: number }) => (
     <tr>
       <td>{name}</td>
@@ -659,6 +685,7 @@ function Debrief(p: StagePanelProps) {
         </tbody>
       </table>
       <p className="stage-note">Scores count your first attempt at each step.</p>
+      {missing.length > 0 && <p className="stage-notdone">Not done: {missing.join(', ')}</p>}
       <p className={score.passed ? 'stage-pass' : 'stage-fail'}>
         {score.passed ? 'Passed' : 'Not passed'} (pass mark {p.level.passMark})
       </p>

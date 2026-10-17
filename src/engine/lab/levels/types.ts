@@ -1,6 +1,7 @@
 // Link lab level framework: hidden truth, step and field types, tolerances and scoring (design sections 7 and 8).
 // Level content is in level1.ts, level2.ts and index.ts. Pure: no React, no storage.
 import { createRng } from '../../rng';
+import type { FrontEndConfig } from '../frontend';
 import type { JammerSpec } from '../jammers';
 
 export interface Truth {
@@ -150,7 +151,14 @@ export type Visual =
   | { kind: 'jammedSpectra' }
   | { kind: 'despreadBars'; gpDb?: number; jsDb?: number; link?: 'practice' } // fixed values, or the practice link's
   | { kind: 'berCurve'; mark?: 'example' | 'practice'; marks?: { db: number; label: string }[] } // marks that link's Eb/J0, or fixed Eb/J0 values, on the curve
-  | { kind: 'berRunDemo'; variants?: { label: string; jammer: JammerSpec; code?: CodeKind }[] } // each variant has its own Run button
+  | {
+      kind: 'berRunDemo';
+      // each variant has its own Run button; the example link at jsDb (default 10 dB), with repetition and a front end when given
+      variants?: { label: string; jammer: JammerSpec; code?: CodeKind; repetition?: 1 | 3; frontEnd?: FrontEndConfig }[];
+      jsDb?: number;
+    }
+  | { kind: 'majorityVote' }
+  | { kind: 'blinding'; demo?: Extract<Visual, { kind: 'berRunDemo' }> } // the time line, then the demo when given
   | { kind: 'threeJammers' }
   | { kind: 'toneSpectrum' }
   | { kind: 'toneSweep' }
@@ -186,6 +194,14 @@ export interface RunSpec {
   jsDbFrom?: (truth: Truth) => number; // js 'fixed': a J/S computed from the truth
   jammer: JammerSpec;
   code?: CodeKind; // default 'short'
+  repetition?: 1 | 3; // copies sent per bit, majority vote (default 1)
+  frontEnd?: FrontEndConfig; // the receiver's front end, run at one sample per chip
+  frontEndFrom?: (truth: Truth, chipsPerBit: number) => FrontEndConfig; // replaces frontEnd
+  // js 'fixed': a J/S computed from what the player entered (as jammerFrom) and the truth; replaces jsDb and jsDbFrom.
+  jsDbFromEntered?: (values: Record<string, number>, chipsPerBit: number, chipRateMcps: number, truth: Truth) => number;
+  // A submitted field the player may edit between the step's runs: shown as its own input, pre-filled with the
+  // submitted value, and used in its place by jammerFrom and jsDbFromEntered. Scoring keeps the first submission.
+  runInput?: { field: string; label: string; unit: string };
   ebN0Db?: number; // replaces the run's receiver Eb/N0 (the known links' 30 dB, the hidden link's scene value)
   // The jammer built from the values the player entered in the same step (field id to value) and the link's
   // chips per bit. When set it replaces `jammer`.
@@ -204,6 +220,7 @@ export interface DenyGoal {
   berAtLeast: number;
   points: number;
   task: string;
+  notYet?: string; // the line shown after a run that did not reach the goal, when the default does not fit
 }
 
 // What a finished run measured, with the J/S it ran at.

@@ -1280,6 +1280,13 @@ select {
 .stage-steps button:disabled {
   opacity: 0.5;
 }
+.stage-steps li.skipped button {
+  color: #94a3b8;
+  opacity: 0.75;
+}
+.stage-skip {
+  opacity: 0.8;
+}
 .stage-tick {
   display: inline-block;
   width: 1.2em;
@@ -1717,3 +1724,8 @@ select {
 .vis-variant-dot.c4 { background: #f472b6; }
 .vis-variant-dot.c5 { background: #a78bfa; }
 .vis-variant-dot.c6 { background: #f87171; }
+.vis-blind {
+  fill: rgba(248, 113, 113, 0.18);
+  stroke: #f87171;
+  stroke-width: 1;
+}

@@ -257,3 +257,55 @@ export function level4Card(
   }
   return { heading: mode === 'practice' ? 'Practice link' : 'What you know', rows };
 }
+
+// Level 5's card. Gp, chips per copy and copies per bit are given. The copy and bit lengths fill in after B3, the
+// front end's recovery is given from C3 on and the longest period fills in after C3. The practice link: its Gp,
+// chips per copy and copies per bit, and the copy length once B2 is done.
+export interface Level5Facts {
+  n: number;
+  gpDb: number;
+  chipRateMcps: number;
+  recoveryUs: number;
+  maxPeriodUs: number;
+}
+
+export function level5Card(
+  mode: 'enemy' | 'practice',
+  flat: FlatStep[],
+  states: StepState[],
+  shownIndex: number,
+  f: Level5Facts,
+): FactsCard {
+  const stepIdx = (id: string) => flat.findIndex((x) => x.step.id === id);
+  const field = (id: string, fid: string) => {
+    const i = stepIdx(id);
+    const st = i >= 0 ? states[i] : undefined;
+    const r = st?.fields?.[fid];
+    const first = st?.first?.[fid] ?? (r ? { value: r.value, ok: r.ok } : undefined);
+    return { i, st, r, first };
+  };
+  const youFmt = (x: { first?: { value: number; ok: boolean } }, fmt: (v: number) => string) =>
+    x.first ? { text: `you: ${fmt(x.first.value)}`, ok: x.first.ok } : undefined;
+  const copyUs = f.n / f.chipRateMcps;
+  const rows: FactRow[] = [
+    { label: mode === 'enemy' ? 'Gp (given)' : 'Gp', value: `${f.n} times (${trim1(f.gpDb)} dB)` },
+    { label: 'Chips per copy', value: String(f.n) },
+    { label: 'Copies per bit', value: '3' },
+  ];
+  if (mode === 'enemy') {
+    const pulse = field('B3', 'pulse');
+    const period = field('C3', 'period');
+    const c3 = stepIdx('C3');
+    rows.push(
+      { label: 'Copy length', value: pulse.r ? `${trim1(copyUs)} µs` : null },
+      { label: 'Bit length', value: pulse.r ? `${trim1(3 * copyUs)} µs` : null, you: pulse.r ? youFmt(pulse, trim1) : undefined },
+      { label: 'Front-end recovery (given)', value: c3 >= 0 && shownIndex >= c3 ? `${trim1(f.recoveryUs)} µs` : null },
+      { label: 'Longest period', value: period.r ? `${trim1(f.maxPeriodUs)} µs` : null, you: period.r ? youFmt(period, trim1) : undefined },
+    );
+  } else {
+    const done = field('B2', 'pulse');
+    const known = shownIndex > done.i || !!done.st?.worked || !!done.r?.ok;
+    rows.push({ label: 'Copy length', value: known ? `${trim1(copyUs)} µs` : null });
+  }
+  return { heading: mode === 'practice' ? 'Practice link' : 'What you know', rows };
+}

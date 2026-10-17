@@ -11,18 +11,17 @@ const idx = (id: string) => flat.findIndex((f) => f.step.id === id);
 const t = level1Truth(3);
 const noop = () => {};
 
-function render(current: number, set: (st: StepState[]) => void, viewing: number | null = null) {
+function render(current: number, set: (st: StepState[]) => void) {
   const states = flat.map((): StepState => ({ done: false }));
   for (let i = 0; i < current; i++) states[i] = { done: true };
   set(states);
   const practice = knownLinkInfo(practiceLinkAt(0));
-  const shown = viewing ?? current;
+  const shown = current;
   const step = flat[shown]?.step;
   const p: StagePanelProps = {
     level: LEVEL_1,
     states,
     current,
-    viewing,
     onView: noop,
     chipSnrDb: 0,
     values: textValues(t, { rxSnrDb: -6, rxEbN0Db: 11 }, practice),
@@ -85,5 +84,25 @@ describe('StagePanel', () => {
   });
   it('the debrief notes first attempts', () => {
     expect(render(flat.length, () => {})).toContain('first attempt');
+  });
+  it('every step is clickable and the forward button is always there: Skip when not done, Continue when done', () => {
+    const c3 = idx('C3');
+    const html = render(idx('B1'), () => {});
+    expect(html).not.toMatch(/<button[^>]*disabled[^>]*>[^<]*<span class="stage-tick">[^<]*<\/span> C3\./);
+    expect(html).not.toMatch(/disabled=""[^>]*>(<span[^>]*>[^<]*<\/span> )?Debrief/);
+    expect(render(c3, () => {})).toContain('>Skip</button>');
+    expect(render(c3, (s) => (s[c3] = { done: true, fields: {} }))).toContain('>Continue</button>');
+  });
+  it('a skipped step has its own mark in the list', () => {
+    const c3 = idx('C3');
+    const html = render(idx('B1'), (s) => (s[c3] = { done: false, skipped: true }));
+    expect(html).toMatch(/stage-tick">–<\/span> (<!-- -->)?C3/);
+  });
+  it('the debrief lists the steps not done', () => {
+    const html = render(flat.length, (s) => {
+      for (const id of ['C3', 'D3']) s[idx(id)] = { done: false, skipped: true };
+    });
+    expect(html).toContain('Not done: ');
+    expect(html).toMatch(/Not done: (<!-- -->)?C3, D3/);
   });
 });

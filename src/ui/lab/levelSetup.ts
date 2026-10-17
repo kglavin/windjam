@@ -15,11 +15,15 @@ import {
   d3Numbers,
   level4Truth,
   level4Values,
+  level5Truth,
+  level5Values,
+  maxPeriodUsOf,
+  recoveryUsOf,
   textValues,
 } from '../../engine/lab/levels';
 import type { Scene, SceneBudget } from '../../engine/lab/scene';
-import { type FactsCard, factsOfTruth, knownFacts, level2Card, level3Card, level4Card } from './knownFacts';
-import { level1Scene, level2Scene, level3Scene, level4Scene } from './levelScene';
+import { type FactsCard, factsOfTruth, knownFacts, level2Card, level3Card, level4Card, level5Card } from './knownFacts';
+import { level1Scene, level2Scene, level3Scene, level4Scene, level5Scene } from './levelScene';
 import type { StepState } from './levelState';
 
 export interface SetupArgs {
@@ -157,4 +161,31 @@ const setup4: LevelSetup = {
   },
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 1: setup1, 2: setup2, 3: setup3, 4: setup4 };
+const setup5: LevelSetup = {
+  truth: level5Truth,
+  scene: level5Scene,
+  hidden: ['intercept'],
+  editable: [],
+  values: (a) => level5Values(a.truth, { jsDb: a.base.jsDb, ebN0Db: a.base.ebN0Db }, a.practice, a.practiceN ?? 0, a.run),
+  hiddenRows: () => [],
+  card: (a) => {
+    if (!a.step || a.step.kind === 'lesson' || !'BC'.includes(a.flat[a.shownIdx].unit.id)) return null;
+    const f = {
+      n: a.practice.n,
+      gpDb: a.practice.gpDb,
+      chipRateMcps: a.practice.chipRateMcps,
+      recoveryUs: 0,
+      maxPeriodUs: 0,
+    };
+    if (a.step.kind === 'practice') return level5Card('practice', a.flat, a.states, a.shownIdx, f);
+    return level5Card('enemy', a.flat, a.states, a.shownIdx, {
+      n: a.truth.n,
+      gpDb: a.truth.gpDb,
+      chipRateMcps: a.truth.chipRateMcps,
+      recoveryUs: recoveryUsOf(a.truth),
+      maxPeriodUs: maxPeriodUsOf(a.truth),
+    });
+  },
+};
+
+export const SETUPS: Record<number, LevelSetup> = { 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5 };

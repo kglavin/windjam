@@ -200,3 +200,17 @@ export function berMultitoneLongCode(ebN0: number, gp: number, js: number, offse
   for (const f of offsets) sum += (js / q) * sinc(f) ** 2;
   return berBpskJammed(ebN0, gp / sum);
 }
+
+// A 3-copy bit when one copy is jammed (copy BER q) and the other two are clean (copy BER p): lost when at least
+// two copies are wrong. Exact.
+export function berOneCopyJammed(q: number, p: number): number {
+  return q * (1 - (1 - p) ** 2) + (1 - q) * p * p;
+}
+
+// Pulsed noise of duty rho against a link that sends r copies per bit and votes, each pulse covering whole
+// groups of r copies: a bit is hit by the pulse in all its copies or in none. Same pulse model as berPulsedBpsk.
+export function berPulsedRepetition(ebN0: number, ebJ0: number, rho: number, r = 3): number {
+  const clean = berBpsk(ebN0);
+  const inPulse = berBpsk(combine(ebN0, rho * ebJ0));
+  return (1 - rho) * berRepetitionMajority(clean, r) + rho * berRepetitionMajority(inPulse, r);
+}

@@ -30,7 +30,7 @@ function render(current: number, set: (st: StepState[]) => void = () => {}, extr
     run: { prediction: states[current]?.prediction, summary: states[current]?.runs?.[0], fields: states[current]?.fields },
   };
   const p: StagePanelProps = {
-    level: LEVEL_4, states, current, viewing: null, onView: noop, chipSnrDb: 0, values: setup.values(args),
+    level: LEVEL_4, states, current, onView: noop, chipSnrDb: 0, values: setup.values(args),
     onCheckLesson: noop, onCheckPractice: noop, onShowWorked: noop, onTryAnother: noop, onSubmitFields: noop, onRetryStart: noop,
     onCheckRetry: noop, onBack: noop, runPlan: () => undefined, onRunStart: noop, onRunDone: noop, onPredictAgain: noop, onAnswer: noop,
     onContinue: noop, card: setup.card(args), score: scoreLevel(LEVEL_4, states), onReplay: noop, onExit: noop, ...extra,

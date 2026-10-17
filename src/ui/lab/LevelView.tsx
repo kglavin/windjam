@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { capture } from '../../engine/lab/capture';
 import { planRun } from '../../engine/lab/berRun';
 import type { LinkParams } from '../../engine/lab/dsss';
@@ -22,6 +22,8 @@ import { Spectrum } from './instruments/Spectrum';
 import { Calculator } from './Calculator';
 import { LinkScene } from './LinkScene';
 import { SETUPS } from './levelSetup';
+import { moveInterceptToSignal } from './levelScene';
+import { leaveStep, nextIndex } from './levelNav';
 import { type StepState, applyDone, runDone, scoreLevel } from './levelState';
 import { StagePanel } from './StagePanel';
 import { VisualView, nullNotes, periodNotes } from './visuals/VisualView';
@@ -47,7 +49,6 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const base = useMemo(() => sceneBudget(setup.scene(truth)), [setup, truth]);
   const [states, setStates] = useState<StepState[]>(() => flat.map(() => ({ done: false })));
   const [current, setCurrent] = useState(0);
-  const [viewing, setViewing] = useState<number | null>(null);
   const [interceptSnrDb, setInterceptSnrDb] = useState<number | undefined>();
   // "Try another" counter: the practice link persists across the practice steps until it changes.
   const [practiceN, setPracticeN] = useState(0);
@@ -71,7 +72,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   // The find step completes by itself when the intercept's chip SNR reaches the target.
   const step = flat[current]?.step;
   useEffect(() => {
-    if (!step || states[current].done || step.kind !== 'find') return;
+    if (!step || !states[current] || states[current].done || step.kind !== 'find') return;
     if (budget.intercept.chipSnrDb >= step.atLeastDb) {
       setInterceptSnrDb(budget.intercept.chipSnrDb);
       patch(current, { done: true });
@@ -106,9 +107,15 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const acNotes = annotated('codePeriods') ? periodNotes(periodUs) : undefined;
 
   const debrief = current >= flat.length;
-  const shownIdx = viewing ?? current;
+  const shownIdx = current;
   const shown = shownIdx >= flat.length ? undefined : flat[shownIdx].step;
   const shownState = states[shownIdx] as StepState | undefined;
+  // The value the run used for an editable run input, in place of the submitted one.
+  const runInputSpec = shown && shown.kind === 'apply' ? shown.run?.runInput : undefined;
+  const runFields =
+    runInputSpec && shownState?.runInput !== undefined && shownState.fields?.[runInputSpec.field]
+      ? { ...shownState.fields, [runInputSpec.field]: { ...shownState.fields[runInputSpec.field], value: shownState.runInput } }
+      : shownState?.fields;
   const setupArgs = {
     truth,
     flat,
@@ -122,7 +129,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     base,
     interceptSnrDb,
     // A step with a run: the prediction and the run that counts (the one that reached the goal, else the first).
-    run: { prediction: shownState?.prediction, summary: shownState?.goal?.run ?? shownState?.runs?.[0], fields: shownState?.fields },
+    run: { prediction: shownState?.prediction, summary: shownState?.goal?.run ?? shownState?.runs?.[0], fields: runFields },
   };
   const hiddenRows = setup.hiddenRows(setupArgs);
   const values = setup.values(setupArgs);
@@ -132,8 +139,15 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   // The BER run a step offers, from the scene as it is now. Seeded from the level seed, the step, the practice
   // link and how many runs the step has had.
   // `mode` 'retry' takes what the player entered in the retry instead of the scored submission.
-  const enteredFor = (i: number, mode: 'main' | 'retry'): Record<string, number> =>
-    Object.fromEntries(Object.entries((mode === 'retry' ? states[i].retry : states[i].fields) ?? {}).map(([id, r]) => [id, r.value]));
+  const enteredFor = (i: number, mode: 'main' | 'retry'): Record<string, number> => {
+    const entered: Record<string, number> = Object.fromEntries(
+      Object.entries((mode === 'retry' ? states[i].retry : states[i].fields) ?? {}).map(([id, r]) => [id, r.value]),
+    );
+    const st = flat[i].step;
+    const ri = mode === 'main' && st.kind === 'apply' ? st.run?.runInput : undefined;
+    if (ri && ri.field in entered && states[i].runInput !== undefined) entered[ri.field] = states[i].runInput!;
+    return entered;
+  };
   // A run whose jammer depends on a field waits for a value of that field inside its range.
   const rangeOk = (i: number, mode: 'main' | 'retry'): boolean => {
     const st = flat[i].step;
@@ -174,12 +188,9 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   };
 
   const score = scoreLevel(level, states);
-  const reported = useRef(false);
+  // Every visit to the debrief records the score so far; the stored best only goes up.
   useEffect(() => {
-    if (debrief && !reported.current) {
-      reported.current = true;
-      onFinish(level.id, score.total, score.passed);
-    }
+    if (debrief) onFinish(level.id, score.total, score.passed);
   }, [debrief, level.id, score.total, score.passed, onFinish]);
 
   const entries = (def: FieldDef[], entered: Record<string, number>) =>
@@ -222,8 +233,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         level={level}
         states={states}
         current={current}
-        viewing={viewing}
-        onView={setViewing}
+        onView={setCurrent}
         chipSnrDb={budget.intercept.chipSnrDb}
         values={values}
         onCheckLesson={(i, value) => {
@@ -266,6 +276,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         onRetryStart={(i) => update(i, (s) => ({ ...s, retrying: true, retry: undefined, retryRun: undefined, retries: (s.retries ?? 0) + 1 }))}
         runPlan={runPlan}
         runNote={runNote}
+        onRunInput={(i, value) => patch(i, { runInput: value })}
         onRunStart={(i, mode, prediction) => {
           if (mode === 'retry') update(i, (s) => ({ ...s, retryRun: { prediction } }));
           else if (prediction !== undefined) update(i, (s) => ({ ...s, prediction }));
@@ -289,17 +300,18 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         }}
         onContinue={() => {
           if (shownIdx >= flat.length) return;
-          // A lesson without a check is finished when the player moves on.
-          if (flat[shownIdx].step.kind === 'lesson') patch(shownIdx, { done: true });
-          if (shownIdx === current) {
-            setViewing(null);
-            setCurrent((c) => c + 1);
-          } else {
-            setViewing(shownIdx + 1 === current ? null : shownIdx + 1);
+          const st = flat[shownIdx].step;
+          setStates((all) => leaveStep(flat, all, shownIdx));
+          // Skipping a find step puts the intercept where the signal can be seen.
+          if (st.kind === 'find' && !states[shownIdx].done) {
+            const next = moveInterceptToSignal(scene, st.atLeastDb);
+            setScene(next);
+            setInterceptSnrDb(sceneBudget(next).intercept.chipSnrDb);
           }
+          setCurrent(nextIndex(flat, shownIdx));
         }}
         onBack={() => {
-          if (shownIdx > 0) setViewing(shownIdx - 1);
+          if (shownIdx > 0) setCurrent(shownIdx - 1);
         }}
         card={card}
         score={score}

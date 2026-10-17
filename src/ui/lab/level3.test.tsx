@@ -31,7 +31,7 @@ function render(current: number, set: (st: StepState[]) => void = () => {}, extr
     level: LEVEL_3,
     states,
     current,
-    viewing: null,
+   
     onView: noop,
     chipSnrDb: 0,
     values: setup.values(args),

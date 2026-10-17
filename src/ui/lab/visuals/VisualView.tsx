@@ -4,6 +4,8 @@ import { Autocorr } from '../instruments/Autocorr';
 import { Spectrum } from '../instruments/Spectrum';
 import { knownCapture } from '../knownCapture';
 import { BerCurve } from './BerCurve';
+import { Blinding } from './Blinding';
+import { MajorityVote } from './MajorityVote';
 import { BerRunDemo, DEMO_JS_DB } from './BerRunDemo';
 import { DbTable } from './DbTable';
 import { Despread } from './Despread';
@@ -76,7 +78,16 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12 }: {
       return <BerCurve markDb={mark} marks={visual.marks} />;
     }
     case 'berRunDemo':
-      return <BerRunDemo variants={visual.variants} />;
+      return <BerRunDemo variants={visual.variants} jsDb={visual.jsDb} />;
+    case 'majorityVote':
+      return <MajorityVote />;
+    case 'blinding':
+      return (
+        <>
+          <Blinding />
+          {visual.demo && <BerRunDemo variants={visual.demo.variants} jsDb={visual.demo.jsDb} />}
+        </>
+      );
     case 'threeJammers':
       return <ThreeJammers />;
     case 'toneSpectrum':

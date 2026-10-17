@@ -103,3 +103,30 @@ export function level4Scene(t: Truth): Scene {
   }
   return last!;
 }
+
+// The scene with the intercept moved out along the starting bearing to the farthest spot whose chip SNR is still
+// at least minDb, so the instruments show the signal after a skipped find step.
+export function moveInterceptToSignal(scene: Scene, minDb: number): Scene {
+  const at = (km: number): Scene => ({
+    ...scene,
+    intercept: { ...scene.intercept, xKm: km * Math.cos(START_BEARING), yKm: km * Math.sin(START_BEARING) },
+  });
+  let lo = 1;
+  let hi = MAX_START_KM;
+  if (sceneBudget(at(hi)).intercept.chipSnrDb >= minDb) return at(hi);
+  while (hi - lo > 0.05) {
+    const mid = (lo + hi) / 2;
+    if (sceneBudget(at(mid)).intercept.chipSnrDb >= minDb) lo = mid;
+    else hi = mid;
+  }
+  return at(Math.floor(lo * 10) / 10);
+}
+
+// Level 5's scene: a receiver with Eb/N0 between 11.5 and 12.5 dB and a jammer for context only. The runs fix
+// their own J/S, so the scene's jammer stays where it is (broadband Eb/J0 between 3.5 and 5 dB).
+export function level5Scene(t: Truth): Scene {
+  const rng = createRng(t.seed ^ 0x2f6b1c3d);
+  const ebN0 = Math.round((11.5 + rng()) * 10) / 10;
+  const ebJ0 = Math.round((3.5 + 1.5 * rng()) * 10) / 10;
+  return sceneAt(t, ebN0, ebJ0);
+}

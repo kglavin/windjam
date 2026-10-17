@@ -20,6 +20,7 @@ export interface FieldResult {
 // What the player has done in one step, indexed like flatSteps(). Apply and question submissions are final.
 export interface StepState {
   done: boolean;
+  skipped?: boolean; // moved on without finishing; ignored once done
   fields?: Record<string, FieldResult>; // apply: the submission; practice: the latest check
   answers?: Record<string, number>; // question id to chosen option
   tries?: number; // wrong lesson checks or practice checks so far
@@ -33,6 +34,7 @@ export interface StepState {
   runs?: RunSummary[]; // every run finished in this step, in order
   goal?: { points: number; run: RunSummary; runNo: number }; // apply with a deny goal: the run that reached it
   retryRun?: { prediction?: number; result?: RunSummary }; // apply: the unscored retry of a run
+  runInput?: number; // apply: the edited value of the run's runInput field (NaN while the entry is not a number)
   retries?: number; // apply: how many retries were started, for the run seed
 }
 
