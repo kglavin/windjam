@@ -54,23 +54,28 @@ function circleRadius(scene: Scene, targetJsDb?: number): number {
   return r > 0.1 && r < 1000 ? r : 0;
 }
 
-function fitScene(scene: Scene, circleKm: number): SceneView {
-  return fitView(sceneFitPoints(scene, circleKm), W, H, MARGIN);
+function fitScene(scene: Scene, circleKm: number, hideJammer: boolean): SceneView {
+  return fitView(sceneFitPoints(scene, circleKm, hideJammer), W, H, MARGIN);
 }
 
-export function LinkScene({ scene, onChange, editable, targetJsDb }: {
+export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hiddenRows }: {
   scene: Scene;
   onChange: (s: Scene) => void;
   editable?: SceneField[];
   targetJsDb?: number;
+  hidden?: 'jammer'[]; // stations a level does not show: not drawn, no lines, no controls, no J/S circle
+  hiddenRows?: string[]; // budget ladder rows to hide, by label
 }) {
+  const noJammer = !!hidden?.includes('jammer');
+  if (noJammer) targetJsDb = undefined;
+  const hiddenSet = new Set(hiddenRows ?? []);
   const can = (f: SceneField) => (editable ?? ALL_FIELDS).includes(f);
   const svgRef = useRef<SVGSVGElement>(null);
   // Fit frozen for the duration of a drag, so the stations do not move under the pointer.
   const [frozen, setFrozen] = useState<SceneView | null>(null);
   const [dragging, setDragging] = useState<StationKey | null>(null);
   const targetR = targetJsDb === undefined ? 0 : jammerDistanceForJs(scene, targetJsDb);
-  const view = frozen ?? fitScene(scene, circleRadius(scene, targetJsDb));
+  const view = frozen ?? fitScene(scene, circleRadius(scene, targetJsDb), noJammer);
   const budget = sceneBudget(scene);
 
   const setStation = (key: StationKey, patch: Partial<Station>) =>
@@ -95,7 +100,7 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
   const onDown = (key: StationKey) => (e: React.PointerEvent) => {
     if (!can(key === 'intercept' ? 'intercept' : 'positions')) return;
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    setFrozen(fitScene(scene, circleRadius(scene, targetJsDb)));
+    setFrozen(fitScene(scene, circleRadius(scene, targetJsDb), noJammer));
     setDragging(key);
   };
   const onMove = (e: React.PointerEvent) => {
@@ -114,20 +119,37 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
   const icP = pos(scene.intercept);
   const jamP = pos(scene.jammer);
   const bar = scaleBarKm(view, 120);
+  // Labels go on the side away from the centroid of the drawn stations, so they stay clear of the lines between them.
+  const shown = noJammer ? [txP, rxP, icP] : [txP, rxP, icP, jamP];
+  const cen = { x: shown.reduce((a, p) => a + p.x, 0) / shown.length, y: shown.reduce((a, p) => a + p.y, 0) / shown.length };
+  const labelSide = (p: { x: number; y: number }) => (p.y >= cen.y ? 1 : -1); // +1 below the station
+  const awayNormal = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    let nx = -dy / len;
+    let ny = dx / len;
+    if (nx * ((a.x + b.x) / 2 - cen.x) + ny * ((a.y + b.y) / 2 - cen.y) < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    return { nx, ny };
+  };
 
   const pathLine = (a: Station, b: Station, setup: PathSetup, dashed: boolean, color: string) => {
     const pl = pathLossDb(scene.freqMHz, a, b, setup);
     const pa = pos(a);
     const pb = pos(b);
-    const mx = (pa.x + pb.x) / 2;
-    const my = (pa.y + pb.y) / 2;
+    const { nx, ny } = awayNormal(pa, pb);
+    const mx = (pa.x + pb.x) / 2 + nx * 9;
+    const my = (pa.y + pb.y) / 2 + ny * 9 + 3;
     const ob = setup.obstacle;
     const ox = ob ? pa.x + (pb.x - pa.x) * ob.atFraction : 0;
     const oy = ob ? pa.y + (pb.y - pa.y) * ob.atFraction : 0;
     return (
       <g>
         <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} stroke={color} strokeWidth={2} strokeDasharray={dashed ? '6 4' : undefined} />
-        <text x={mx} y={my - 6} className="axis" textAnchor="middle" fill={color}>
+        <text x={mx} y={my} className="axis" textAnchor="middle" fill={color}>
           {pl.distanceKm.toFixed(1)} km, {pl.totalDb.toFixed(1)} dB
         </text>
         {ob && (
@@ -162,10 +184,15 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
 
   const rows = budget.ladder;
   const idx = (label: string) => rows.findIndex((r) => r.label === label);
-  const sigRows = rows.slice(0, idx('Signal S') + 1);
-  const jamRows = rows.slice(idx('Jammer power'), idx('Jamming J') + 1);
-  const noiseRows = rows.slice(idx('Noise floor N'), idx('Processing gain') + 1);
-  const ratioRows = rows.slice(idx('Eb/N0'));
+  const visible = (r: (typeof rows)[number]) => !hiddenSet.has(r.label);
+  // Without a jammer the signal path runs on through the noise floor to the SNR.
+  const sigRows = [
+    ...rows.slice(0, idx('Signal S') + 1),
+    ...(noJammer ? rows.slice(idx('Noise floor N'), idx('SNR') + 1) : []),
+  ].filter(visible);
+  const jamRows = noJammer ? [] : rows.slice(idx('Jammer power'), idx('Jamming J') + 1).filter(visible);
+  const noiseRows = noJammer ? [] : rows.slice(idx('Noise floor N'), idx('Processing gain') + 1).filter(visible);
+  const ratioRows = (noJammer ? rows.slice(idx('Processing gain')) : rows.slice(idx('Eb/N0'))).filter(visible);
   const keyRows = new Set(['Signal S', 'Jamming J', 'Noise floor N']);
   const ladderRow = (r: (typeof rows)[number], cls = '') => (
     <tr key={r.label} className={`${keyRows.has(r.label) ? 'key' : ''} ${cls}`}>
@@ -174,7 +201,7 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
     </tr>
   );
 
-  const icRows = budget.interceptLadder;
+  const icRows = budget.interceptLadder.filter((r) => !hiddenSet.has(r.label) && !(noJammer && /^J(amming|\/S)/.test(r.label)));
   const icKey = new Set(['Signal S at intercept', 'Jamming J at intercept', 'Noise floor N']);
   const icRatio = new Set(['Chip SNR', 'J/S at intercept']);
 
@@ -229,24 +256,40 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
       <div className="scene-main">
         <svg ref={svgRef} className="scene-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Link scene"
           onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-          {targetJsDb !== undefined && (
-            <g>
-              <circle cx={rxP.x} cy={rxP.y} r={targetR * view.scale} fill="none" stroke="#ef4444" strokeDasharray="2 4" opacity={0.5} />
-              <text x={rxP.x} y={rxP.y - targetR * view.scale - 4} className="axis" textAnchor="middle" fill="#ef4444">
-                J/S = {targetJsDb} dB
-              </text>
-            </g>
-          )}
+          {targetJsDb !== undefined && (() => {
+            // J/S label on the circle at the point facing away from the other stations.
+            const ang = Math.hypot(rxP.x - cen.x, rxP.y - cen.y) > 4 ? Math.atan2(rxP.y - cen.y, rxP.x - cen.x) : -Math.PI / 2;
+            const rr = targetR * view.scale + 8;
+            const lx = Math.min(Math.max(rxP.x + rr * Math.cos(ang), 40), W - 40);
+            const ly = Math.min(Math.max(rxP.y + rr * Math.sin(ang), 12), H - 20);
+            return (
+              <g>
+                <circle cx={rxP.x} cy={rxP.y} r={targetR * view.scale} fill="none" stroke="#ef4444" strokeDasharray="2 4" opacity={0.5} />
+                <text x={lx} y={ly} className="axis" textAnchor="middle" fill="#ef4444">J/S = {targetJsDb} dB</text>
+              </g>
+            );
+          })()}
           {scene.rxAntenna === 'directional' && wedge()}
           {pathLine(scene.tx, scene.rx, scene.txPath, false, '#60a5fa')}
-          {pathLine(scene.jammer, scene.rx, scene.jamPath, true, '#ef4444')}
+          {!noJammer && pathLine(scene.jammer, scene.rx, scene.jamPath, true, '#ef4444')}
           <line x1={txP.x} y1={txP.y} x2={icP.x} y2={icP.y} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="1 4" strokeLinecap="round" />
-          <text x={(txP.x + icP.x) / 2} y={(txP.y + icP.y) / 2 - 6} className="axis" textAnchor="middle" fill="#f59e0b">
-            {budget.intercept.txDistanceKm.toFixed(1)} km, chip SNR {fmt(budget.intercept.chipSnrDb)} dB
-          </text>
-          <line x1={jamP.x} y1={jamP.y} x2={icP.x} y2={icP.y} stroke="#f59e0b" strokeWidth={1} strokeDasharray="1 4" strokeLinecap="round" opacity={0.35} />
-          {[...STATIONS, INTERCEPT].map(({ key, color }) => {
+          {(() => {
+            const { nx, ny } = awayNormal(txP, icP);
+            return (
+              <text x={(txP.x + icP.x) / 2 + nx * 9} y={(txP.y + icP.y) / 2 + ny * 9 + 3} className="axis" textAnchor="middle" fill="#f59e0b">
+                {budget.intercept.txDistanceKm.toFixed(1)} km, chip SNR {fmt(budget.intercept.chipSnrDb)} dB
+              </text>
+            );
+          })()}
+          {!noJammer && (
+            <line x1={jamP.x} y1={jamP.y} x2={icP.x} y2={icP.y} stroke="#f59e0b" strokeWidth={1} strokeDasharray="1 4" strokeLinecap="round" opacity={0.35} />
+          )}
+          {[...STATIONS, INTERCEPT].filter(({ key }) => !(noJammer && key === 'jammer')).map(({ key, color }) => {
             const p = pos(scene[key]);
+            const side = labelSide(p);
+            const lx = Math.min(Math.max(p.x, 45), W - 45);
+            const topY = side > 0 ? p.y + 22 : p.y - 26;
+            const subY = side > 0 ? p.y + 33 : p.y - 15;
             const l = labelOf(key);
             return (
               <g key={key} className={can(key === 'intercept' ? 'intercept' : 'positions') ? 'scene-station draggable' : 'scene-station'}
@@ -256,8 +299,8 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
                 {key === 'rx' && <rect x={p.x - 7} y={p.y - 7} width={14} height={14} fill={color} />}
                 {key === 'jammer' && <circle cx={p.x} cy={p.y} r={8} fill={color} />}
                 {key === 'intercept' && <polygon points={`${p.x},${p.y - 9} ${p.x + 9},${p.y} ${p.x},${p.y + 9} ${p.x - 9},${p.y}`} fill={color} />}
-                <text x={p.x} y={p.y + 22} className="axis" textAnchor="middle" fill={color}>{l.top}</text>
-                <text x={p.x} y={p.y + 33} className="axis" textAnchor="middle">{l.sub}</text>
+                <text x={lx} y={topY} className="axis" textAnchor="middle" fill={color}>{l.top}</text>
+                <text x={lx} y={subY} className="axis" textAnchor="middle">{l.sub}</text>
               </g>
             );
           })}
@@ -270,11 +313,11 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
             <tbody>
               <tr className="head"><th colSpan={2}>Signal path</th></tr>
               {sigRows.map((r) => ladderRow(r))}
-              <tr className="head"><th colSpan={2}>Jammer path</th></tr>
+              {jamRows.length > 0 && <tr className="head"><th colSpan={2}>Jammer path</th></tr>}
               {jamRows.map((r) => ladderRow(r))}
-              <tr className="head"><th colSpan={2}>Noise</th></tr>
+              {noiseRows.length > 0 && <tr className="head"><th colSpan={2}>Noise</th></tr>}
               {noiseRows.map((r) => ladderRow(r))}
-              <tr className="head"><th colSpan={2}>Ratios</th></tr>
+              {ratioRows.length > 0 && <tr className="head"><th colSpan={2}>Ratios</th></tr>}
               {ratioRows.map((r) => ladderRow(r, 'ratio'))}
               <tr className="head"><th colSpan={2}>At the intercept</th></tr>
               {icRows.map((r) => (
@@ -292,7 +335,7 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
         {can('positions') && (
           <div className="scene-group">
             <h4>Positions</h4>
-            {STATIONS.map((s) => stationInputs(s.key, s.name))}
+            {STATIONS.filter((s) => !(noJammer && s.key === 'jammer')).map((s) => stationInputs(s.key, s.name))}
           </div>
         )}
         {can('intercept') && (
@@ -319,11 +362,11 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
               {can('txPower') && <NumberField label="W" value={scene.tx.powerW} min={0.1} max={1000} step={0.1} onChange={(v) => setStation('tx', { powerW: v })} />}
               {can('gains') && <NumberField label="dBi" value={scene.tx.gainDbi} min={-10} max={30} step={0.5} onChange={(v) => setStation('tx', { gainDbi: v })} />}
             </div>
-            <div className="scene-row">
+            {!noJammer && <div className="scene-row">
               <span className="scene-tag">Jammer</span>
               {can('jamPower') && <NumberField label="W" value={scene.jammer.powerW} min={0.1} max={1000} step={0.1} onChange={(v) => setStation('jammer', { powerW: v })} />}
               {can('gains') && <NumberField label="dBi" value={scene.jammer.gainDbi} min={-10} max={30} step={0.5} onChange={(v) => setStation('jammer', { gainDbi: v })} />}
-            </div>
+            </div>}
             {can('gains') && scene.rxAntenna === 'omni' && (
               <div className="scene-row">
                 <span className="scene-tag">Rx</span>
@@ -336,7 +379,7 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
           <div className="scene-group">
             <h4>Antenna heights</h4>
             <div className="scene-row">
-              {STATIONS.map((s) => (
+              {STATIONS.filter((s) => !(noJammer && s.key === 'jammer')).map((s) => (
                 <NumberField key={s.key} label={`${s.name} m`} value={scene[s.key].heightM} min={1} max={100} step={1}
                   onChange={(v) => setStation(s.key, { heightM: v })} />
               ))}
@@ -358,7 +401,7 @@ export function LinkScene({ scene, onChange, editable, targetJsDb }: {
           <div className="scene-group">
             <h4>Paths</h4>
             {pathControls('txPath', 'Tx to Rx')}
-            {pathControls('jamPath', 'Jammer to Rx')}
+            {!noJammer && pathControls('jamPath', 'Jammer to Rx')}
           </div>
         )}
         {can('noise') && (

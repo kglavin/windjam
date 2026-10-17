@@ -4,14 +4,19 @@ import type { IQ } from '../../../engine/lab/signal';
 import { Axes } from './Axes';
 import { INNER_H, INNER_W, PAD, PH, PW, niceTicks, plotX, poly } from './plot';
 
-const LAGS = [20, 50, 100, 200, 500, 1000]; // µs
+const LAGS = [50, 100, 200, 500, 1000]; // µs
 const WINDOWS = [50, 100, 200, 500, 1000]; // µs
 
 // Autocorrelation |R(tau)| or the fluctuation display, over the preamble or the data.
-export function Autocorr({ x, sampleRateHz, preambleSamples }: { x: IQ; sampleRateHz: number; preambleSamples?: number }) {
+export function Autocorr({ x, sampleRateHz, preambleSamples, annotations }: {
+  x: IQ;
+  sampleRateHz: number;
+  preambleSamples?: number;
+  annotations?: { lagUs: number; label: string }[];
+}) {
   const [mode, setMode] = useState<'acf' | 'fluct'>('acf');
   const [win, setWin] = useState<'preamble' | 'data'>(preambleSamples ? 'preamble' : 'data');
-  const [maxLagUs, setMaxLagUs] = useState(200);
+  const [maxLagUs, setMaxLagUs] = useState(1000); // the longest lag first, so a long code period is never off the plot
   const [fluctUs, setFluctUs] = useState(200);
   const [hover, setHover] = useState<number | null>(null); // lag in samples
 
@@ -82,6 +87,13 @@ export function Autocorr({ x, sampleRateHz, preambleSamples }: { x: IQ; sampleRa
           yLabel={mode === 'acf' ? '|R(τ)| / R(0)' : 'mean |R|² over windows'}
         />
         <polyline points={poly(y.length, (i) => fx(i), (i) => fy(Math.min(top, y[i])))} className="inst-line c1" />
+        {annotations?.filter((a) => a.lagUs / usPerSample <= maxLag).map((a, i) => (
+          <g key={`${a.lagUs}`}>
+            <line x1={fx(a.lagUs / usPerSample)} x2={fx(a.lagUs / usPerSample)} y1={PAD.t} y2={PAD.t + INNER_H} className="inst-annot" />
+            {/* Labels step down one line each so close-spaced periods stay readable. */}
+            <text x={fx(a.lagUs / usPerSample) + 4} y={PAD.t + 10 + 12 * i} textAnchor="start" className="inst-annot-label">{a.label}</text>
+          </g>
+        ))}
         {hv && <line x1={fx(hv.lag)} x2={fx(hv.lag)} y1={PAD.t} y2={PAD.t + INNER_H} className="inst-cursor" />}
         <rect
           x={PAD.l}

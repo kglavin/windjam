@@ -16,8 +16,10 @@ const MIN_SPAN_KM = 1;
 export function sceneFitPoints(
   scene: { tx: KmPoint; rx: KmPoint; jammer: KmPoint; intercept: KmPoint },
   circleRadiusKm = 0,
+  hideJammer = false,
 ): KmPoint[] {
-  const pts: KmPoint[] = [scene.tx, scene.rx, scene.jammer, scene.intercept];
+  const pts: KmPoint[] = [scene.tx, scene.rx, scene.intercept];
+  if (!hideJammer) pts.push(scene.jammer);
   const r = circleRadiusKm;
   if (r > 0) {
     const { xKm, yKm } = scene.rx;

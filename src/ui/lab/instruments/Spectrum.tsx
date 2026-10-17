@@ -7,7 +7,7 @@ import { INNER_H, INNER_W, PAD, PH, PW, niceTicks, plotX, poly } from './plot';
 const NFFTS = [256, 1024, 4096];
 
 // Welch power spectrum in dB, MHz relative to the carrier, with a click-to-place marker.
-export function Spectrum({ x, sampleRateHz }: { x: IQ; sampleRateHz: number }) {
+export function Spectrum({ x, sampleRateHz, annotations }: { x: IQ; sampleRateHz: number; annotations?: { xMHz: number; label: string }[] }) {
   const [nfft, setNfft] = useState(1024);
   const [marker, setMarker] = useState<number | null>(null); // frequency in MHz
   const spec = useMemo(() => {
@@ -60,6 +60,12 @@ export function Spectrum({ x, sampleRateHz }: { x: IQ; sampleRateHz: number }) {
           yLabel="Level (dB per bin)"
         />
         <polyline points={poly(spec.mhz.length, (i) => fx(spec.mhz[i]), (i) => fy(spec.db[i]))} className="inst-line c1" />
+        {annotations?.filter((a) => Math.abs(a.xMHz) <= half).map((a) => (
+          <g key={`${a.xMHz}`}>
+            <line x1={fx(a.xMHz)} x2={fx(a.xMHz)} y1={PAD.t} y2={PAD.t + INNER_H} className="inst-annot" />
+            <text x={fx(a.xMHz)} y={PAD.t + 10} textAnchor="middle" className="inst-annot-label">{a.label}</text>
+          </g>
+        ))}
         {mk && (
           <g>
             <line x1={fx(mk.f)} x2={fx(mk.f)} y1={PAD.t} y2={PAD.t + INNER_H} className="inst-cursor" />
