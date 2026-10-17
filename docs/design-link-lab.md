@@ -41,7 +41,29 @@ URL handling: `?server=` takes precedence and opens missions in watch mode, as n
 
 ## 4. The emulated link
 
-One transmitter, one receiver, complex baseband, no geography. A level fixes these hidden parameters (drawn from the level's seed within ranges):
+The lab does not use the hex map. It shows one link as a simple scene, and the player varies the physical assumptions there. The work of the chapter is at the signal level: RF measurement, the spreading code, and attacks on it.
+
+### 4.1 The scene
+
+An SVG drawing of three stations on a flat plane: transmitter, receiver and jammer, each an icon with its antenna, joined by labelled paths (Tx→Rx, J→Rx). The player drags the stations or types positions, and sets:
+
+| Parameter | Range | Notes |
+|---|---|---|
+| Distances | from the positions, 0.1 to 100 km | shown on each path |
+| Frequency | 30 to 3000 MHz | |
+| Transmitter and jammer power | 0.1 W to 1 kW | |
+| Antenna heights | 1 to 100 m | used by two-ray and the obstacle |
+| Antenna gains | omni, or directional at the receiver pointed at the transmitter | the jammer then sits in a sidelobe unless it is in line |
+| Path model, per path | free space, two-ray, or either plus one knife-edge obstacle (height and position on the path) | |
+| Receiver noise figure and environment | 2 to 15 dB; rural or urban man-made noise | |
+
+From these the scene computes S, J and N at the receiver input, and from them Eb/N0, J/S and Eb/J0 after processing gain. A budget ladder beside the drawing shows each term in dB, so the player sees how the geometry becomes the numbers the signal-level simulation runs on. It reuses the map-free functions in `rf.ts` (`fsplDb`, `twoRayLossDb`, `knifeEdgeLossDb`, `noiseFloorDbm`, `manMadeNoiseFigureDb`).
+
+A level sets which scene parameters the player may change. Levels about the code fix the scene and let the player sweep jammer power; levels about the J/S equation free the positions and powers.
+
+### 4.2 The signal
+
+Complex baseband between the scene's transmitter and receiver. A level fixes these hidden parameters (drawn from the level's seed within ranges):
 
 | Parameter | Range | Notes |
 |---|---|---|
@@ -51,7 +73,7 @@ One transmitter, one receiver, complex baseband, no geography. A level fixes the
 | Repetition r | 1, 3 or 5 | each bit sent r times, majority-logic decoding |
 | Preamble | 32 code periods, data fixed at +1 | sent at the start of every transmission, as real links do for acquisition |
 | Carrier offset | 0 to a few kHz | so the spectrum is not trivially centred |
-| Eb/N0 | 6 to 12 dB | the clean link's margin |
+| Eb/N0 | from the scene; levels choose scenes giving 6 to 12 dB | the clean link's margin |
 
 What the instruments can show (D4). Under random data the autocorrelation's peaks at the code period average to zero, because adjacent bits flip sign at random. They show during the preamble, which gives the code length and the preamble's end, and so the timing of the first data bit. For a short code, a fluctuation display (the variance of autocorrelations taken over short windows) also peaks at the code period under data. Repetition shows as a nonzero mean autocorrelation at lags k·N for k < r, of height (r−k)/r, because repeated bits are equal. For a long code the bit rate cannot be seen without the code: the level card gives it, as intelligence on the service would, and the player computes Gp from the measured chip rate.
 
@@ -66,7 +88,7 @@ Front end: before despreading the receiver applies a soft limiter (Rapp model, s
 
 ## 5. Attacks
 
-The player picks a jammer and its parameters and sets the J/S ratio (jammer to signal power, average, at the receiver input) with a slider. Each is generated at sample level and added before the front end. Every run reports both average and peak J/S.
+The player picks a jammer and its parameters. The J/S ratio (jammer to signal power, average, at the receiver input) comes from the scene: the player changes it by moving the jammer or changing its power, and a sweep steps jammer power with the geometry fixed. Each attack is generated at sample level and added before the front end. Every run reports both average and peak J/S.
 
 | Attack | Parameters | Expected effect (theory curve) |
 |---|---|---|
@@ -102,14 +124,14 @@ Every level runs through five stages, shown as steps in a side panel:
 
 Score per level: characterisation (40), predictions (30, the mean prediction score scaled), questions (30). A level is complete at 60.
 
-Attack efficiency, shown in every debrief: the average J/S and the peak J/S each attack needed to reach BER 1e-1 (the jammer's goal used elsewhere in Windjam), relative to broadband noise.
+Attack efficiency, shown in every debrief: the average J/S and the peak J/S each attack needed to reach BER 1e-1 (the jammer's goal used elsewhere in Windjam), relative to broadband noise, and what that means in the scene: the greatest jammer-to-receiver distance at which the attack reaches 1e-1 with the scene's jammer power.
 
 ## 8. The DSSS levels
 
 | Level | Link | Attacks | Teaches |
 |---|---|---|---|
 | 1. A quiet signal | short code (N = 63), no repetition | none | chip rate and bandwidth from spectrum and autocorrelation; code length from the preamble and the fluctuation display; Gp = N |
-| 2. Processing gain | long code, bit rate given; two links with Gp 10 dB apart | BBN | measured BER against `Gp/(J/S)`; a 10 dB increase in Gp moves the curve 10 dB; why the lab's BPSK curve sits 4 dB left of the map game's |
+| 2. Processing gain | long code, bit rate given; two links with Gp 10 dB apart; jammer position and power free | BBN | J/S from the scene (distances, powers, path models); measured BER against `Gp/(J/S)`; a 10 dB increase in Gp moves the curve 10 dB and shortens the jammer's effective range; why the lab's BPSK curve sits 4 dB left of the map game's |
 | 3. Where to put the power | long code, no repetition | BBN, partial-band, pulsed with pulse duration from well under to over a bit | frequency concentration does nothing; time concentration works when pulses cover whole bits; the worst-case ρ |
 | 4. Tones | short code (N = 31), then a long code | single tone at swept offsets, multitone | line spectrum of a short code; tone phase; PAPR and compression |
 | 5. Saturation and timing | short code (N = 63), repetition r = 3 | pulsed with high peak, pulsed aligned to repetition groups | repetition from the autocorrelation; front-end saturation; majority logic defeated by timing |
@@ -121,6 +143,7 @@ New code under `src/engine/lab/`, pure TypeScript with tests, no React and no ga
 
 | Module | Contents |
 |---|---|
+| `scene.ts` | the scene's stations and paths; S, J, N, Eb/N0, J/S and the budget ladder terms, from `rf.ts`; the jammer distance that gives a target J/S |
 | `pn.ts` | LFSR m-sequence generator for degrees 5 to 17, primitive taps table; periodic autocorrelation |
 | `signal.ts` | complex sample buffers (Float32Array pairs), BPSK chip modulation at one sample per chip and oversampled, preamble, carrier offset, AWGN at a given Eb/N0 |
 | `dsss.ts` | transmitter (preamble, bits, repetition, spreading) and receiver (front end, despreading, integrate-and-dump, majority logic), returning decisions and correlator outputs |
@@ -132,7 +155,7 @@ New code under `src/engine/lab/`, pure TypeScript with tests, no React and no ga
 
 Runs happen in a Web Worker so the page stays responsive. A BER point to 1e-3 with 100 errors is about 10⁵ bits: at Gp 255 and one sample per chip, about 2.6×10⁷ samples, around a second. Runs at s = 4 take four times as long; the run's time bound caps them.
 
-The existing link-budget code (`ew.ts`, `budget.ts`) is not changed. A test checks the lab's Gp against `processingGainDb` for the same chip and data rates. BER curves differ by design (section 2).
+The existing link-budget code (`rf.ts`, `ew.ts`, `budget.ts`) is not changed; `scene.ts` calls `rf.ts` and never the map. A test checks the lab's Gp against `processingGainDb` for the same chip and data rates. BER curves differ by design (section 2).
 
 Non-functional requirements:
 
@@ -142,7 +165,7 @@ Non-functional requirements:
 
 ## 10. Interface
 
-`src/ui/chapters/Home.tsx` (the start screen) and `src/ui/lab/`: `LabChapter.tsx` (level select and layout), `StagePanel.tsx` (the five stages, the characterisation card, predictions, questions, score), and one component per instrument. The map's Scope (`scope.ts`) is analytic (band segments, no samples), so the lab's instruments are new; they follow the SVG approach of `ScopeTool.tsx`, `SequenceChart.tsx` and `ProfileChart.tsx`. No new chart library.
+`src/ui/chapters/Home.tsx` (the start screen) and `src/ui/lab/`: `LabChapter.tsx` (level select and layout), `LinkScene.tsx` (the scene drawing, its controls and the budget ladder), `StagePanel.tsx` (the five stages, the characterisation card, predictions, questions, score), and one component per instrument. The map's Scope (`scope.ts`) is analytic (band segments, no samples), so the lab's instruments are new; they follow the SVG approach of `ScopeTool.tsx`, `SequenceChart.tsx` and `ProfileChart.tsx`. No new chart library.
 
 ## 11. Work packages
 
@@ -159,7 +182,9 @@ Each is sized for one agent, with its own tests, following the conventions in th
 | LL-7 `jammers.ts`; each attack's measured BER interval contains its theory at three J/S points | M | LL-4, LL-5, LL-6 |
 | LL-8 Worker wrapper and run protocol (start, progress, cancel, time bound, results) | S | LL-4, LL-7 |
 | LL-9 Instruments: spectrum, trace, autocorrelation, fluctuation, correlator histogram, BER meter, curve plotter | L | LL-5, LL-8 |
-| LL-10 `levels.ts` and `StagePanel.tsx`: stages, card, predictions, questions, scoring, progress | M | LL-1, LL-9 |
+| LL-13 `scene.ts`: budget from positions, powers, gains and path models; tests against `fsplDb` and `twoRayLossDb` | S | none |
+| LL-14 `LinkScene.tsx`: drawing, dragging, controls, budget ladder | M | LL-13 |
+| LL-10 `levels.ts` and `StagePanel.tsx`: stages, card, predictions, questions, scoring, progress | M | LL-1, LL-9, LL-14 |
 | LL-11 Levels 1 to 5 content and their texts; a playthrough check of each | M | LL-10 |
 | LL-12 CSK level | L | LL-11 |
 
@@ -177,6 +202,7 @@ D1. Coherent BPSK chips. The lab's BER differs from the map game's noncoherent B
 D2. BER runs at one sample per chip with chip-matched jammer models; captures and compression runs oversampled.
 D3. Bit period, first-bit time and repetition are characterisation outputs, and timed attacks align to the player's estimate.
 D4. Every transmission starts with an unmodulated preamble; a fluctuation display shows a short code's period under data; level 1 uses a short code, long codes start at level 2 with the bit rate given.
+D5. No hex map. The lab draws one link as a scene whose physical assumptions the player varies; J/S and Eb/N0 come from that scene through `rf.ts`.
 
 Risks:
 
