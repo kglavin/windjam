@@ -3,7 +3,9 @@ import { berNoncoherentBfsk } from '../ew';
 import {
   berBpsk,
   berBpskJammed,
+  berMultitoneLongCode,
   berNoncoherentBfskLin,
+  berPartialBandDsss,
   berPartialBandBfsk,
   berPulsedBpsk,
   berRepetitionMajority,
@@ -12,6 +14,7 @@ import {
   db,
   jsForBer,
   qfunc,
+  sincSquaredMean,
   undb,
   worstRhoBfsk,
   worstRhoBpsk,
@@ -115,5 +118,24 @@ describe('repetition and search', () => {
     expect(Math.abs(js - 20.86)).toBeLessThan(0.05);
     expect(jsForBer(() => 0, 0.1)).toBe(Infinity);
     expect(jsForBer(() => 0.5, 0.1)).toBe(-Infinity);
+  });
+});
+
+describe('partial band and multitone against DSSS', () => {
+  it('sincSquaredMean', () => {
+    expect(sincSquaredMean(-0.5, 0.5)).toBeCloseTo(0.7737, 3);
+    expect(sincSquaredMean(0.3, 0.3)).toBeCloseTo((Math.sin(0.3 * Math.PI) / (0.3 * Math.PI)) ** 2, 12);
+    expect(sincSquaredMean(-1, 1)).toBeCloseTo(0.4514, 3);
+  });
+  it('berPartialBandDsss', () => {
+    const w = sincSquaredMean(-0.5, 0.5);
+    expect(berPartialBandDsss(Infinity, 64, 10, 1)).toBeCloseTo(berBpskJammed(Infinity, 64 / (10 * w)), 14);
+    expect(db(w)).toBeGreaterThan(-1.12);
+    expect(db(w)).toBeLessThan(-1.08);
+  });
+  it('berMultitoneLongCode', () => {
+    expect(berMultitoneLongCode(4, 100, 5, [0])).toBeCloseTo(berToneLongCode(4, 100, 5, 0), 14);
+    const sinc2 = (Math.sin(0.1 * Math.PI) / (0.1 * Math.PI)) ** 2;
+    expect(berMultitoneLongCode(4, 100, 5, [-0.1, 0.1])).toBeCloseTo(berBpskJammed(4, 100 / (5 * sinc2)), 14);
   });
 });

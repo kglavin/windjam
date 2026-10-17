@@ -176,3 +176,27 @@ export function jsForBer(berOfJsDb: (jsDb: number) => number, target: number, lo
   }
   return (lo + hi) / 2;
 }
+
+// Mean of sinc^2(f) over [lo, hi] cycles per chip (Simpson, 200 panels); lo = hi gives sinc^2(lo).
+export function sincSquaredMean(lo: number, hi: number): number {
+  if (lo === hi) return sinc(lo) ** 2;
+  const m = 200;
+  const h = (hi - lo) / m;
+  let sum = sinc(lo) ** 2 + sinc(hi) ** 2;
+  for (let i = 1; i < m; i++) sum += (i % 2 ? 4 : 2) * sinc(lo + i * h) ** 2;
+  return sum / (3 * m);
+}
+
+// Noise confined in frequency is spread again by despreading; it can only gain the sinc^2 weighting near the
+// carrier, at most 1.1 dB over broadband noise at equal J/S (sincSquaredMean(-0.5, 0.5) is about 0.774).
+export function berPartialBandDsss(ebN0: number, gp: number, js: number, rho: number, centre = 0): number {
+  return berBpskJammed(ebN0, gp / (js * sincSquaredMean(centre - rho / 2, centre + rho / 2)));
+}
+
+// Multitone against a long code with random phases: each tone acts as broadband noise of power (js/q) sinc^2(f_i).
+export function berMultitoneLongCode(ebN0: number, gp: number, js: number, offsets: number[]): number {
+  const q = offsets.length;
+  let sum = 0;
+  for (const f of offsets) sum += (js / q) * sinc(f) ** 2;
+  return berBpskJammed(ebN0, gp / sum);
+}
