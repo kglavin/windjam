@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { capture } from '../../engine/lab/capture';
 import type { LinkParams } from '../../engine/lab/dsss';
-import { type Ctx, type LevelDef, checkField, level1Truth, textValues } from '../../engine/lab/levels';
+import { type Ctx, type FieldDef, type LevelDef, checkField, flatSteps, level1Truth, textValues, withinTol } from '../../engine/lab/levels';
 import { mSequence } from '../../engine/lab/pn';
 import { type Scene, sceneBudget } from '../../engine/lab/scene';
 import { undb } from '../../engine/lab/theory';
@@ -11,6 +11,7 @@ import { LinkScene } from './LinkScene';
 import { level1Scene } from './levelScene';
 import { type StepState, scoreLevel } from './levelState';
 import { StagePanel } from './StagePanel';
+import { VisualView, nullNotes, periodNotes } from './visuals/VisualView';
 
 const S = 4;
 const N_BITS = 300;
@@ -31,9 +32,10 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   onFinish: (levelId: number, score: number, passed: boolean) => void;
 }) {
   const truth = useMemo(() => level1Truth(seed), [seed]);
+  const flat = useMemo(() => flatSteps(level), [level]);
   const [scene, setScene] = useState<Scene>(() => level1Scene(truth));
   const budget = useMemo(() => sceneBudget(scene), [scene]);
-  const [states, setStates] = useState<StepState[]>(() => level.steps.map(() => ({ done: false })));
+  const [states, setStates] = useState<StepState[]>(() => flat.map(() => ({ done: false })));
   const [current, setCurrent] = useState(0);
   const [viewing, setViewing] = useState<number | null>(null);
   const [interceptSnrDb, setInterceptSnrDb] = useState<number | undefined>();
@@ -42,11 +44,11 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     setStates((all) => all.map((s, j) => (j === i ? { ...s, ...p } : s)));
   const ctx: Ctx = { rxSnrDb: budget.snrDb, rxEbN0Db: budget.ebN0Db };
 
-  // Step 1 completes by itself when the intercept's chip SNR reaches the target.
-  const step = level.steps[current];
+  // The find step completes by itself when the intercept's chip SNR reaches the target.
+  const step = flat[current]?.step;
   useEffect(() => {
-    if (!step || states[current].done || step.goal.kind !== 'interceptSnr') return;
-    if (budget.intercept.chipSnrDb >= step.goal.atLeastDb) {
+    if (!step || states[current].done || step.kind !== 'find') return;
+    if (budget.intercept.chipSnrDb >= step.atLeastDb) {
       setInterceptSnrDb(budget.intercept.chipSnrDb);
       patch(current, { done: true });
     }
@@ -73,20 +75,16 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   }, [code, truth, icEbN0Db]);
   const sampleRateHz = truth.chipRateMcps * 1e6 * S;
 
-  const done = (id: string) => level.steps.some((s, i) => s.id === id && states[i].done);
-  const nullsOn = level.steps.some((s, i) => s.annotate === 'nulls' && states[i].done);
-  const periodsOn = level.steps.some((s, i) => s.annotate === 'codePeriods' && states[i].done);
+  const doneStep = (id: string) => flat.some((f, i) => f.step.id === id && states[i].done);
+  const annotated = (kind: 'nulls' | 'codePeriods') =>
+    flat.some((f, i) => f.step.kind === 'apply' && f.step.annotate === kind && states[i].done);
   const periodUs = truth.n / truth.chipRateMcps;
-  const specNotes = nullsOn
-    ? [truth.chipRateMcps, -truth.chipRateMcps].map((x) => ({ xMHz: x, label: 'first null: chip rate' }))
-    : undefined;
-  const acNotes = periodsOn
-    ? [1, 2, 3].map((k) => ({ lagUs: k * periodUs, label: k === 1 ? '1 period' : `${k} periods` }))
-    : undefined;
+  const specNotes = annotated('nulls') ? nullNotes(truth.chipRateMcps) : undefined;
+  const acNotes = annotated('codePeriods') ? periodNotes(periodUs) : undefined;
 
-  const debrief = current >= level.steps.length;
-  const instruments = debrief ? [] : level.steps[viewing ?? current].instruments;
-  const hiddenRows = [...JAMMER_ROWS, ...(done('predict') ? [] : LATE_ROWS)];
+  const debrief = current >= flat.length;
+  const shown = debrief && viewing === null ? undefined : flat[viewing ?? current].step;
+  const hiddenRows = [...JAMMER_ROWS, ...(doneStep('F2') ? [] : LATE_ROWS)];
 
   const values = textValues(truth, {
     interceptSnrDb,
@@ -103,6 +101,14 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     }
   }, [debrief, level.id, score.total, score.passed, onFinish]);
 
+  const entries = (def: FieldDef[], entered: Record<string, number>) =>
+    Object.fromEntries(def.map((f) => [f.id, { value: entered[f.id], ...checkField(f, entered[f.id], truth, ctx) }]));
+
+  // Lessons and practice show their figure alone; the scene appears with the steps on the real link.
+  const showScene = !shown || shown.kind === 'find' || shown.kind === 'apply' || shown.kind === 'questions';
+  const instruments = shown && (shown.kind === 'find' || shown.kind === 'apply') ? shown.instruments : [];
+  const visual = shown && (shown.kind === 'lesson' || shown.kind === 'practice' || shown.kind === 'apply') ? shown.visual : undefined;
+
   return (
     <main className="level-view">
       <StagePanel
@@ -113,21 +119,43 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         onView={setViewing}
         chipSnrDb={budget.intercept.chipSnrDb}
         values={values}
+        onCheckLesson={(i, value) => {
+          const st = flat[i].step;
+          if (st.kind !== 'lesson' || !st.check || states[i].checkRight) return;
+          const ok = withinTol(st.check.tol, value, st.check.answer);
+          if (ok) {
+            patch(i, {
+              checkRight: true,
+              checkWrong: false,
+              done: true,
+              fields: { answer: { value, ok: true, truth: st.check.answer, points: 0 } },
+            });
+          } else {
+            patch(i, { checkWrong: true, tries: (states[i].tries ?? 0) + 1 });
+          }
+        }}
+        onCheckPractice={(i, entered) => {
+          const st = flat[i].step;
+          if (st.kind !== 'practice' || states[i].done) return;
+          const fields = entries(st.fields, entered);
+          const allOk = Object.values(fields).every((f) => f.ok);
+          patch(i, { fields, done: allOk, tries: allOk ? states[i].tries : (states[i].tries ?? 0) + 1 });
+        }}
+        onShowWorked={(i) => patch(i, { worked: true, done: true })}
         onSubmitFields={(i, entered) => {
-          const st = level.steps[i];
-          if (st.goal.kind !== 'fields' || states[i].fields) return;
-          const fields = Object.fromEntries(
-            st.goal.fields.map((f) => [f.id, { value: entered[f.id], ...checkField(f, entered[f.id], truth, ctx) }]),
-          );
-          patch(i, { fields, done: true });
+          const st = flat[i].step;
+          if (st.kind !== 'apply' || states[i].fields) return;
+          patch(i, { fields: entries(st.fields, entered), done: true });
         }}
         onAnswer={(i, qid, choice) => {
-          const st = level.steps[i];
-          if (st.goal.kind !== 'questions' || states[i].answers?.[qid] !== undefined) return;
+          const st = flat[i].step;
+          if (st.kind !== 'questions' || states[i].answers?.[qid] !== undefined) return;
           const answers = { ...states[i].answers, [qid]: choice };
-          patch(i, { answers, done: st.goal.questions.every((q) => answers[q.id] !== undefined) });
+          patch(i, { answers, done: st.questions.every((q) => answers[q.id] !== undefined) });
         }}
         onContinue={() => {
+          // A lesson without a check is finished when the player moves on.
+          if (current < flat.length) patch(current, { done: true });
           setViewing(null);
           setCurrent((c) => c + 1);
         }}
@@ -136,16 +164,34 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         onExit={onExit}
       />
       <div className="level-work">
-        <LinkScene
-          scene={scene}
-          onChange={setScene}
-          editable={['intercept']}
-          hidden={['jammer']}
-          hiddenRows={hiddenRows}
-        />
+        {showScene && (
+          <LinkScene
+            scene={scene}
+            onChange={setScene}
+            editable={['intercept']}
+            hidden={['jammer']}
+            hiddenRows={hiddenRows}
+          />
+        )}
+        {visual && (
+          <div className="level-instruments" key={shown?.id}>
+            <VisualView
+              visual={visual}
+              links={level.links}
+              hidden={{
+                x: shot.rx,
+                sampleRateHz,
+                preambleSamples: shot.frame.preambleChips * shot.s,
+                specNotes,
+                acNotes,
+                chipRateMcps: truth.chipRateMcps,
+              }}
+            />
+          </div>
+        )}
         {instruments.length > 0 && (
           <div className="level-instruments">
-            {instruments.includes('spectrum') && <Spectrum x={shot.rx} sampleRateHz={sampleRateHz} annotations={specNotes} />}
+            {instruments.includes('spectrum') && <Spectrum x={shot.rx} sampleRateHz={sampleRateHz} annotations={specNotes} envelope={specNotes ? { chipRateMHz: truth.chipRateMcps } : undefined} />}
             {instruments.includes('autocorr') && (
               <Autocorr
                 x={shot.rx}

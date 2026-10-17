@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PRIMITIVE_TAPS, mSequence, periodicAutocorrelation } from './pn';
 
-const DEGREES = Array.from({ length: 13 }, (_, i) => i + 5);
+const DEGREES = Array.from({ length: 15 }, (_, i) => i + 3);
 const LONG = [11, 12, 13, 14, 15, 16, 17];
 
 // Steps the LFSR from the seed and counts the steps until it returns to the seed.
@@ -41,7 +41,7 @@ describe('m-sequence balance', () => {
 });
 
 describe('m-sequence autocorrelation', () => {
-  it.each([5, 6, 7, 8, 9, 10])('degree %i: two-valued over all lags', (n) => {
+  it.each([3, 4, 5, 6, 7, 8, 9, 10])('degree %i: two-valued over all lags', (n) => {
     const code = mSequence(n);
     const N = code.length;
     const r = periodicAutocorrelation(code);
@@ -75,8 +75,8 @@ describe('m-sequence seeds', () => {
 });
 
 describe('m-sequence errors', () => {
-  it('throws for degree 4 and 18', () => {
-    expect(() => mSequence(4)).toThrow();
+  it('throws for degree 2 and 18', () => {
+    expect(() => mSequence(2)).toThrow();
     expect(() => mSequence(18)).toThrow();
   });
 

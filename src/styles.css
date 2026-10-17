@@ -1405,3 +1405,135 @@ select {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Link lab level 1: worked examples, practice and figures */
+.stage-units {
+  list-style: none;
+  margin: 10px 0;
+  padding: 0;
+}
+.stage-unit-group summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding: 2px 4px;
+}
+.stage-unit-group summary.active {
+  color: var(--text);
+  font-weight: 600;
+}
+.stage-unit-group summary.done {
+  color: #86efac;
+}
+.stage-unit-group .stage-steps {
+  margin: 0 0 4px 14px;
+}
+.stage-debrief-link {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: var(--muted);
+}
+.stage-debrief-link:disabled {
+  opacity: 0.5;
+}
+.stage-unit-group.active .stage-debrief-link {
+  color: var(--text);
+  font-weight: 600;
+}
+.stage-para {
+  margin: 8px 0;
+}
+.stage-worked {
+  margin: 8px 0;
+  padding-left: 22px;
+}
+.stage-worked li {
+  margin: 4px 0;
+}
+.stage-example {
+  padding: 8px 10px 8px 28px;
+  border-radius: 6px;
+  background: #0b1220;
+  border-left: 3px solid #34d399;
+}
+.stage-subhead {
+  margin: 10px 0 0;
+  font-weight: 600;
+}
+.stage-rule {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #1c1917;
+  border: 1px solid #f59e0b;
+  font-weight: 600;
+}
+.stage-check {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.stage-check .stage-task {
+  margin-top: 0;
+}
+.stage-check .stage-input input {
+  width: 90px;
+}
+.stage-feedback {
+  margin: 6px 0 0;
+}
+.stage-feedback.ok {
+  color: #86efac;
+}
+.stage-feedback.bad {
+  color: #f87171;
+}
+.vis-label {
+  fill: var(--text);
+  font-size: 10px;
+}
+.vis-sum {
+  fill: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.vis-box {
+  fill: none;
+  stroke: #60a5fa;
+  stroke-width: 1.2;
+}
+.vis-legend-bg {
+  fill: #0b1220;
+  stroke: var(--border);
+}
+.vis-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+.vis-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 320px;
+  font-variant-numeric: tabular-nums;
+}
+.vis-table th,
+.vis-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+.inst-envelope {
+  fill: none;
+  stroke: #e5e7eb;
+  stroke-width: 1.2;
+  stroke-dasharray: 5 4;
+}
+.inst-envelope-label {
+  fill: #e5e7eb;
+  font-size: 9px;
+}

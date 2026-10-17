@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { LEVEL_1, LEVELS, type Ctx, type FieldDef, checkField, fillText, level1Truth, textValues } from './levels';
+import {
+  LEVEL_1,
+  LEVELS,
+  type ApplyStep,
+  type Ctx,
+  type FieldDef,
+  type LessonStep,
+  type PracticeStep,
+  type StepDef,
+  checkField,
+  fillText,
+  flatSteps,
+  knownLinkInfo,
+  level1Truth,
+  textValues,
+  withinTol,
+} from './levels';
 
 const ctx: Ctx = { rxSnrDb: -6.2, rxEbN0Db: 11 };
 const t = level1Truth(3);
@@ -49,31 +65,141 @@ describe('checkField', () => {
     expect(checkField(p, 102.5, t, ctx)).toMatchObject({ ok: false, points: 5 });
     expect(checkField(p, 103.5, t, ctx)).toMatchObject({ ok: false, points: 0 });
   });
-  it('step 5 prediction scores 30, 15, 0', () => {
-    const field = (LEVEL_1.steps[4].goal as { kind: 'fields'; fields: FieldDef[] }).fields[0];
-    expect(checkField(field, 11.8, t, ctx).points).toBe(30);
-    expect(checkField(field, 13.5, t, ctx).points).toBe(15);
+  it('withinTol handles rel, abs, exact and NaN', () => {
+    expect(withinTol({ exact: true }, 70, 70)).toBe(true);
+    expect(withinTol({ exact: true }, 69, 70)).toBe(false);
+    expect(withinTol({ abs: 0.5 }, 11.4, 11.8)).toBe(true);
+    expect(withinTol({ rel: 0.05 }, NaN, 1)).toBe(false);
+  });
+  it('the Eb/N0 prediction scores 20, 10, 0', () => {
+    const step = allSteps().find((s) => s.id === 'F2') as ApplyStep;
+    const field = step.fields[0];
+    expect(checkField(field, 11.8, t, ctx).points).toBe(20);
+    expect(checkField(field, 13.5, t, ctx).points).toBe(10);
     expect(checkField(field, 15, t, ctx).points).toBe(0);
   });
 });
 
-describe('LEVEL_1', () => {
-  it('is in LEVELS and its points sum to 100', () => {
+const allSteps = (): StepDef[] => LEVEL_1.units.flatMap((u) => u.steps);
+
+describe('LEVEL_1 structure', () => {
+  it('is in LEVELS with well-formed units and steps', () => {
     expect(LEVELS).toEqual([LEVEL_1]);
+    expect(LEVEL_1.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
+    const ids = allSteps().map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(flatSteps(LEVEL_1).map((f) => f.step.id)).toEqual(ids);
+    for (const u of LEVEL_1.units) {
+      expect(u.steps.length).toBeGreaterThan(0);
+      for (const s of u.steps) {
+        expect(s.id.startsWith(u.id)).toBe(true);
+        expect(s.title.length).toBeGreaterThan(0);
+        if (s.kind === 'lesson') {
+          expect((s.paragraphs?.length ?? 0) + (s.steps?.length ?? 0)).toBeGreaterThan(0);
+          if (s.check) expect(s.check.wrong.length).toBeGreaterThan(0);
+        }
+        if (s.kind === 'practice') {
+          expect(s.fields.length).toBeGreaterThan(0);
+          expect(s.worked.length).toBeGreaterThan(0);
+          expect(s.hint.length).toBeGreaterThan(0);
+        }
+        if (s.kind === 'apply') {
+          expect(s.fields.length).toBeGreaterThan(0);
+          expect(s.reveal.length).toBeGreaterThan(0);
+        }
+        if (s.kind === 'find') expect(s.reveal.length).toBeGreaterThan(0);
+        if (s.kind === 'questions') {
+          for (const q of s.questions) {
+            expect(q.correct).toBeLessThan(q.options.length);
+          }
+        }
+      }
+    }
+  });
+
+  it('scores only apply fields and questions, 100 points, pass mark 60', () => {
     let total = 0;
-    for (const s of LEVEL_1.steps) {
-      if (s.goal.kind === 'fields') total += s.goal.fields.reduce((a, x) => a + x.points, 0);
-      if (s.goal.kind === 'questions') total += s.goal.questions.reduce((a, x) => a + x.points, 0);
+    for (const s of allSteps()) {
+      if (s.kind === 'apply') total += s.fields.reduce((a, x) => a + x.points, 0);
+      if (s.kind === 'questions') total += s.questions.reduce((a, x) => a + x.points, 0);
+      if (s.kind === 'practice') for (const f of s.fields) expect(f.points).toBe(0);
     }
     expect(total).toBe(100);
     expect(LEVEL_1.passMark).toBe(60);
+    const pts = (id: string, fid: string) => (allSteps().find((s) => s.id === id) as ApplyStep).fields.find((f) => f.id === fid)!.points;
+    expect([pts('C3', 'chipRate'), pts('D3', 'length'), pts('E3', 'gpDb'), pts('E3', 'bitRate'), pts('F2', 'rxEbN0')]).toEqual([15, 15, 15, 5, 20]);
   });
-  it('fillText leaves no placeholder behind', () => {
+
+  it('practice truths come from the practice link', () => {
+    const truth = (id: string, fid: string) => {
+      const f = (allSteps().find((s) => s.id === id) as PracticeStep).fields.find((x) => x.id === fid)!;
+      return f.truth(t, ctx);
+    };
+    expect(truth('C2', 'chipRate')).toBe(2);
+    expect(truth('D2', 'length')).toBe(63);
+    expect(truth('E2', 'gpDb')).toBeCloseTo(17.99, 2);
+    expect(truth('E2', 'bitRate')).toBeCloseTo(31.75, 2);
+  });
+
+  it('every placeholder in every text resolves', () => {
     const v = textValues(t, { interceptSnrDb: 3.4, rxSnrDb: -6.2, rxEbN0Db: 11 });
-    const texts = [LEVEL_1.intro, LEVEL_1.debrief];
-    for (const s of LEVEL_1.steps) texts.push(s.task, s.reveal, s.hint ?? '', s.tryThis ?? '');
+    const texts: string[] = [LEVEL_1.intro, LEVEL_1.debrief];
+    for (const s of allSteps()) {
+      texts.push(s.title);
+      if (s.kind === 'lesson') {
+        texts.push(...(s.paragraphs ?? []), ...(s.steps ?? []), s.rule ?? '');
+        if (s.check) texts.push(s.check.question, s.check.wrong);
+      } else if (s.kind === 'practice') texts.push(s.task, s.hint, ...s.worked);
+      else if (s.kind === 'apply') texts.push(s.task, s.hint ?? '', ...s.reveal);
+      else if (s.kind === 'find') texts.push(s.task, s.hint, ...s.reveal);
+      else for (const q of s.questions) texts.push(q.text, q.explain, ...q.options);
+    }
     for (const x of texts) expect(fillText(x, v)).not.toContain('{');
     expect(fillText('{n} and {n}', { n: '5' })).toBe('5 and 5');
     expect(fillText('{missing}', {})).toBe('{missing}');
+  });
+
+  it('textValues gives chipRateK and bitRate', () => {
+    const v = textValues({ ...t, n: 127, chipRateMcps: 0.5, bitRateKbps: 500 / 127 }, { rxSnrDb: -6, rxEbN0Db: 15 });
+    expect(v.chipRateK).toBe('500');
+    expect(v.bitRate).toBe('3.94');
+  });
+});
+
+describe('numbers written in the texts agree with the known links', () => {
+  const ex = knownLinkInfo(LEVEL_1.links.example);
+  const pr = knownLinkInfo(LEVEL_1.links.practice);
+  const text = (id: string) => {
+    const s = allSteps().find((x) => x.id === id) as LessonStep;
+    return [...(s.paragraphs ?? []), ...(s.steps ?? []), s.rule ?? ''].join(' ');
+  };
+  it('example link', () => {
+    expect(ex.n).toBe(31);
+    expect(ex.chipRateMcps).toBe(1);
+    expect(ex.periodUs).toBe(31);
+    expect(ex.gpDb.toFixed(1)).toBe('14.9');
+    expect(ex.bitRateKbps.toFixed(1)).toBe('32.3');
+    expect(1 / ex.chipRateMcps).toBe(1); // chip length in us
+    expect(text('E1')).toContain('14.9 dB');
+    expect(text('E1')).toContain('32.3 kbps');
+    expect(text('E1')).toContain('Gp = 31');
+    expect(text('D1')).toContain('31 µs, 62 µs and 93 µs');
+    expect(text('D1')).toContain('31 µs × 1 Mcps = 31 chips');
+    expect(text('C1')).toContain('31-chip');
+    expect(text('C1')).toContain('1.0 Mcps');
+    expect(text('A1')).toContain('7 chips');
+    expect(Number((-8 + Number(ex.gpDb.toFixed(1))).toFixed(1))).toBe(6.9);
+    expect(text('F1')).toContain('6.9 dB');
+  });
+  it('practice link', () => {
+    expect(pr.n).toBe(63);
+    expect(pr.chipRateMcps).toBe(2);
+    expect(pr.periodUs).toBe(31.5);
+    expect(pr.gpDb.toFixed(1)).toBe('18.0');
+    expect(pr.bitRateKbps.toFixed(1)).toBe('31.7');
+    const worked = (id: string) => (allSteps().find((x) => x.id === id) as PracticeStep).worked.join(' ');
+    expect(worked('E2')).toContain('18.0 dB');
+    expect(worked('E2')).toContain('31.7 kbps');
+    expect(worked('D2')).toContain('31.5 µs × 2.0 Mcps = 63 chips');
   });
 });

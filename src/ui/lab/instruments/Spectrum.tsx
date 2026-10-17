@@ -4,11 +4,17 @@ import type { IQ } from '../../../engine/lab/signal';
 import { Axes } from './Axes';
 import { INNER_H, INNER_W, PAD, PH, PW, niceTicks, plotX, poly } from './plot';
 
-const NFFTS = [256, 1024, 4096];
+const NFFTS = [64, 128, 256, 1024, 4096];
 
 // Welch power spectrum in dB, MHz relative to the carrier, with a click-to-place marker.
-export function Spectrum({ x, sampleRateHz, annotations }: { x: IQ; sampleRateHz: number; annotations?: { xMHz: number; label: string }[] }) {
-  const [nfft, setNfft] = useState(1024);
+export function Spectrum({ x, sampleRateHz, annotations, title = 'Spectrum', envelope }: {
+  x: IQ;
+  sampleRateHz: number;
+  annotations?: { xMHz: number; label: string }[];
+  title?: string;
+  envelope?: { chipRateMHz: number }; // dashed sinc² curve, levelled to the measured mean inside |f| < Rc/2
+}) {
+  const [nfft, setNfft] = useState(128);
   const [marker, setMarker] = useState<number | null>(null); // frequency in MHz
   const spec = useMemo(() => {
     const { freq, psd } = welchPsd(x, nfft);
@@ -36,10 +42,29 @@ export function Spectrum({ x, sampleRateHz, annotations }: { x: IQ; sampleRateHz
     return { f: spec.mhz[best], level: spec.db[best] };
   }, [marker, spec]);
 
+  const env = useMemo(() => {
+    if (!envelope) return null;
+    const rc = envelope.chipRateMHz;
+    const sinc2 = (f: number) => {
+      const a = Math.PI * (f / rc);
+      return Math.abs(a) < 1e-9 ? 1 : (Math.sin(a) / a) ** 2;
+    };
+    let sum = 0;
+    let n = 0;
+    for (let i = 0; i < spec.mhz.length; i++) {
+      if (Math.abs(spec.mhz[i]) < 0.5 * rc) {
+        sum += spec.db[i] - 10 * Math.log10(sinc2(spec.mhz[i]));
+        n++;
+      }
+    }
+    const off = n > 0 ? sum / n : 0;
+    return { mhz: spec.mhz, db: Array.from(spec.mhz, (f) => 10 * Math.log10(Math.max(sinc2(f), 1e-6)) + off) };
+  }, [envelope, spec]);
+
   return (
     <section className="inst-panel">
       <header className="inst-head">
-        <h3>Spectrum</h3>
+        <h3>{title}</h3>
         <label>
           RBW{' '}
           <select value={nfft} onChange={(e) => setNfft(Number(e.target.value))}>
@@ -60,6 +85,15 @@ export function Spectrum({ x, sampleRateHz, annotations }: { x: IQ; sampleRateHz
           yLabel="Level (dB per bin)"
         />
         <polyline points={poly(spec.mhz.length, (i) => fx(spec.mhz[i]), (i) => fy(spec.db[i]))} className="inst-line c1" />
+        {env && (
+          <g>
+            <polyline
+              points={poly(env.mhz.length, (i) => fx(env.mhz[i]), (i) => fy(Math.max(env.db[i], spec.bottom)))}
+              className="inst-envelope"
+            />
+            <text x={fx(0) + 6} y={PAD.t + 22} className="inst-envelope-label">envelope</text>
+          </g>
+        )}
         {annotations?.filter((a) => Math.abs(a.xMHz) <= half).map((a) => (
           <g key={`${a.xMHz}`}>
             <line x1={fx(a.xMHz)} x2={fx(a.xMHz)} y1={PAD.t} y2={PAD.t + INNER_H} className="inst-annot" />

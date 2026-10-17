@@ -1,5 +1,7 @@
-// Fibonacci LFSR feedback taps for degrees 5 to 17 (1-based stages, highest = degree).
+// Fibonacci LFSR feedback taps for degrees 3 to 17 (1-based stages, highest = degree).
 export const PRIMITIVE_TAPS: Record<number, number[]> = {
+  3: [3, 2],
+  4: [4, 3],
   5: [5, 3],
   6: [6, 5],
   7: [7, 6],

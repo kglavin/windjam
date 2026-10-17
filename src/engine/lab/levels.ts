@@ -1,4 +1,4 @@
-// Link lab level definitions: hidden truth, steps, tolerances, texts and scoring (design sections 7 and 8).
+// Link lab level definitions: hidden truth, units and steps, tolerances, texts and scoring (design sections 7 and 8).
 // Pure: no React, no storage.
 import { createRng } from '../rng';
 
@@ -46,27 +46,36 @@ export interface FieldDef {
   label: string;
   unit: string;
   truth: (t: Truth, ctx: Ctx) => number;
-  check: { rel?: number; abs?: number; exact?: boolean };
+  check: Tol;
   points: number;
   // Reduced credit for an answer outside `check` but inside this tolerance.
   partial?: { abs: number; points: number };
 }
 
+export interface Tol {
+  rel?: number;
+  abs?: number;
+  exact?: boolean;
+}
+
+export function withinTol(c: Tol, value: number, truth: number): boolean {
+  if (!Number.isFinite(value)) return false;
+  if (c.exact) return value === truth;
+  const err = Math.abs(value - truth);
+  if (c.rel !== undefined) return err <= c.rel * Math.abs(truth);
+  if (c.abs !== undefined) return err <= c.abs;
+  return false;
+}
+
 export function checkField(f: FieldDef, value: number, t: Truth, ctx: Ctx): { ok: boolean; truth: number; points: number } {
   const truth = f.truth(t, ctx);
   const err = Math.abs(value - truth);
-  const within = (c: { rel?: number; abs?: number; exact?: boolean }) => {
-    if (!Number.isFinite(value)) return false;
-    if (c.exact) return value === truth;
-    if (c.rel !== undefined) return err <= c.rel * Math.abs(truth);
-    if (c.abs !== undefined) return err <= c.abs;
-    return false;
-  };
-  const ok = within(f.check);
+  const ok = withinTol(f.check, value, truth);
   if (ok) return { ok, truth, points: f.points };
   if (f.partial && Number.isFinite(value) && err <= f.partial.abs) return { ok, truth, points: f.partial.points };
   return { ok, truth, points: 0 };
 }
+
 
 export interface Question {
   id: string;
@@ -77,222 +86,545 @@ export interface Question {
   points: number;
 }
 
-export interface StepDef {
+// A small link the player is shown, never hidden: its numbers are written in the texts.
+export interface KnownLink {
+  degree: number;
+  chipRateMcps: number;
+}
+
+export interface KnownLinkInfo extends KnownLink {
+  n: number;
+  bitRateKbps: number;
+  gp: number;
+  gpDb: number;
+  periodUs: number;
+}
+
+// Short code, one code period per bit.
+export function knownLinkInfo(k: KnownLink): KnownLinkInfo {
+  const n = 2 ** k.degree - 1;
+  return {
+    ...k,
+    n,
+    bitRateKbps: (k.chipRateMcps * 1000) / n,
+    gp: n,
+    gpDb: 10 * Math.log10(n),
+    periodUs: n / k.chipRateMcps,
+  };
+}
+
+export type LinkKey = 'example' | 'practice' | 'hidden';
+
+export type Visual =
+  | { kind: 'spreading' }
+  | { kind: 'spreadVsUnspread' }
+  | { kind: 'despread' }
+  | { kind: 'interceptCompare' }
+  | { kind: 'dbTable' }
+  | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
+  | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
+  | { kind: 'none' };
+
+export type Instrument = 'spectrum' | 'autocorr';
+
+export interface LessonStep {
+  kind: 'lesson';
+  id: string;
+  title: string;
+  paragraphs?: string[];
+  steps?: string[]; // numbered worked example
+  rule?: string;
+  visual: Visual;
+  // Unscored, unlimited retries.
+  check?: { question: string; unit?: string; answer: number; tol: Tol; wrong: string };
+}
+
+export interface PracticeStep {
+  kind: 'practice';
+  id: string;
+  title: string;
+  link: 'practice';
+  visual: Visual;
+  task: string;
+  hint: string;
+  fields: FieldDef[]; // truths from the practice link, all unscored
+  worked: string[];
+}
+
+export interface ApplyStep {
+  kind: 'apply';
   id: string;
   title: string;
   task: string;
   hint?: string;
-  instruments: ('spectrum' | 'autocorr')[];
-  goal:
-    | { kind: 'interceptSnr'; atLeastDb: number }
-    | { kind: 'fields'; fields: FieldDef[] }
-    | { kind: 'questions'; questions: Question[] };
-  reveal: string;
-  tryThis?: string;
-  annotate?: 'nulls' | 'codePeriods';
+  fields: FieldDef[];
+  reveal: string[];
+  instruments: Instrument[];
+  visual?: Visual;
+  annotate?: 'nulls' | 'codePeriods'; // drawn on the instrument once the step is done
+  prediction?: boolean; // scored as prediction rather than characterisation
+}
+
+export interface FindStep {
+  kind: 'find';
+  id: string;
+  title: string;
+  task: string;
+  hint: string;
+  atLeastDb: number;
+  reveal: string[];
+  instruments: Instrument[];
+}
+
+export interface QuestionsStep {
+  kind: 'questions';
+  id: string;
+  title: string;
+  task: string;
+  questions: Question[];
+}
+
+export type StepDef = LessonStep | PracticeStep | ApplyStep | FindStep | QuestionsStep;
+
+export interface UnitDef {
+  id: string;
+  title: string;
+  steps: StepDef[];
 }
 
 export interface LevelDef {
   id: number;
   title: string;
   intro: string;
-  steps: StepDef[];
+  links: { example: KnownLink; practice: KnownLink };
+  units: UnitDef[];
   debrief: string;
   passMark: number;
 }
+
+export interface FlatStep {
+  index: number;
+  unitIndex: number;
+  unit: UnitDef;
+  step: StepDef;
+}
+
+// Every step in play order, with the unit it belongs to. State arrays are indexed by `index`.
+export function flatSteps(level: LevelDef): FlatStep[] {
+  const out: FlatStep[] = [];
+  level.units.forEach((unit, unitIndex) => {
+    for (const step of unit.steps) out.push({ index: out.length, unitIndex, unit, step });
+  });
+  return out;
+}
+
+const EXAMPLE: KnownLink = { degree: 5, chipRateMcps: 1 };
+const PRACTICE: KnownLink = { degree: 6, chipRateMcps: 2 };
+const practiceLink = knownLinkInfo(PRACTICE);
 
 export const LEVEL_1: LevelDef = {
   id: 1,
   title: 'A quiet signal',
   intro:
-    'An enemy link uses direct-sequence spread spectrum (DSSS). Before you can attack it you need its shape: how fast it chips, how long its code is, and how much processing gain that gives it. Those numbers decide how much jamming power every attack in the later levels will need.',
+    'An enemy radio link uses spread spectrum. In this level you learn what that means and take the link apart: how fast it sends chips, how long its code is, and how much that protects it. Each idea comes with a worked example first, then one for you to try, then the real thing.',
   passMark: 60,
-  steps: [
+  links: { example: EXAMPLE, practice: PRACTICE },
+  units: [
     {
-      id: 'find',
-      title: 'Find the signal',
-      instruments: ['spectrum'],
-      goal: { kind: 'interceptSnr', atLeastDb: 3 },
-      task:
-        'Your intercept receiver (amber) is far from the enemy transmitter, and the spectrum shows only noise. Drag the intercept toward the transmitter, or type its position, until its chip SNR is at least +3 dB.',
-      hint:
-        'Watch Chip SNR under At the intercept. Halving the distance gains about 12 dB on a two-ray path and 6 dB in free space.',
-      reveal:
-        "The signal is out of the noise at {interceptSnr} dB per chip. Now look at the friendly receiver: its SNR is {rxSnr} dB, below the noise, yet the link works. A DSSS transmitter spreads each bit over many chips, so per hertz it is weaker than the noise. The friendly receiver knows the code and adds the chips of each bit back together (despreading), which recovers the processing gain. You don't know the code, so you have to get closer.",
-    },
-    {
-      id: 'chiprate',
-      title: 'Bandwidth and chip rate',
-      instruments: ['spectrum'],
-      annotate: 'nulls',
-      task:
-        'Each chip is a rectangular pulse, so the spectrum has a sinc² shape: a main lobe centred on the carrier, first nulls at ± the chip rate, and smaller side lobes beyond. Click the spectrum to put the marker on each first null and read its frequency. Enter the null-to-null bandwidth and the chip rate.',
-      hint: 'If the nulls are hard to see, choose a finer resolution bandwidth or move the intercept closer.',
-      goal: {
-        kind: 'fields',
-        fields: [
-          {
-            id: 'bandwidth',
-            label: 'Null-to-null bandwidth',
-            unit: 'MHz',
-            truth: (t) => 2 * t.chipRateMcps,
-            check: { rel: 0.1 },
-            points: 5,
-          },
-          {
-            id: 'chipRate',
-            label: 'Chip rate',
-            unit: 'Mcps',
-            truth: (t) => t.chipRateMcps,
-            check: { rel: 0.05 },
-            points: 10,
-          },
-        ],
-      },
-      reveal:
-        'Chip rate {chipRate} Mcps. The nulls sit at ±{chipRate} MHz, so the main lobe is {bandwidth} MHz wide, and each chip lasts 1/Rc = {chipUs} µs.',
-    },
-    {
-      id: 'code',
-      title: 'Code length',
-      instruments: ['autocorr'],
-      annotate: 'codePeriods',
-      task:
-        'Every transmission starts with a preamble: the spreading code repeated with no data on it. A repeating sequence matches itself when shifted by a whole period, so the autocorrelation of the preamble has a peak at every multiple of the code period. Set the window to preamble, read the spacing between peaks, and work out how many chips the code has: period × chip rate.',
-      hint: 'Move over the plot to read the lag. Choose a longer maximum lag if you see fewer than two peaks.',
-      goal: {
-        kind: 'fields',
-        fields: [
-          {
-            id: 'period',
-            label: 'Code period',
-            unit: 'µs',
-            truth: (t) => t.n / t.chipRateMcps,
-            check: { rel: 0.02 },
-            points: 0,
-          },
-          {
-            id: 'length',
-            label: 'Code length',
+      id: 'A',
+      title: 'What spreading does',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'A1',
+          title: 'Bits become chips',
+          visual: { kind: 'spreading' },
+          paragraphs: [
+            'A radio link sends bits. The top row shows 4 bits: +1, −1, −1, +1. Each bit lasts 7 µs.',
+            'Spread spectrum multiplies every bit by a fast pattern called the code. The middle row is the code: 7 short pulses called chips, each 1 µs long, repeated for every bit.',
+            'The bottom row is what the transmitter sends: bit × code. A +1 bit sends the code as it is. A −1 bit sends it upside down.',
+            'So each bit becomes 7 chips, and chips go by 7 times faster than bits.',
+          ],
+          check: {
+            question: 'With this 7-chip code, how many chips are sent for 10 bits?',
             unit: 'chips',
-            truth: (t) => t.n,
-            check: { exact: true },
-            points: 10,
+            answer: 70,
+            tol: { exact: true },
+            wrong: 'Each bit becomes 7 chips, so 10 bits become 10 × 7.',
           },
-        ],
-      },
-      reveal:
-        'The code is {n} chips long, period {periodUs} µs. {n} = 2^{degree} − 1: a maximal-length sequence from a {degree}-stage shift register. The main peak is a triangle two chips wide at its base, because shifting by a chip or more leaves the chips unrelated.',
-      tryThis:
-        'Switch the window to data. The peaks vanish: each bit multiplies a whole code period by +1 or −1 at random, so the shifted copies agree with either sign equally often and cancel. Now switch the mode to fluctuation. It averages the square of correlations over short windows, which does not cancel, so the code period shows again. That is how you would find a short code that has no preamble.',
+        },
+        {
+          kind: 'lesson',
+          id: 'A2',
+          title: 'Spreading makes the signal wide and low',
+          visual: { kind: 'spreadVsUnspread' },
+          paragraphs: [
+            'This plot is a spectrum: how much power the signal has at each frequency. The orange line is the bits sent without the code. The blue line is the same bits sent with the code.',
+            'Short pulses take up more frequencies than long ones. The chips are 7 times shorter than the bits, so the blue signal is 7 times wider: its hump runs from −1 MHz to +1 MHz, the orange one only from about −0.14 to +0.14 MHz.',
+            'Both carry the same power. Spread over 7 times the width, the blue signal is about 7 times lower at each frequency. That is why spread spectrum is hard to see: it can sit below the noise.',
+          ],
+          check: {
+            question: 'If each bit became 70 chips instead of 7, how many times wider would the spread signal be than the unspread one?',
+            unit: 'times',
+            answer: 70,
+            tol: { exact: true },
+            wrong: 'The width follows the chips. 70 chips per bit makes each chip 70 times shorter than a bit.',
+          },
+        },
+        {
+          kind: 'lesson',
+          id: 'A3',
+          title: 'The receiver gets the bits back',
+          visual: { kind: 'despread' },
+          paragraphs: [
+            'The friendly receiver knows the code. It multiplies what it receives by the same code again. A chip times itself is always +1, so the code cancels out and the bits come back (third row).',
+            "Then it adds up the 7 chips of each bit (bottom row). The signal's 7 chips all point the same way, so they add up to 7. Noise does not follow the code: its chips point up and down at random and mostly cancel.",
+            'So after adding, the signal has gained 7 times on the noise. This gain is called the processing gain, Gp. It equals the number of chips per bit.',
+            'A receiver without the code cannot do this. That is the advantage the link has over you, and over any jammer.',
+          ],
+          check: {
+            question: 'A code has 63 chips per bit. What is its processing gain, in times?',
+            unit: 'times',
+            answer: 63,
+            tol: { exact: true },
+            wrong: 'Gp is the number of chips per bit.',
+          },
+        },
+      ],
     },
     {
-      id: 'gain',
+      id: 'B',
+      title: 'Find the enemy signal',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'B1',
+          title: 'Why you have to get close',
+          visual: { kind: 'interceptCompare' },
+          paragraphs: [
+            'Your intercept receiver does not know the code, so it gets no processing gain. It sees the signal only where the signal is stronger than the noise.',
+            "Chip SNR is the signal's power divided by the noise power in the signal's band, in dB. 0 dB means equal; −10 dB means the signal is 10 times weaker than the noise.",
+            'Left: the intercept is far away. Chip SNR is −15 dB and the spectrum is flat noise. Right: the intercept is close. Chip SNR is +20 dB and the hump stands out.',
+          ],
+        },
+        {
+          kind: 'find',
+          id: 'B2',
+          title: 'Find the real link',
+          atLeastDb: 3,
+          instruments: ['spectrum'],
+          task:
+            'Now the real enemy link. Drag your intercept (amber) toward the enemy transmitter (blue), or type its position, until the chip SNR under At the intercept reaches +3 dB.',
+          hint: 'Halving the distance gains about 12 dB.',
+          reveal: [
+            'Found: chip SNR {interceptSnr} dB. The friendly receiver hears the same link at {rxSnr} dB, below the noise, and still decodes it, because despreading gives it the processing gain.',
+          ],
+        },
+      ],
+    },
+    {
+      id: 'C',
+      title: 'Chip rate',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'C1',
+          title: 'Example: reading the chip rate',
+          visual: { kind: 'spectrum', link: 'example', annotate: true },
+          paragraphs: [
+            'This is the spectrum of the 31-chip example link, which sends 1 million chips per second.',
+            'The fine bumps come from the pattern of the code. What matters is the overall shape, the dashed envelope: one wide hump that falls to zero at ± the chip rate.',
+          ],
+          steps: [
+            'Find the deepest dip on each side of the central hump. These dips are called nulls. Here they are at −1.0 MHz and +1.0 MHz.',
+            'Bandwidth = right null − left null = 1.0 − (−1.0) = 2.0 MHz.',
+            'Chip rate = bandwidth ÷ 2 = 1.0 Mcps (million chips per second).',
+          ],
+          rule: 'The nulls sit at ± the chip rate. Each chip lasts 1 ÷ chip rate: here 1 µs.',
+        },
+        {
+          kind: 'practice',
+          id: 'C2',
+          title: 'Try it: practice link',
+          link: 'practice',
+          visual: { kind: 'spectrum', link: 'practice' },
+          task:
+            'Click the spectrum to put the marker on the first null to the right of the hump and read its frequency. Enter the chip rate.',
+          hint: 'The first null is the first deep dip to the right of the central hump. The chip rate equals its frequency.',
+          fields: [
+            {
+              id: 'chipRate',
+              label: 'Chip rate',
+              unit: 'Mcps',
+              truth: () => practiceLink.chipRateMcps,
+              check: { rel: 0.05 },
+              points: 0,
+            },
+          ],
+          worked: [
+            'The nulls are at −2.0 MHz and +2.0 MHz.',
+            'Bandwidth = 2.0 − (−2.0) = 4.0 MHz.',
+            'Chip rate = 4.0 ÷ 2 = 2.0 Mcps.',
+          ],
+        },
+        {
+          kind: 'apply',
+          id: 'C3',
+          title: 'Your turn: the enemy link',
+          instruments: ['spectrum'],
+          annotate: 'nulls',
+          task: 'Same method on the enemy link.',
+          hint: 'If the nulls are hard to see, move the intercept closer or choose a finer resolution bandwidth (RBW).',
+          fields: [
+            {
+              id: 'chipRate',
+              label: 'Chip rate',
+              unit: 'Mcps',
+              truth: (t) => t.chipRateMcps,
+              check: { rel: 0.05 },
+              points: 15,
+            },
+          ],
+          reveal: [
+            'The nulls are at ±{chipRate} MHz.',
+            'Bandwidth = {bandwidth} MHz.',
+            'Chip rate = {chipRate} Mcps, so each chip lasts {chipUs} µs.',
+          ],
+        },
+      ],
+    },
+    {
+      id: 'D',
+      title: 'Code length',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'D1',
+          title: 'Example: reading the code length',
+          visual: { kind: 'autocorr', link: 'example', annotate: true },
+          paragraphs: [
+            'Every transmission starts with a preamble: the code sent over and over with no data on it. Because the code repeats, the signal looks like itself again after one code length.',
+            'The autocorrelation plot measures that: how alike the signal is to itself delayed by a given time. 1 means identical, 0 means unrelated.',
+          ],
+          steps: [
+            'The first peak is always at 0: no delay.',
+            'The next peaks are at 31 µs, 62 µs and 93 µs. The spacing, 31 µs, is the code period.',
+            'Code length = period × chip rate = 31 µs × 1 Mcps = 31 chips.',
+          ],
+          rule: 'Peaks repeat every code period. Chips in the code = period × chip rate.',
+        },
+        {
+          kind: 'practice',
+          id: 'D2',
+          title: 'Try it: practice link',
+          link: 'practice',
+          visual: { kind: 'autocorr', link: 'practice' },
+          task: 'Move over the plot to read the delay of the first peak after 0. Enter the code length in chips.',
+          hint: "You measured this link's chip rate: 2.0 Mcps. Length = period × chip rate.",
+          fields: [
+            {
+              id: 'length',
+              label: 'Code length',
+              unit: 'chips',
+              truth: () => practiceLink.n,
+              check: { exact: true },
+              points: 0,
+            },
+          ],
+          worked: ['The first peak after 0 is at 31.5 µs.', 'Code length = 31.5 µs × 2.0 Mcps = 63 chips.'],
+        },
+        {
+          kind: 'apply',
+          id: 'D3',
+          title: 'Your turn: the enemy link',
+          instruments: ['autocorr'],
+          annotate: 'codePeriods',
+          task: 'Same method on the enemy link. Use the chip rate you measured for it.',
+          hint: 'Choose a shorter maximum lag if the peaks are crowded, a longer one if you see none after 0.',
+          fields: [
+            {
+              id: 'length',
+              label: 'Code length',
+              unit: 'chips',
+              truth: (t) => t.n,
+              check: { exact: true },
+              points: 15,
+            },
+          ],
+          reveal: ['The peaks are every {periodUs} µs.', 'Code length = {periodUs} µs × {chipRate} Mcps = {n} chips.'],
+        },
+      ],
+    },
+    {
+      id: 'E',
       title: 'Processing gain',
-      instruments: ['autocorr'],
-      task:
-        'This link uses a short code: one full code period per bit. So a bit lasts one code period, the bit rate is 1 / period, and the processing gain is Gp = chip rate / bit rate, the number of chips per bit. Enter the bit rate and Gp in dB (10·log10 Gp).',
-      goal: {
-        kind: 'fields',
-        fields: [
-          {
-            id: 'bitRate',
-            label: 'Bit rate',
-            unit: 'kbps',
-            truth: (t) => t.bitRateKbps,
-            check: { rel: 0.05 },
-            points: 5,
-          },
-          {
-            id: 'gpDb',
-            label: 'Processing gain',
-            unit: 'dB',
-            truth: (t) => t.gpDb,
-            check: { abs: 1 },
-            points: 10,
-          },
-        ],
-      },
-      reveal:
-        'Gp = {n} = {gpDb} dB. After despreading, the signal stands {gpDb} dB higher relative to anything that does not carry the code, a jammer included. Broadband noise therefore needs {gpDb} dB more power to do the damage it would do to an unspread link.',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'E1',
+          title: 'Example: processing gain in dB',
+          visual: { kind: 'dbTable' },
+          paragraphs: [
+            'The example link sends one code period per bit, so each bit is 31 chips and Gp = 31.',
+            'Gains are usually given in decibels (dB): dB = 10 × log10(ratio). A few to remember: 2 times is 3 dB, 10 times is 10 dB, 100 times is 20 dB. The table has more.',
+          ],
+          steps: [
+            'Gp = 31 chips per bit → 10 × log10(31) = 14.9 dB.',
+            'Bit rate = chip rate ÷ chips per bit = 1000 kchips/s ÷ 31 = 32.3 kbps.',
+          ],
+        },
+        {
+          kind: 'practice',
+          id: 'E2',
+          title: 'Try it: practice link',
+          link: 'practice',
+          visual: { kind: 'dbTable' },
+          task: 'The practice link has 63 chips per bit at 2.0 Mcps. Enter its Gp in dB and its bit rate.',
+          hint: 'Use the table, or 10 × log10(63). Bit rate = 2000 ÷ 63 kbps.',
+          fields: [
+            {
+              id: 'gpDb',
+              label: 'Processing gain',
+              unit: 'dB',
+              truth: () => practiceLink.gpDb,
+              check: { abs: 0.5 },
+              points: 0,
+            },
+            {
+              id: 'bitRate',
+              label: 'Bit rate',
+              unit: 'kbps',
+              truth: () => practiceLink.bitRateKbps,
+              check: { rel: 0.05 },
+              points: 0,
+            },
+          ],
+          worked: ['Gp = 63 → 10 × log10(63) = 18.0 dB.', 'Bit rate = 2000 kchips/s ÷ 63 = 31.7 kbps.'],
+        },
+        {
+          kind: 'apply',
+          id: 'E3',
+          title: 'Your turn: the enemy link',
+          instruments: [],
+          visual: { kind: 'dbTable' },
+          task: 'The enemy link also sends one code period per bit. Enter its Gp in dB and its bit rate.',
+          fields: [
+            {
+              id: 'gpDb',
+              label: 'Processing gain',
+              unit: 'dB',
+              truth: (t) => t.gpDb,
+              check: { abs: 1 },
+              points: 15,
+            },
+            {
+              id: 'bitRate',
+              label: 'Bit rate',
+              unit: 'kbps',
+              truth: (t) => t.bitRateKbps,
+              check: { rel: 0.05 },
+              points: 5,
+            },
+          ],
+          reveal: ['Gp = {n} → 10 × log10({n}) = {gpDb} dB.', 'Bit rate = {chipRateK} kchips/s ÷ {n} = {bitRate} kbps.'],
+        },
+      ],
     },
     {
-      id: 'predict',
-      title: "Predict the receiver's Eb/N0",
-      instruments: [],
-      task:
-        "Under Signal path the budget shows the friendly receiver's SNR in the chip bandwidth. Predict the Eb/N0 its correlator sees after despreading.",
-      goal: {
-        kind: 'fields',
-        fields: [
-          {
-            id: 'rxEbN0',
-            label: 'Eb/N0 at the receiver',
-            unit: 'dB',
-            truth: (_t, ctx) => ctx.rxEbN0Db,
-            check: { abs: 1 },
-            points: 30,
-            partial: { abs: 3, points: 15 },
-          },
-        ],
-      },
-      reveal:
-        'Eb/N0 = SNR + Gp = {rxSnr} + {gpDb} = {rxEbN0} dB. Coherent BPSK needs about 9.6 dB for an error rate of 1 in 100,000, so this link has {margin} dB of margin. Every attack in the next levels has to eat through that margin, after losing Gp to despreading.',
+      id: 'F',
+      title: "The receiver's margin",
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'F1',
+          title: "Example: what the receiver's decoder sees",
+          visual: { kind: 'none' },
+          paragraphs: [
+            "The friendly receiver's budget shows its SNR before despreading. Despreading adds Gp. What its decoder then sees is Eb/N0, the energy of one bit over the noise: Eb/N0 = SNR + Gp, in dB.",
+          ],
+          steps: ['Example: SNR −8.0 dB and Gp 14.9 dB.', 'Eb/N0 = −8.0 + 14.9 = 6.9 dB.'],
+          rule:
+            'The link needs about 9.6 dB of Eb/N0 for fewer than 1 error in 100,000 bits. Anything above that is margin, and a jammer has to take the margin away to break the link.',
+        },
+        {
+          kind: 'apply',
+          id: 'F2',
+          title: "Your turn: the enemy link's margin",
+          instruments: [],
+          prediction: true,
+          task:
+            'Read the SNR under Signal path in the budget, add the Gp you measured, and enter the Eb/N0.',
+          fields: [
+            {
+              id: 'rxEbN0',
+              label: 'Eb/N0 at the receiver',
+              unit: 'dB',
+              truth: (_t, ctx) => ctx.rxEbN0Db,
+              check: { abs: 1 },
+              points: 20,
+              partial: { abs: 3, points: 10 },
+            },
+          ],
+          reveal: ['Eb/N0 = {rxSnr} + {gpDb} = {rxEbN0} dB.', 'Margin = {rxEbN0} − 9.6 = {margin} dB.'],
+        },
+      ],
     },
     {
-      id: 'questions',
+      id: 'G',
       title: 'Check your understanding',
-      instruments: [],
-      task: 'Three short questions. One attempt each.',
-      goal: {
-        kind: 'questions',
-        questions: [
-          {
-            id: 'q1',
-            text: 'Why could the friendly receiver decode a signal below the noise when your intercept could not see it at a similar SNR?',
-            options: [
-              'Despreading adds up the chips of each bit, which only a receiver that knows the code can do',
-              'The friendly receiver has a better antenna',
-              'The noise is lower at the friendly receiver',
-            ],
-            correct: 0,
-            explain:
-              'Only a receiver holding the code can despread. Despreading gains Gp for the signal and nothing for noise or a jammer, so the friendly receiver works at a chip SNR an interceptor cannot use.',
-            points: 10,
-          },
-          {
-            id: 'q2',
-            text: 'If the chip rate doubled and the data rate stayed the same, what would happen?',
-            options: [
-              'Bandwidth and Gp both double: Gp rises by 3 dB',
-              'Bandwidth doubles and Gp stays the same',
-              'Gp doubles and the bandwidth stays the same',
-            ],
-            correct: 0,
-            explain:
-              'Gp is chips per bit. Twice the chip rate at the same bit rate means twice the chips per bit and twice the occupied bandwidth.',
-            points: 10,
-          },
-          {
-            id: 'q3',
-            text: 'Why did the autocorrelation peaks disappear in the data window?',
-            options: [
-              'Random data flips the sign of whole code periods, so shifted copies cancel',
-              'The noise is stronger during data',
-              'The code changes after the preamble',
-            ],
-            correct: 0,
-            explain:
-              'The code is the same throughout. Each bit multiplies one period by ±1, so a shift of one period lines up periods with random relative signs, and their contributions cancel on average.',
-            points: 10,
-          },
-        ],
-      },
-      reveal: '',
+      steps: [
+        {
+          kind: 'questions',
+          id: 'G1',
+          title: 'Three questions',
+          task: 'Three short questions. One attempt each.',
+          questions: [
+            {
+              id: 'q1',
+              text: 'Why can the friendly receiver decode the link when its SNR is below 0 dB?',
+              options: [
+                'It multiplies by the code and adds up the chips of each bit, gaining Gp',
+                'It has a bigger antenna',
+                'The noise is lower where it is',
+              ],
+              correct: 0,
+              explain:
+                "Despreading adds up the chips of each bit. The signal's chips add up and the noise's mostly cancel, a gain of Gp. Without the code you cannot do this.",
+              points: 10,
+            },
+            {
+              id: 'q2',
+              text: 'The chip rate doubles and the bit rate stays the same. What happens?',
+              options: [
+                'The signal gets twice as wide and Gp doubles (+3 dB)',
+                'The signal gets twice as wide and Gp stays the same',
+                'Gp doubles and the width stays the same',
+              ],
+              correct: 0,
+              explain:
+                'Twice the chips per second at the same bits per second means twice the chips per bit, so Gp doubles, and chips half as long, so the signal is twice as wide.',
+              points: 10,
+            },
+            {
+              id: 'q3',
+              text: 'Your intercept shows only flat noise. What should you do?',
+              options: [
+                'Move closer to the transmitter to raise the chip SNR',
+                'Wait for the preamble',
+                'Look at the autocorrelation instead',
+              ],
+              correct: 0,
+              explain:
+                'Without the code you get no processing gain, so the only way to see the signal is more signal: get closer, or use a better antenna.',
+              points: 10,
+            },
+          ],
+        },
+      ],
     },
   ],
   debrief:
-    "You measured the link from outside. The spectrum's nulls gave the chip rate, the preamble's autocorrelation gave the code length, and together they gave the processing gain: {gpDb} dB. Every attack pays that price, because despreading dilutes anything that does not carry the code. Level 2 measures exactly how much broadband noise that costs.",
+    'You took an unknown spread-spectrum link apart from outside. You found it, read its chip rate from the spectrum\'s nulls, its code length from the preamble\'s repeats, and worked out its processing gain: {gpDb} dB. In level 2 a jammer tries to beat that gain.',
 };
 
 export const LEVELS: LevelDef[] = [LEVEL_1];
@@ -302,6 +634,7 @@ export function fillText(template: string, values: Record<string, string>): stri
 }
 
 const fixed = (v: number, d: number) => v.toFixed(d);
+const sig3 = (v: number) => String(Number(v.toPrecision(3)));
 
 // Placeholder values for the level texts: the hidden truth plus live scene values.
 export function textValues(t: Truth, live: { interceptSnrDb?: number; rxSnrDb: number; rxEbN0Db: number }): Record<string, string> {
@@ -314,11 +647,13 @@ export function textValues(t: Truth, live: { interceptSnrDb?: number; rxSnrDb: n
     rxEbN0: fixed(shownEbN0, 1),
     margin: fixed(shownEbN0 - 9.6, 1),
     chipRate: fixed(t.chipRateMcps, 2),
+    chipRateK: String(Math.round(t.chipRateMcps * 1000)),
     bandwidth: fixed(2 * t.chipRateMcps, 2),
     chipUs: fixed(1 / t.chipRateMcps, 1),
     n: String(t.n),
     degree: String(t.degree),
     periodUs: fixed(period, 1),
     gpDb: fixed(t.gpDb, 1),
+    bitRate: sig3(t.bitRateKbps),
   };
 }

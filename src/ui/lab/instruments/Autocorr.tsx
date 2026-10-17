@@ -8,15 +8,16 @@ const LAGS = [50, 100, 200, 500, 1000]; // µs
 const WINDOWS = [50, 100, 200, 500, 1000]; // µs
 
 // Autocorrelation |R(tau)| or the fluctuation display, over the preamble or the data.
-export function Autocorr({ x, sampleRateHz, preambleSamples, annotations }: {
+export function Autocorr({ x, sampleRateHz, preambleSamples, annotations, initialMaxLagUs = 1000 }: {
   x: IQ;
   sampleRateHz: number;
   preambleSamples?: number;
   annotations?: { lagUs: number; label: string }[];
+  initialMaxLagUs?: number; // the longest lag first by default, so a long code period is never off the plot
 }) {
   const [mode, setMode] = useState<'acf' | 'fluct'>('acf');
   const [win, setWin] = useState<'preamble' | 'data'>(preambleSamples ? 'preamble' : 'data');
-  const [maxLagUs, setMaxLagUs] = useState(1000); // the longest lag first, so a long code period is never off the plot
+  const [maxLagUs, setMaxLagUs] = useState(initialMaxLagUs);
   const [fluctUs, setFluctUs] = useState(200);
   const [hover, setHover] = useState<number | null>(null); // lag in samples
 
