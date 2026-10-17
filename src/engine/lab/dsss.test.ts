@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { type LinkParams, frame, simulate } from './dsss';
+import { createRng } from '../rng';
+import { type LinkParams, frame, receive, simulate, transmit } from './dsss';
+import { type JammerSpec, jammer } from './jammers';
 import { mSequence } from './pn';
-import { type IQ, gaussian, iq } from './signal';
+import { type IQ, addScaled, gaussian, iq } from './signal';
 import { berBpsk, berBpskJammed, berRepetitionMajority, undb } from './theory';
 
 const params = (over: Partial<LinkParams> = {}): LinkParams => ({
@@ -143,6 +145,67 @@ describe('broadband noise jammer', () => {
     for (const s of [1, 4]) {
       const r = simulate(params(), { nBits: n, seed: 8, s, interference: bbn });
       near(r.errors, n, berBpskJammed(Number.POSITIVE_INFINITY, 31 / js));
+    }
+  });
+});
+
+describe('startChip continuity', () => {
+  const p = params({ code: mSequence(9), chipsPerBit: 16, repetition: 3, carrierCyclesPerChip: 0.013 });
+  const nBits = 40;
+  const bitsAll = new Int8Array(2 * nBits).map((_, i) => (((i * 7919) >> 3) & 1 ? 1 : -1));
+  const a = bitsAll.slice(0, nBits);
+  const b = bitsAll.slice(nBits);
+  const chunkChips = nBits * 3 * 16;
+  const specs: JammerSpec[] = [
+    { kind: 'tone', fTc: 0.021, phase: 1.1 },
+    { kind: 'multitone', q: 3, spacing: 0.01, phases: [0.3, 1.2, 2.5] },
+  ];
+
+  it('chips, transmitted samples and correlator outputs match one long call', () => {
+    for (const s of [1, 2]) {
+      const whole = frame(p, bitsAll, false);
+      const f1 = frame(p, a, false, 0);
+      const f2 = frame(p, b, false, chunkChips);
+      expect(Array.from(whole.chips)).toEqual([...f1.chips, ...f2.chips]);
+      const tw = transmit(p, whole, s);
+      const t1 = transmit(p, f1, s);
+      const t2 = transmit(p, f2, s);
+      for (let i = 0; i < t2.re.length; i++) {
+        expect(t2.re[i]).toBeCloseTo(tw.re[t1.re.length + i], 3);
+        expect(t2.im[i]).toBeCloseTo(tw.im[t1.re.length + i], 3);
+      }
+      for (const spec of specs) {
+        const jam = jammer(spec, 4);
+        const rng = createRng(1);
+        const jw = jam(tw.re.length, s, rng, 0);
+        const j1 = jam(t1.re.length, s, rng, 0);
+        const j2 = jam(t2.re.length, s, rng, chunkChips);
+        for (let i = 0; i < j2.re.length; i++) {
+          expect(j2.re[i]).toBeCloseTo(jw.re[j1.re.length + i], 3);
+          expect(j2.im[i]).toBeCloseTo(jw.im[j1.re.length + i], 3);
+        }
+        addScaled(tw, jw);
+        addScaled(t1, j1);
+        addScaled(t2, j2);
+        const rw = receive(p, tw, s, whole);
+        const r1 = receive(p, t1, s, f1);
+        const r2 = receive(p, t2, s, f2);
+        const joined = [...r1.corr, ...r2.corr];
+        for (let i = 0; i < joined.length; i++) expect(joined[i]).toBeCloseTo(rw.corr[i], 3);
+      }
+    }
+  });
+
+  it('pulsed on/off pattern continues across chunks', () => {
+    const jam = jammer({ kind: 'pulsed', duty: 0.3, periodChips: 37, offsetChips: 5 }, 2);
+    const n = 2 * chunkChips;
+    const w = jam(n, 1, createRng(1), 0);
+    const x1 = jam(chunkChips, 1, createRng(2), 0);
+    const x2 = jam(chunkChips, 1, createRng(3), chunkChips);
+    const on = (z: { re: Float32Array; im: Float32Array }, i: number) => z.re[i] !== 0 || z.im[i] !== 0;
+    for (let i = 0; i < chunkChips; i++) {
+      expect(on(x1, i)).toBe(on(w, i));
+      expect(on(x2, i)).toBe(on(w, chunkChips + i));
     }
   });
 });

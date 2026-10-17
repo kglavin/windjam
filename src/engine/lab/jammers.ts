@@ -18,19 +18,20 @@ export type JammerSpec =
   | { kind: 'partial'; rho: number; centre?: number }
   | { kind: 'pulsed'; duty: number; periodChips: number; offsetChips?: number }
   | { kind: 'tone'; fTc: number; phase?: number }
-  | { kind: 'multitone'; q: number; spacing: number; centre?: number; phases: 'random' | 'zero' | 'newman' };
+  | { kind: 'multitone'; q: number; spacing: number; centre?: number; phases: 'random' | 'zero' | 'newman' | number[] };
 
 const BLOCK = 1 << 14;
 
 const sinc = (x: number): number => (x === 0 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x));
 
 // Adds a tone of the given power at fTc cycles per chip; at s = 1 it is the chip-matched-filter output.
-function addTone(x: IQ, power: number, fTc: number, phase: number, s: number): void {
+// startChip is the absolute chip index of sample 0, so the tone's phase runs on across chunks.
+function addTone(x: IQ, power: number, fTc: number, phase: number, s: number, startChip = 0): void {
   const n = x.re.length;
   if (s === 1) {
     const amp = Math.sqrt(power) * sinc(fTc);
     for (let k = 0; k < n; k++) {
-      const a = 2 * Math.PI * fTc * (k + 0.5) + phase;
+      const a = 2 * Math.PI * fTc * (startChip + k + 0.5) + phase;
       x.re[k] += amp * Math.cos(a);
       x.im[k] += amp * Math.sin(a);
     }
@@ -38,7 +39,7 @@ function addTone(x: IQ, power: number, fTc: number, phase: number, s: number): v
     const amp = Math.sqrt(power);
     const w = (2 * Math.PI * fTc) / s;
     for (let k = 0; k < n; k++) {
-      const a = w * k + phase;
+      const a = w * (startChip * s + k) + phase;
       x.re[k] += amp * Math.cos(a);
       x.im[k] += amp * Math.sin(a);
     }
@@ -89,7 +90,7 @@ function partialBand(n: number, s: number, js: number, rho: number, centre: numb
 
 // Builds the interference generator for a jammer spec at average J/S js (linear), under the convention above.
 export function jammer(spec: JammerSpec, js: number): Interference {
-  return (n, s, rng) => {
+  return (n, s, rng, startChip = 0) => {
     const out = iq(n);
     switch (spec.kind) {
       case 'bbn': {
@@ -109,7 +110,7 @@ export function jammer(spec: JammerSpec, js: number): Interference {
         const offset = spec.offsetChips ?? 0;
         const on = spec.duty * spec.periodChips;
         for (let i = 0; i < n; i++) {
-          const pos = (((Math.floor(i / s) - offset) % spec.periodChips) + spec.periodChips) % spec.periodChips;
+          const pos = (((startChip + Math.floor(i / s) - offset) % spec.periodChips) + spec.periodChips) % spec.periodChips;
           if (pos < on - 1e-9) {
             out.re[i] = sd * g();
             out.im[i] = sd * g();
@@ -118,14 +119,20 @@ export function jammer(spec: JammerSpec, js: number): Interference {
         return out;
       }
       case 'tone':
-        addTone(out, js, spec.fTc, spec.phase ?? 2 * Math.PI * rng(), s);
+        addTone(out, js, spec.fTc, spec.phase ?? 2 * Math.PI * rng(), s, startChip);
         return out;
       case 'multitone': {
         const c = spec.centre ?? 0;
         for (let i = 0; i < spec.q; i++) {
-          const phase =
-            spec.phases === 'random' ? 2 * Math.PI * rng() : spec.phases === 'zero' ? 0 : (Math.PI * i * i) / spec.q;
-          addTone(out, js / spec.q, c + (i - (spec.q - 1) / 2) * spec.spacing, phase, s);
+          const ph = spec.phases;
+          const phase = Array.isArray(ph)
+            ? ph[i]
+            : ph === 'random'
+              ? 2 * Math.PI * rng()
+              : ph === 'zero'
+                ? 0
+                : (Math.PI * i * i) / spec.q;
+          addTone(out, js / spec.q, c + (i - (spec.q - 1) / 2) * spec.spacing, phase, s, startChip);
         }
         return out;
       }
