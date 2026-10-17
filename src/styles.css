@@ -820,3 +820,91 @@ select {
   border-color: #c084fc;
   background: #3b1f5c;
 }
+
+.root-col {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.root-col [hidden] {
+  display: none;
+}
+
+.chapter-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.topbar {
+  flex: none;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.home {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+
+.home h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.home-sub {
+  color: var(--muted);
+  margin: 6px 0 28px;
+  font-size: 15px;
+}
+
+.home-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.home-card {
+  flex: 1 1 260px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-card h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.home-card p {
+  margin: 0;
+  flex: 1;
+  color: var(--muted);
+}
+
+.home-card button {
+  align-self: flex-start;
+}
+
+.lab-placeholder {
+  padding: 24px 16px;
+}
+
+.mission-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}

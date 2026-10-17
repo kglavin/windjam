@@ -20,17 +20,17 @@ import { createMission, issue as issueMission, jumpReplay, viewOf, visibleLog } 
 import { SequenceChart } from './ui/SequenceChart';
 import { parseCommand } from './engine/mission/commands';
 import { Console } from './ui/Console';
+import { MissionPicker } from './ui/MissionPicker';
 import { MissionPanel } from './ui/MissionPanel';
 import { REPLAY_SPEEDS, ReplayBar, type ReplayMove } from './ui/ReplayBar';
 
 const DEFAULT_SEED = 1234;
 
-export function App() {
+export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; onChapter: (c: 'sandbox' | 'missions') => void }) {
   const [sandbox, setSandbox] = useState<World>(() => createScenario(DEFAULT_SEED));
   // Mission mode runs its own world (with Red hidden) on top of the same engine.
   const [mission, setMission] = useState<MissionState>();
-  const [mode, setMode] = useState<'sandbox' | 'mission'>('sandbox');
-  const missionActive = mode === 'mission' && !!mission;
+  const missionActive = chapter === 'missions' && !!mission;
   // Whose picture the map and panel show. In a duel the umpire seat sees everything; the consoles are always per side.
   const [seat, setSeat] = useState<PlayerSide | 'umpire'>('blue');
   // Duel: one console for both sides, lines prefixed blue> or red>, so a whole script can be pasted at once.
@@ -44,6 +44,7 @@ export function App() {
     if (!server) return;
     let stop = false;
     let mapSeed = -1;
+    let entered = false; // switch to the Missions chapter once, so the Chapters button still works while watching
     let map: ReturnType<typeof createScenario>['map'] | undefined;
     const poll = async () => {
       try {
@@ -60,7 +61,8 @@ export function App() {
         }
         setServerInfo({ turn: j.turn, turnMin: j.turnMin, waitingFor: j.waitingFor, status: j.status });
         setMission((prev) => (prev && prev.status !== 'running' && prev.seed === j.state.seed && j.status !== 'running' ? prev : { ...j.state, world: { ...j.state.world, map } }));
-        setMode('mission');
+        if (!entered) onChapter('missions');
+        entered = true;
       } catch {
         setServerInfo((prev) => (prev ? { ...prev, status: 'unreachable' } : { turn: 0, turnMin: 0, waitingFor: [], status: 'unreachable' }));
       }
@@ -319,7 +321,7 @@ export function App() {
     setMission(createMission(Math.floor(Math.random() * 1_000_000), kind));
     setSeat(kind === 'hide' ? 'red' : 'blue');
     setReplayPlaying(false);
-    setMode('mission');
+    onChapter('missions');
     setTool('select');
     setSelectedHex(undefined);
     setSelectedUnitId(undefined);
@@ -422,8 +424,10 @@ export function App() {
           onOneConsole={setOneConsole}
           server={server ? { url: server, ...(serverInfo ?? { turn: 0, turnMin: 0, waitingFor: [], status: 'connecting' }) } : undefined}
           onNewMission={() => startMission(mission.mission)}
-          onExit={() => setMode('sandbox')}
+          onExit={() => onChapter('sandbox')}
         />
+      ) : chapter === 'missions' ? (
+        <MissionPicker onStart={startMission} />
       ) : (
       <SidePanel
         world={world}
