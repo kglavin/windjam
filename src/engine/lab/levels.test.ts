@@ -204,7 +204,7 @@ describe('numbers written in the texts agree with the known links', () => {
     // The default texts read as before for the first practice link.
     const v = textValues(t, { rxSnrDb: -6, rxEbN0Db: 15 });
     expect(fillText(worked('D2'), v)).toContain('31.5 µs × 2.0 Mcps = 63 chips');
-    expect(fillText(worked('C2'), v)).toBe('The nulls are at −2.0 MHz and +2.0 MHz. Bandwidth = 2.0 − (−2.0) = 4.0 MHz. Chip rate = 4.0 ÷ 2 = 2.0 Mcps.');
+    expect(fillText(worked('C2'), v)).toBe('The nulls are at −2.0 MHz and +2.0 MHz. Null-to-null bandwidth = 2.0 − (−2.0) = 4.0 MHz. Chip rate = 4.0 ÷ 2 = 2.0 Mcps.');
     expect(fillText(worked('E2'), v)).toBe('Gp = 63 → 10 × log10(63) = 18.0 dB. Bit rate = 2000 kchips/s ÷ 63 = 31.7 kbps.');
     expect(fillText(worked('D2'), v)).toBe('The first peak after 0 is at 31.5 µs. Code length = 31.5 µs × 2.0 Mcps = 63 chips.');
   });

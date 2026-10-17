@@ -276,6 +276,7 @@ export interface LessonStep {
   steps?: string[]; // numbered worked example
   rule?: string;
   visual: Visual;
+  video?: string; // explainer at public/videos/<id>.mp4, shown collapsed above the visual (design-lesson-videos.md)
   // Unscored, unlimited retries.
   check?: { question: string; unit?: string; answer: number; tol: Tol; wrong: string };
 }

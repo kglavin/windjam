@@ -10,7 +10,8 @@
     "test": "vitest run --dir src --maxWorkers=3",
     "mission": "tsx scripts/run-mission.ts",
     "serve": "tsx scripts/serve.ts",
-    "games": "tsx scripts/games.ts"
+    "games": "tsx scripts/games.ts",
+    "video": "tsx scripts/video.ts"
   },
   "dependencies": {
     "pixi.js": "^8.22.0",

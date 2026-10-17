@@ -26,6 +26,7 @@ import { moveInterceptToSignal } from './levelScene';
 import { leaveStep, nextIndex } from './levelNav';
 import { type StepState, applyDone, runDone, scoreLevel } from './levelState';
 import { StagePanel } from './StagePanel';
+import { VideoCard } from './VideoCard';
 import { VisualView, nullNotes, periodNotes } from './visuals/VisualView';
 
 const S = 4;
@@ -330,6 +331,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         )}
         {visual && (
           <div className="level-instruments" key={`${shown?.id}-${practiceN}`}>
+            {shown?.kind === 'lesson' && shown.video && <VideoCard id={shown.video} title={shown.title} />}
             <VisualView
               visual={visual}
               links={{ example: level.links.example, practice: practiceLink }}

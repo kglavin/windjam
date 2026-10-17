@@ -1,2 +1,9 @@
 node_modules
 dist
+
+# Lesson videos: Python env, Manim output, exported data, review copies
+videos/.venv
+videos/.media
+videos/data/*.json
+videos/__pycache__
+tmp

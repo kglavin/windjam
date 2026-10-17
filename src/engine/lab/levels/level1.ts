@@ -30,6 +30,7 @@ export const LEVEL_1: LevelDef = {
           id: 'A1',
           title: 'Bits become chips',
           visual: { kind: 'spreading' },
+          video: 'level1-A1',
           paragraphs: [
             'A radio link sends bits. The top row shows 4 bits: +1, −1, −1, +1. Each bit lasts 7 µs.',
             'Spread spectrum multiplies every bit by a fast pattern called the code. The middle row is the code: 7 short pulses called chips, each 1 µs long, repeated for every bit.',
@@ -122,14 +123,15 @@ export const LEVEL_1: LevelDef = {
           id: 'C1',
           title: 'Example: reading the chip rate',
           visual: { kind: 'spectrum', link: 'example', annotate: true },
+          video: 'level1-C1',
           paragraphs: [
             'This is the spectrum of the 31-chip example link, which sends 1 million chips per second.',
             'The fine bumps come from the pattern of the code. What matters is the overall shape, the dashed envelope: one wide hump that falls to zero at ± the chip rate.',
           ],
           steps: [
             'Find the deepest dip on each side of the central hump. These dips are called nulls. Here they are at −1.0 MHz and +1.0 MHz.',
-            'Bandwidth = right null − left null = 1.0 − (−1.0) = 2.0 MHz.',
-            'Chip rate = bandwidth ÷ 2 = 1.0 Mcps (million chips per second).',
+            'Null-to-null bandwidth = right null − left null = 1.0 − (−1.0) = 2.0 MHz.',
+            'Chip rate = null-to-null bandwidth ÷ 2 = 1.0 Mcps (million chips per second).',
           ],
           rule: 'The nulls sit at ± the chip rate. Each chip lasts 1 ÷ chip rate: here 1 µs.',
         },
@@ -154,7 +156,7 @@ export const LEVEL_1: LevelDef = {
           ],
           worked: [
             'The nulls are at −{pChipRate} MHz and +{pChipRate} MHz.',
-            'Bandwidth = {pChipRate} − (−{pChipRate}) = {pBandwidth} MHz.',
+            'Null-to-null bandwidth = {pChipRate} − (−{pChipRate}) = {pBandwidth} MHz.',
             'Chip rate = {pBandwidth} ÷ 2 = {pChipRate} Mcps.',
           ],
         },
@@ -178,7 +180,7 @@ export const LEVEL_1: LevelDef = {
           ],
           reveal: [
             'The nulls are at ±{chipRate} MHz.',
-            'Bandwidth = {bandwidth} MHz.',
+            'Null-to-null bandwidth = {bandwidth} MHz.',
             'Chip rate = {chipRate} Mcps, so each chip lasts {chipUs} µs.',
           ],
         },
@@ -193,6 +195,7 @@ export const LEVEL_1: LevelDef = {
           id: 'D1',
           title: 'Example: reading the code length',
           visual: { kind: 'autocorr', link: 'example', annotate: true },
+          video: 'level1-D1',
           paragraphs: [
             'Every transmission starts with a preamble: the code sent over and over with no data on it. Because the code repeats, the signal looks like itself again after one code length.',
             'The autocorrelation plot measures that: how alike the signal is to itself delayed by a given time. 1 means identical, 0 means unrelated.',
