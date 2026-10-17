@@ -353,7 +353,7 @@ Status: the implementation breakdown for Parts 1 to 5. Each work package is size
 
 Conventions every package follows:
 
-- Code goes in the file the package names; new engine code gets a `*.test.ts` beside it; `npm test`, `npm run typecheck` and `npm run build` must pass before the package is done.
+- Code goes in the file the package names; new engine code gets a `*.test.ts` beside it; `npm test`, `npm run typecheck` and `npm run build` must pass before the package is done. Run the tests with `npm test`, never a bare `vitest run`: the script caps the suite at 3 workers and to `src/`, which keeps parallel agents from saturating the container (an uncapped run starts one worker per core per agent).
 - Engine code never reads the truth on a side's behalf: a function that takes a `PlayerSide` sees only that side's picture (`pictureOf`, `visibleWorld`) and its own units.
 - Console lines are added with `log(s, kind, text, side)` and carry the side that may see them.
 - New state fields are copied in `clone()` in `mission.ts` if a turn mutates them; forgetting this leaks mutations between turns (it happened with `blueUav`).
