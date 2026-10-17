@@ -65,11 +65,11 @@ reads a number off a plot. Definitions and tables do not. A video runs 1 to 3 mi
 | | L1 D1, Reading the code length | Delayed copy slides along the preamble while the autocorrelation traces; peak spacing × chip rate on a scratchpad | Published |
 | V1 | L1 A2, Spreading makes the signal wide and low | Pulse shortens from bit to chip while the spectrum widens and drops at constant area; noise floor; same picture in dB | Published |
 | V2 | L1 A3, The receiver gets the bits back | Received × code cancels the code; each bit's 7 chips stack to 7 while noise chips cancel; a receiver with a guessed code; Gp on a scratchpad | Published |
-| V3 | L2 B1, What the decoder sees | Spectra before and after despreading: the signal collapses into a peak and gains Gp, the jammer stays spread; the bit filter keeps 1/Gp of it; Eb/J0 = Gp − J/S | In review |
-| V4 | L3 B1, A quarter of the band | The receiver's multiply by the code spreads the partial-band jammer back over the whole band (numerical convolution, matching the engine's sinc² weighting) | In review |
-| V5 | L3 D1, Long pulses or short ones | Chip sums with pulses: one-chip pulses averaged over the bit, one-bit pulses break bits; 0.1 × 0.22 on a scratchpad | In review |
-| V6 | L4 B1, The code turns the tone into noise | A tone × a long code; its spectrum smears from a spike into a floor | Tier 1 |
-| V7 | L4 D1, Peaks | Eight tones as phasors: in phase they peak at 8× the average, random phases lower; PAPR in dB | Tier 1 |
+| V3 | L2 B1, What the decoder sees | Spectra before and after despreading: the signal collapses into a peak and gains Gp, the jammer stays spread; the bit filter keeps 1/Gp of it; Eb/J0 = Gp − J/S | Published |
+| V4 | L3 B1, A quarter of the band | The receiver's multiply by the code spreads the partial-band jammer back over the whole band (numerical convolution, matching the engine's sinc² weighting) | Published |
+| V5 | L3 D1, Long pulses or short ones | Chip sums with pulses: one-chip pulses averaged over the bit, one-bit pulses break bits; 0.1 × 0.22 on a scratchpad | Published |
+| V6 | L4 B1, The code turns the tone into noise | A tone × a long code; short code against long code; tone × long code in time; the spike smears into a sinc² at the noise level | In review |
+| V7 | L4 D1, Peaks | Eight tones as phasors: in phase they peak at 8× the average, random and Newman phases lower (the engine's phases); a front-end limit squashing the peaks | In review |
 | V8 | L3 A1, Three ways to spend the same power | One block of power reshaped: wide and low, narrow and tall, short and tall | Tier 2 |
 | V9 | L3 C1, The same power in bursts | Bit timeline with pulses; hit bits break, the rest are clean; 0.1 × 0.081 on a scratchpad | Tier 2 |
 | V10 | L3 E1, How short should the pulses be | Duty cycle sweep: the overall BER rises to a peak and falls | Tier 2 |

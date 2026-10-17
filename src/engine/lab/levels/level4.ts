@@ -241,6 +241,7 @@ export const LEVEL_4: LevelDef = {
           kind: 'lesson',
           id: 'B1',
           title: 'Example: the code turns the tone into noise',
+          video: 'level4-B1',
           visual: {
             kind: 'berRunDemo',
             variants: [
@@ -352,6 +353,7 @@ export const LEVEL_4: LevelDef = {
           id: 'D1',
           title: 'Example: peaks',
           visual: { kind: 'peaks' },
+          video: 'level4-D1',
           paragraphs: [
             'A jammer can send many tones at once. Their powers add up on average, but when the tones line up in phase their peaks add up too: 8 tones in phase give peaks 8 times the average power.',
             'Peak-to-average ratio, PAPR, measures that: 8 times is 9.0 dB. With random phases it is lower (about {paprRandom} dB here), and with carefully chosen phases lower still ({paprNewman} dB).',
