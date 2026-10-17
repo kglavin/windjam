@@ -42,6 +42,7 @@ export interface Ctx {
   rxEbN0Db: number;
   practice?: KnownLinkInfo; // the practice link in play; the first one when absent
   practiceJsDb?: number; // level 2: J/S on the practice link
+  practiceN?: number; // the "Try another" counter of the practice link in play
   jsDb?: number; // level 2: J/S of the scene the level started with (the jammer is fixed until the last unit)
   ebJ0Db?: number; // level 2: Eb/J0 of that scene
 }
@@ -63,10 +64,13 @@ export interface FieldDef {
   // Reduced credit for an answer outside `check` but inside this tolerance.
   partial?: { abs: number; points: number };
   // The entry must lie inside this range before it can be submitted (a duty cycle, say, that a run will use).
-  range?: { min: number; max: number; message: string };
+  // maxKey: the placeholder whose value replaces max (a limit that depends on the link); message is filled with the placeholders.
+  range?: { min: number; max: number; message: string; maxKey?: string };
   // predictBer only: full points also within this factor of the measured BER (grade 'near'), half within one more
   // (grade 'wide'). Without it: full inside the interval, half within a factor of 2.
   fullWithinFactor?: number;
+  // A custom check in place of `check`: the entry is right when this returns true. Its true value is not shown.
+  accept?: (value: number, truth: number, t: Truth, ctx: Ctx) => boolean;
 }
 
 export interface Tol {
@@ -89,7 +93,7 @@ export function withinTol(c: Tol, value: number, truth: number): boolean {
 export function checkField(f: FieldDef, value: number, t: Truth, ctx: Ctx): { ok: boolean; truth: number; points: number } {
   const truth = f.truth(t, ctx);
   const err = Math.abs(value - truth);
-  const ok = withinTol(f.check, value, truth);
+  const ok = f.accept ? Number.isFinite(value) && f.accept(value, truth, t, ctx) : withinTol(f.check, value, truth);
   if (ok) return { ok, truth, points: f.points };
   if (f.partial && Number.isFinite(value) && err <= f.partial.abs) return { ok, truth, points: f.partial.points };
   return { ok, truth, points: 0 };
@@ -132,6 +136,9 @@ export function knownLinkInfo(k: KnownLink): KnownLinkInfo {
   };
 }
 
+// Which code a run uses: 'short' is one code period per bit (the default), 'long' an m-sequence of degree 13 that runs on across bits.
+export type CodeKind = 'short' | 'long';
+
 export type LinkKey = 'example' | 'practice' | 'hidden';
 
 export type Visual =
@@ -143,8 +150,11 @@ export type Visual =
   | { kind: 'jammedSpectra' }
   | { kind: 'despreadBars'; gpDb?: number; jsDb?: number; link?: 'practice' } // fixed values, or the practice link's
   | { kind: 'berCurve'; mark?: 'example' | 'practice'; marks?: { db: number; label: string }[] } // marks that link's Eb/J0, or fixed Eb/J0 values, on the curve
-  | { kind: 'berRunDemo'; variants?: { label: string; jammer: JammerSpec }[] } // each variant has its own Run button
+  | { kind: 'berRunDemo'; variants?: { label: string; jammer: JammerSpec; code?: CodeKind }[] } // each variant has its own Run button
   | { kind: 'threeJammers' }
+  | { kind: 'toneSpectrum' }
+  | { kind: 'toneSweep' }
+  | { kind: 'peaks' }
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'none' };
@@ -175,12 +185,17 @@ export interface RunSpec {
   jsDb?: number;
   jsDbFrom?: (truth: Truth) => number; // js 'fixed': a J/S computed from the truth
   jammer: JammerSpec;
+  code?: CodeKind; // default 'short'
+  ebN0Db?: number; // replaces the run's receiver Eb/N0 (the known links' 30 dB, the hidden link's scene value)
   // The jammer built from the values the player entered in the same step (field id to value) and the link's
   // chips per bit. When set it replaces `jammer`.
-  jammerFrom?: (values: Record<string, number>, chipsPerBit: number) => JammerSpec;
+  jammerFrom?: (values: Record<string, number>, chipsPerBit: number, chipRateMcps: number) => JammerSpec;
   // A line for the run box about the jammer that will be used, from the same inputs as jammerFrom.
   jammerNote?: (values: Record<string, number>, chipsPerBit: number) => string | undefined;
 }
+
+// A tone offset in kHz as cycles per chip: kHz / (chip rate in kHz).
+export const khzToFtc = (khz: number, chipRateMcps: number): number => khz / (chipRateMcps * 1000);
 
 // The jammer's goal: after a run at the scene's J/S the measured BER reaches berAtLeast (less 20% for counting
 // noise). Points in full when passed within 3 runs, half after.
@@ -272,6 +287,7 @@ export interface ApplyStep {
   instruments: Instrument[];
   visual?: Visual;
   annotate?: 'nulls' | 'codePeriods'; // drawn on the instrument once the step is done
+  runUnscored?: boolean; // a run with no prediction and no goal: the step is done once it has been run, nothing scored
   prediction?: boolean; // scored as prediction rather than characterisation
   run?: RunSpec; // a BER run; a predictBer field is scored against it
   goal?: DenyGoal; // appears once the fields are submitted; the run counts when it reaches the goal

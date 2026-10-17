@@ -4,9 +4,8 @@ import { Bench } from './Bench';
 import { LevelView } from './LevelView';
 import { type Progress, loadProgress, recordScore } from './progress';
 
-// Levels 4 and 5 from design section 8: not built yet.
+// Level 5 from design section 8: not built yet.
 const COMING = [
-  { id: 4, title: 'Tones', blurb: 'Single and multitone jammers against short and long codes.' },
   { id: 5, title: 'Saturation and timing', blurb: 'Front-end overload and pulses aligned to repetition groups.' },
 ];
 

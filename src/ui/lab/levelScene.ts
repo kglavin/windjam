@@ -1,3 +1,4 @@
+import { toneBers } from '../../engine/lab/levels';
 import { createRng } from '../../engine/rng';
 import type { Truth } from '../../engine/lab/levels';
 import { type Scene, jammerDistanceForJs, sceneBudget } from '../../engine/lab/scene';
@@ -45,6 +46,11 @@ function jammerScene(t: Truth, salt: number, ebJ0LoDb: number, ebJ0SpanDb: numbe
   const rng = createRng(t.seed ^ salt);
   const targetEbN0Db = Math.round((24.5 + rng()) * 10) / 10;
   const targetEbJ0Db = Math.round((ebJ0LoDb + ebJ0SpanDb * rng()) * 10) / 10;
+  return sceneAt(t, targetEbN0Db, targetEbJ0Db);
+}
+
+// The scene with the receiver's Eb/N0 and the broadband Eb/J0 (Gp less J/S) at the targets.
+function sceneAt(t: Truth, targetEbN0Db: number, targetEbJ0Db: number): Scene {
   let scene: Scene = {
     ...DEFAULT_SCENE,
     chipRateMcps: t.chipRateMcps,
@@ -76,3 +82,24 @@ export const level2Scene = (t: Truth): Scene => jammerScene(t, 0x2c1b3c6d, 3.5, 
 // Level 3's scene: a link with margin, Eb/J0 between 8.5 and 10.5 dB (8 to 11 as the texts round it). The
 // jammer stays where it is and the intercept is not used.
 export const level3Scene = (t: Truth): Scene => jammerScene(t, 0x1b873593, 8.5, 2);
+
+// Level 4's scene: a noisy receiver (Eb/N0 8.5 to 10 dB) and a J/S that leaves broadband Eb/J0 between 1.5 and 3.5 dB.
+// Targets are drawn from the seed until the scene as built passes: against the enemy short code at the scene J/S a
+// tone on the carrier gives BER of at most 0.002, and a tone on the first line (phase-averaged) and broadband
+// noise both give between 0.006 and 0.09 (the texts promise 0.005 to 0.1). The jammer stays where it is.
+export const LEVEL4_BER = { carrierMax: 0.002, min: 0.006, max: 0.09 };
+export function level4Scene(t: Truth): Scene {
+  const rng = createRng(t.seed ^ 0x3c6ef372);
+  let last: Scene | undefined;
+  for (let k = 0; k < 60; k++) {
+    const ebN0 = Math.round((8.5 + 1.5 * rng()) * 10) / 10;
+    const ebJ0 = Math.round((1.5 + 2 * rng()) * 10) / 10;
+    const scene = sceneAt(t, ebN0, ebJ0);
+    last = scene;
+    const b = sceneBudget(scene);
+    const m = toneBers(t.degree, b.ebN0Db, b.jsDb);
+    const ok = (v: number) => v >= LEVEL4_BER.min && v <= LEVEL4_BER.max;
+    if (m.carrier <= LEVEL4_BER.carrierMax && ok(m.line) && ok(m.bbn)) return scene;
+  }
+  return last!;
+}

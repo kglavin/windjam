@@ -1694,6 +1694,11 @@ select {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
+.vis-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
 .vis-three-col {
   margin: 0;
   display: grid;

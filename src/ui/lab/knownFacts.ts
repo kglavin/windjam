@@ -208,3 +208,52 @@ export function level3Card(
 }
 
 const berBpskLin = (ebJ0Db: number): number => berBpsk(undb(ebJ0Db));
+
+// Level 4's card. The enemy link: Gp, chips per bit, chip rate and the scene's J/S are given; the line spacing fills in
+// after C3 and the highest average J/S after D3. The practice link: the line spacing once C2 is done.
+export interface Level4Facts {
+  n: number;
+  gpDb: number;
+  chipRateMcps: number;
+  jsDb: number; // enemy: the scene's J/S now; practice: the practice J/S
+  maxAvgDb?: number; // enemy: the highest average J/S of D3
+}
+
+const SOURCES4 = {
+  enemy: { spacing: ['C3', 'spacing'], limit: ['D3', 'avgJs'] },
+  practice: { spacing: ['C2', 'spacing'], limit: ['', ''] },
+} as const;
+
+export function level4Card(
+  mode: 'enemy' | 'practice',
+  flat: FlatStep[],
+  states: StepState[],
+  shownIndex: number,
+  f: Level4Facts,
+): FactsCard {
+  const src = SOURCES4[mode];
+  const lookup = (key: keyof typeof src) => {
+    const [stepId, fieldId] = src[key];
+    const i = flat.findIndex((x) => x.step.id === stepId);
+    const st = i >= 0 ? states[i] : undefined;
+    const r = st?.fields?.[fieldId];
+    const first = st?.first?.[fieldId] ?? (r ? { value: r.value, ok: r.ok } : undefined);
+    const known = i >= 0 && (mode === 'enemy' ? !!r : shownIndex > i || !!st?.worked || !!r?.ok);
+    return { known, first };
+  };
+  const spacing = lookup('spacing');
+  const limit = lookup('limit');
+  const youFmt = (x: ReturnType<typeof lookup>, fmt: (v: number) => string) =>
+    x.known && x.first ? { text: `you: ${fmt(x.first.value)}`, ok: x.first.ok } : undefined;
+  const rows: FactRow[] = [
+    { label: mode === 'enemy' ? 'Gp (given)' : 'Gp', value: `${f.n} times (${trim1(f.gpDb)} dB)` },
+    { label: 'Chips per bit', value: String(f.n) },
+    { label: 'Chip rate', value: `${trim1(f.chipRateMcps)} Mcps` },
+    { label: 'Line spacing', value: spacing.known ? `${sig3((f.chipRateMcps * 1000) / f.n)} kHz` : null, you: youFmt(spacing, sig3) },
+    { label: mode === 'enemy' ? 'J/S now' : 'J/S', value: `${trim1(f.jsDb)} dB` },
+  ];
+  if (mode === 'enemy') {
+    rows.push({ label: 'PAPR limit: highest average J/S', value: limit.known ? `${trim1(f.maxAvgDb ?? NaN)} dB` : null, you: youFmt(limit, trim1) });
+  }
+  return { heading: mode === 'practice' ? 'Practice link' : 'What you know', rows };
+}

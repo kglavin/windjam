@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { level1Truth, level2Truth, level3Truth } from '../../engine/lab/levels';
+import { level1Truth, level2Truth, level3Truth, level4Truth, toneBers } from '../../engine/lab/levels';
 import { berPulsedBpsk, undb } from '../../engine/lab/theory';
 import { sceneBudget } from '../../engine/lab/scene';
-import { level1Scene, level2Scene, level3Scene } from './levelScene';
+import { LEVEL4_BER, level1Scene, level2Scene, level3Scene, level4Scene } from './levelScene';
 
 describe('level1Scene', () => {
   it('starts the intercept below 3 dB and the friendly link below the noise with margin', () => {
@@ -77,5 +77,40 @@ describe('level3Scene', () => {
       expect(Math.abs(s.jammer.yKm)).toBeLessThan(200);
       expect(b.jamDistanceKm).toBeGreaterThan(1);
     }
+  });
+});
+
+describe('level4Scene', () => {
+  it('against the enemy short code at the scene J/S a carrier tone is at most 0.002 and the first-line tone and broadband noise are in 0.005 to 0.1', () => {
+    let ebLo = Infinity;
+    let ebHi = -Infinity;
+    let jsLo = Infinity;
+    let jsHi = -Infinity;
+    for (let seed = 1; seed <= 150; seed++) {
+      const t = level4Truth(seed);
+      const s = level4Scene(t);
+      expect(level4Scene(t)).toEqual(s);
+      const b = sceneBudget(s);
+      const m = toneBers(t.degree, b.ebN0Db, b.jsDb);
+      expect(m.carrier).toBeLessThanOrEqual(LEVEL4_BER.carrierMax);
+      expect(m.line).toBeGreaterThanOrEqual(0.005);
+      expect(m.line).toBeLessThanOrEqual(0.1);
+      expect(m.bbn).toBeGreaterThanOrEqual(0.005);
+      expect(m.bbn).toBeLessThanOrEqual(0.1);
+      expect(b.gpDb).toBeCloseTo(t.gpDb, 6);
+      expect(b.ebN0Db).toBeGreaterThan(8);
+      expect(b.ebN0Db).toBeLessThan(10.5);
+      expect(s.tx.powerW).toBeGreaterThanOrEqual(0.1);
+      expect(s.tx.powerW).toBeLessThanOrEqual(1000);
+      expect(s.jammer.powerW).toBeGreaterThan(0);
+      expect(Math.abs(s.jammer.xKm)).toBeLessThan(200);
+      expect(Math.abs(s.jammer.yKm)).toBeLessThan(200);
+      expect(b.jamDistanceKm).toBeGreaterThan(1);
+      ebLo = Math.min(ebLo, b.ebN0Db);
+      ebHi = Math.max(ebHi, b.ebN0Db);
+      jsLo = Math.min(jsLo, b.jsDb);
+      jsHi = Math.max(jsHi, b.jsDb);
+    }
+    console.log(`level4 scene: Eb/N0 ${ebLo.toFixed(1)} to ${ebHi.toFixed(1)} dB, J/S ${jsLo.toFixed(1)} to ${jsHi.toFixed(1)} dB`);
   });
 });

@@ -1,23 +1,24 @@
 import { useMemo, useState } from 'react';
 import { planRun } from '../../../engine/lab/berRun';
 import type { JammerSpec } from '../../../engine/lab/jammers';
-import { EXAMPLE, type RunSummary, FIRST_PRACTICE, knownLinkInfo, level2Truth } from '../../../engine/lab/levels';
+import { type CodeKind, EXAMPLE, type RunSummary, FIRST_PRACTICE, knownLinkInfo, level2Truth } from '../../../engine/lab/levels';
 import { CurvePlot } from '../instruments/CurvePlot';
 import { RunStats, useRun } from '../RunBox';
 
 export const DEMO_JS_DB = 10;
 const DEMO_SEED = 20_251;
-const SINGLE = [{ label: 'measured', jammer: { kind: 'bbn' } as JammerSpec }];
+const SINGLE: DemoVariant[] = [{ label: 'measured', jammer: { kind: 'bbn' } }];
 const VARIANT_COLOURS = ['c2', 'c3', 'c4', 'c5', 'c6'];
 
 export interface DemoVariant {
   label: string;
   jammer: JammerSpec;
+  code?: CodeKind; // default short
 }
 
-function planFor(jammer: JammerSpec, seed: number) {
+function planFor(jammer: JammerSpec, seed: number, code?: CodeKind) {
   return planRun(
-    { link: 'example', js: 'fixed', jsDb: DEMO_JS_DB, jammer },
+    { link: 'example', js: 'fixed', jsDb: DEMO_JS_DB, jammer, code },
     {
       truth: level2Truth(1),
       example: knownLinkInfo(EXAMPLE),
@@ -60,7 +61,7 @@ function VariantMeter({ title, colour, plan, onResult }: {
 export function BerRunDemo({ variants }: { variants?: DemoVariant[] }) {
   const list = variants ?? SINGLE;
   const many = variants !== undefined;
-  const plans = useMemo(() => list.map((v, i) => planFor(v.jammer, DEMO_SEED + 4 * i)), [list]);
+  const plans = useMemo(() => list.map((v, i) => planFor(v.jammer, DEMO_SEED + 4 * i, v.code)), [list]);
   const [results, setResults] = useState<Record<string, RunSummary>>({});
   const theory = useMemo(() => planFor({ kind: 'bbn' }, DEMO_SEED).curve, []);
   const points = list.flatMap((v) => {

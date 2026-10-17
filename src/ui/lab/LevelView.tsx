@@ -63,6 +63,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     rxEbN0Db: budget.ebN0Db,
     practice: practiceInfo,
     practiceJsDb,
+    practiceN,
     jsDb: base.jsDb,
     ebJ0Db: base.ebJ0Db,
   };
@@ -116,6 +117,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     step: shown,
     practice: practiceInfo,
     practiceJsDb,
+    practiceN,
     budget,
     base,
     interceptSnrDb,
@@ -137,7 +139,11 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     const st = flat[i].step;
     if (st.kind !== 'apply') return true;
     const entered = enteredFor(i, mode);
-    return st.fields.every((f) => !f.range || (entered[f.id] >= f.range.min && entered[f.id] <= f.range.max));
+    return st.fields.every((f) => {
+      if (!f.range) return true;
+      const max = f.range.maxKey && Number.isFinite(Number(values[f.range.maxKey])) ? Number(values[f.range.maxKey]) : f.range.max;
+      return entered[f.id] >= f.range.min && entered[f.id] <= max;
+    });
   };
   const runPlan = (i: number, mode: 'main' | 'retry' = 'main') => {
     const st = flat[i].step;

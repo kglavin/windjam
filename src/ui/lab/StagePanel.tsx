@@ -327,6 +327,7 @@ function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: Ste
         />
       )}
       {step.run && settled && predictField(step.fields) && <ApplyPredict {...p} field={predictField(step.fields)!} />}
+      {step.run && settled && step.runUnscored && <UnscoredRun {...p} />}
       {step.run && settled && step.goal && <DenyRun {...p} goal={step.goal} />}
       {state.done && (
         <>
@@ -347,7 +348,7 @@ function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: Ste
                   onSubmit={(e) => p.onCheckRetry(p.index, e)}
                 />
               )}
-              {step.run && predictField(step.fields) && <RetryRun {...p} />}
+              {step.run && (predictField(step.fields) || step.runUnscored) && <RetryRun {...p} />}
             </div>
           )}
         </>
@@ -419,17 +420,37 @@ function ApplyPredict(p: StagePanelProps & { step: ApplyStep; index: number; sta
   );
 }
 
-// Unscored retry of a predict-and-run step.
+// An unscored run, no prediction: the measured BER is shown and the step is done once it has been run.
+function UnscoredRun(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState }) {
+  const { state } = p;
+  const result = state.runs?.[0];
+  return (
+    <div className="stage-fields">
+      <RunBox
+        plan={p.runPlan(p.index)}
+        note={p.runNote?.(p.index)}
+        needsPrediction={false}
+        value={{ result }}
+        canRun={!result}
+        onStart={() => p.onRunStart(p.index, 'main')}
+        onDone={(s) => p.onRunDone(p.index, 'main', s)}
+      />
+    </div>
+  );
+}
+
+// Unscored retry of a run step.
 function RetryRun(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState }) {
   const { state } = p;
   const rr = state.retryRun;
+  const needsPrediction = !!predictField(p.step.fields);
   const grade = rr?.result && rr.prediction !== undefined ? scorePrediction(rr.prediction, rr.result, 0, predictField(p.step.fields)?.fullWithinFactor).grade : undefined;
   return (
     <div className="stage-fields">
       <RunBox
         plan={p.runPlan(p.index, 'retry')}
         note={p.runNote?.(p.index, 'retry')}
-        needsPrediction
+        needsPrediction={needsPrediction}
         value={{ prediction: rr?.prediction, result: rr?.result }}
         canRun={!rr?.result}
         onStart={(pred) => p.onRunStart(p.index, 'retry', pred)}
@@ -509,7 +530,9 @@ function FieldsForm({ fields, results, mode, done, worked = false, values, onSub
         const visible = groups.filter((x) => x < g).every((x) => fields.filter((f) => groupOf(f) === x).every(settled));
         if (!visible) return null;
         const locked = mode === 'retry' ? false : mode === 'apply' ? inGroup.every((f) => !!results?.[f.id]) : done || inGroup.every(settled);
-        const inRange = (f: FieldDef) => !f.range || (parsed(f.id) >= f.range.min && parsed(f.id) <= f.range.max);
+        const maxOf = (f: FieldDef) =>
+          f.range?.maxKey && Number.isFinite(Number(values[f.range.maxKey])) ? Number(values[f.range.maxKey]) : (f.range?.max ?? Infinity);
+        const inRange = (f: FieldDef) => !f.range || (parsed(f.id) >= f.range.min && parsed(f.id) <= maxOf(f));
         const ready = inGroup.every((f) => Number.isFinite(parsed(f.id)) && inRange(f));
         return (
           <form
@@ -544,18 +567,18 @@ function FieldsForm({ fields, results, mode, done, worked = false, values, onSub
                     </span>
                   </label>
                   {!fieldLocked && f.range && Number.isFinite(parsed(f.id)) && !inRange(f) && (
-                    <span className="stage-result bad">{f.range.message}</span>
+                    <span className="stage-result bad">{fillText(f.range.message, values)}</span>
                   )}
                   {r && mode === 'apply' && (
                     <span className={`stage-result ${r.ok ? 'ok' : r.points > 0 ? 'partial' : 'bad'}`}>
-                      {r.ok ? '✓' : r.points > 0 ? '~' : '✗'} true value {sig(r.truth)} {f.unit}
+                      {r.ok ? '✓' : r.points > 0 ? '~' : '✗'}{f.accept ? (r.ok ? ' accepted' : ' not accepted') : ` true value ${sig(r.truth)} ${f.unit}`}
                       {f.points > 0 ? `, ${r.points}/${f.points} pts` : ', not scored'}
                     </span>
                   )}
                   {r && mode !== 'apply' && (
                     <span className={`stage-result ${r.ok ? 'ok' : 'bad'}`}>
                       {r.ok ? '✓ Right' : '✗ Not yet'}
-                      {worked && ` (true value ${sig(r.truth)} ${f.unit})`}
+                      {worked && !f.accept && ` (true value ${sig(r.truth)} ${f.unit})`}
                     </span>
                   )}
                 </div>

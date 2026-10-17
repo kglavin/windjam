@@ -38,7 +38,7 @@ export interface StepState {
 
 // An apply step is done when every field and the goal, if there is one, are settled.
 export function applyDone(step: ApplyStep, st: StepState | undefined): boolean {
-  return step.fields.every((f) => !!st?.fields?.[f.id]) && (!step.goal || !!st?.goal);
+  return step.fields.every((f) => !!st?.fields?.[f.id]) && (!step.goal || !!st?.goal) && (!step.runUnscored || !!st?.runs?.length);
 }
 
 export interface ScorePart {

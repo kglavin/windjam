@@ -12,11 +12,14 @@ import {
   level2Values,
   level3Truth,
   level3Values,
+  d3Numbers,
+  level4Truth,
+  level4Values,
   textValues,
 } from '../../engine/lab/levels';
 import type { Scene, SceneBudget } from '../../engine/lab/scene';
-import { type FactsCard, factsOfTruth, knownFacts, level2Card, level3Card } from './knownFacts';
-import { level1Scene, level2Scene, level3Scene } from './levelScene';
+import { type FactsCard, factsOfTruth, knownFacts, level2Card, level3Card, level4Card } from './knownFacts';
+import { level1Scene, level2Scene, level3Scene, level4Scene } from './levelScene';
 import type { StepState } from './levelState';
 
 export interface SetupArgs {
@@ -27,6 +30,7 @@ export interface SetupArgs {
   step: StepDef | undefined;
   practice: KnownLinkInfo;
   practiceJsDb: number;
+  practiceN?: number; // the "Try another" counter
   budget: SceneBudget; // the scene now
   base: SceneBudget; // the scene the level started with
   interceptSnrDb?: number;
@@ -125,4 +129,32 @@ const setup3: LevelSetup = {
   },
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 1: setup1, 2: setup2, 3: setup3 };
+const setup4: LevelSetup = {
+  truth: level4Truth,
+  scene: level4Scene,
+  hidden: ['intercept'],
+  editable: [],
+  values: (a) => level4Values(a.truth, { jsDb: a.base.jsDb, ebN0Db: a.base.ebN0Db }, a.practice, a.practiceN ?? 0, a.practiceJsDb, a.run),
+  hiddenRows: () => [],
+  card: (a) => {
+    if (!a.step || a.step.kind === 'lesson' || !'BCD'.includes(a.flat[a.shownIdx].unit.id)) return null;
+    if (a.step.kind === 'practice') {
+      return level4Card('practice', a.flat, a.states, a.shownIdx, {
+        n: a.practice.n,
+        gpDb: a.practice.gpDb,
+        chipRateMcps: a.practice.chipRateMcps,
+        jsDb: a.practiceJsDb,
+      });
+    }
+    const d3 = d3Numbers(a.truth);
+    return level4Card('enemy', a.flat, a.states, a.shownIdx, {
+      n: a.truth.n,
+      gpDb: a.truth.gpDb,
+      chipRateMcps: a.truth.chipRateMcps,
+      jsDb: a.budget.jsDb,
+      maxAvgDb: d3.peakLimit - 10 * Math.log10(d3.q),
+    });
+  },
+};
+
+export const SETUPS: Record<number, LevelSetup> = { 1: setup1, 2: setup2, 3: setup3, 4: setup4 };

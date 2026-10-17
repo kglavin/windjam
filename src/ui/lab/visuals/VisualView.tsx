@@ -12,6 +12,9 @@ import { InterceptCompare } from './InterceptCompare';
 import { JammedSpectra } from './JammedSpectra';
 import { SpreadVsUnspread } from './SpreadVsUnspread';
 import { ThreeJammers } from './ThreeJammers';
+import { Peaks } from './Peaks';
+import { ToneSpectrum } from './ToneSpectrum';
+import { ToneSweep } from './ToneSweep';
 import { Spreading } from './Spreading';
 
 export interface HiddenShot {
@@ -76,6 +79,12 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12 }: {
       return <BerRunDemo variants={visual.variants} />;
     case 'threeJammers':
       return <ThreeJammers />;
+    case 'toneSpectrum':
+      return <ToneSpectrum />;
+    case 'toneSweep':
+      return <ToneSweep />;
+    case 'peaks':
+      return <Peaks />;
     case 'spectrum':
     case 'autocorr': {
       if (visual.link === 'hidden') {
