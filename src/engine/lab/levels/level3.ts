@@ -198,6 +198,7 @@ export const LEVEL_3: LevelDef = {
           kind: 'lesson',
           id: 'B1',
           title: 'Example: a quarter of the band',
+          video: 'level3-B1',
           visual: {
             kind: 'berRunDemo',
             variants: [
@@ -315,6 +316,7 @@ export const LEVEL_3: LevelDef = {
           kind: 'lesson',
           id: 'D1',
           title: 'Example: long pulses or short ones',
+          video: 'level3-D1',
           visual: {
             kind: 'berRunDemo',
             variants: [

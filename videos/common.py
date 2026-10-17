@@ -3,13 +3,16 @@ long enough to read, labels, brackets and the scratchpad panel."""
 import json
 from pathlib import Path
 
+import numpy as np
+
 from manim import *
 
 # The figure colours in src/styles.css (.inst-svg .c1/.c2/.c3) and the instrument background.
 BLUE_C1 = "#60a5fa"
 AMBER_C2 = "#f59e0b"
 GREEN_C3 = "#34d399"
-RED = "#f87171"
+RED = "#f87171"        # jammer (.vis-bar-jam)
+YELLOW = "#facc15"     # the Eb/J0 gap (.vis-gap)
 GREY = "#94a3b8"
 PANEL = "#111a2e"
 
@@ -71,6 +74,17 @@ def stack_targets(bars, values, x, y, amp, width=0.3):
     return out
 
 
+def pulse_psd(f, T):
+    """Power spectral density per MHz of random ±1 pulses T µs long with power 1: T·sinc²(f·T). Peak T, first
+    nulls at ±1/T, area 1 for every T."""
+    x = f * T
+    return T * (1.0 if abs(x) < 1e-12 else (np.sin(np.pi * x) / (np.pi * x)) ** 2)
+
+
+def db(v, floor=1e-12):
+    return 10 * np.log10(max(v, floor))
+
+
 class Plot:
     """A plain plot frame (no LaTeX): x from x0 over width, y from y0 over height, mapping data ranges xr and yr."""
 
@@ -115,7 +129,10 @@ class LessonScene(Scene):
 
     def caption(self, text):
         self.hold_caption()
-        new = label(text, size=28).to_edge(DOWN, buff=0.3)
+        new = label(text, size=28)
+        if new.width > 13.4:  # keep long captions inside the frame
+            new.scale_to_fit_width(13.4)
+        new.to_edge(DOWN, buff=0.3)
         if self.cap is None:
             self.play(FadeIn(new, shift=UP * 0.2), run_time=0.6)
         else:

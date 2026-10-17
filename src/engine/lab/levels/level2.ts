@@ -142,6 +142,7 @@ export const LEVEL_2: LevelDef = {
           id: 'B1',
           title: 'Example: what the decoder sees',
           visual: { kind: 'despreadBars', gpDb: 14.9, jsDb: 10 },
+          video: 'level2-B1',
           paragraphs: [
             "The enemy receiver multiplies everything it hears by its code and adds up the chips of each bit. The signal follows the code and gains Gp. The jammer's noise does not follow the code, so it gains nothing.",
             'The example link has Gp = 14.9 dB (31 chips per bit) and the jammer arrives at J/S = 10 dB.',
