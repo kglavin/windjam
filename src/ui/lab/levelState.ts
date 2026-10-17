@@ -96,7 +96,7 @@ export function runDone(step: ApplyStep | PracticeStep, st: StepState, s: RunSum
   const pf = step.fields.find((f) => f.kind === 'predictBer');
   if (step.kind === 'practice') {
     if (!pf || st.prediction === undefined) return next;
-    const g = scorePrediction(st.prediction, s, 0);
+    const g = scorePrediction(st.prediction, s, 0, pf.fullWithinFactor);
     const ok = g.grade !== 'miss';
     const fields = { ...st.fields, [pf.id]: { value: st.prediction, ok, truth: s.ber, points: 0, grade: g.grade } };
     const first = { ...st.first };
@@ -105,7 +105,7 @@ export function runDone(step: ApplyStep | PracticeStep, st: StepState, s: RunSum
     return { ...next, fields, first, done: st.done || done, tries: ok ? st.tries : (st.tries ?? 0) + 1 };
   }
   if (pf && st.prediction !== undefined && !st.fields?.[pf.id]) {
-    const g = scorePrediction(st.prediction, s, pf.points);
+    const g = scorePrediction(st.prediction, s, pf.points, pf.fullWithinFactor);
     next.fields = { ...st.fields, [pf.id]: { value: st.prediction, ok: g.grade === 'inside', truth: s.ber, points: g.points, grade: g.grade } };
   }
   if (step.goal && !st.goal) {

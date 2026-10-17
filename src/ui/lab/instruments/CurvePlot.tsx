@@ -16,6 +16,7 @@ interface Props {
   theory: { label: string; f: (jsDb: number) => number }[];
   predictions?: { jsDb: number; ber: number }[];
   xRange?: [number, number];
+  kindOrder?: string[]; // point kinds in colour order, so a kind keeps its colour whichever is plotted first
 }
 
 const LOG_LO = Math.log10(1e-5);
@@ -23,7 +24,7 @@ const LOG_HI = Math.log10(0.5);
 const COLOURS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'];
 
 // BER against J/S: measured points with intervals, theory lines, prediction markers and the jammer goal.
-export function CurvePlot({ points, theory, predictions = [], xRange = [-10, 30] }: Props) {
+export function CurvePlot({ points, theory, predictions = [], xRange = [-10, 30], kindOrder = [] }: Props) {
   const [x0, x1] = xRange;
   const fx = (v: number) => PAD.l + ((v - x0) / (x1 - x0)) * INNER_W;
   const fy = (b: number) => PAD.t + ((LOG_HI - Math.log10(Math.max(1e-5, Math.min(0.5, b)))) / (LOG_HI - LOG_LO)) * INNER_H;
@@ -38,7 +39,7 @@ export function CurvePlot({ points, theory, predictions = [], xRange = [-10, 30]
       }),
     [theory, x0, x1],
   );
-  const kinds = useMemo(() => Array.from(new Set(points.map((p) => p.kind ?? 'measured'))), [points]);
+  const kinds = useMemo(() => Array.from(new Set([...kindOrder, ...points.map((p) => p.kind ?? 'measured')])), [points, kindOrder]);
   const kindClass = (k: string) => COLOURS[(theory.length + kinds.indexOf(k)) % COLOURS.length];
 
   return (

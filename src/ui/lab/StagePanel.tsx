@@ -37,7 +37,8 @@ export interface StagePanelProps {
   onRetryStart: (stepIndex: number) => void;
   onCheckRetry: (stepIndex: number, entered: Record<string, number>) => void;
   onBack: () => void;
-  runPlan: (stepIndex: number) => RunPlan | undefined; // the BER run a step offers, from the scene now
+  runPlan: (stepIndex: number, mode?: 'main' | 'retry') => RunPlan | undefined; // the BER run a step offers, from the scene now
+  runNote?: (stepIndex: number, mode?: 'main' | 'retry') => string | undefined; // a line about the run's jammer
   onRunStart: (stepIndex: number, mode: 'main' | 'retry', prediction?: number) => void;
   onRunDone: (stepIndex: number, mode: 'main' | 'retry', summary: RunSummary) => void;
   onPredictAgain: (stepIndex: number) => void; // practice: unlock the prediction for another run
@@ -361,9 +362,10 @@ const predictField = (fields: FieldDef[]) => fields.find((f) => f.kind === 'pred
 const GRADE_TEXT: Record<PredictGrade, string> = {
   inside: 'inside the measured range',
   near: 'within a factor of 2 of the measured BER',
+  wide: 'within a factor of 3 of the measured BER',
   miss: 'not within a factor of 2 of the measured BER',
 };
-const GRADE_MARK: Record<PredictGrade, string> = { inside: '✓', near: '~', miss: '✗' };
+const GRADE_MARK: Record<PredictGrade, string> = { inside: '✓', near: '~', wide: '~', miss: '✗' };
 
 // Practice: predict, run, compare. Unscored; another prediction and run until it is right.
 function PracticeRun(p: StagePanelProps & { step: PracticeStep; index: number; state: StepState; field: FieldDef }) {
@@ -401,6 +403,7 @@ function ApplyPredict(p: StagePanelProps & { step: ApplyStep; index: number; sta
     <div className="stage-fields">
       <RunBox
         plan={p.runPlan(p.index)}
+        note={p.runNote?.(p.index)}
         needsPrediction
         value={{ prediction: state.prediction, result }}
         canRun={!result}
@@ -408,7 +411,7 @@ function ApplyPredict(p: StagePanelProps & { step: ApplyStep; index: number; sta
         onDone={(s) => p.onRunDone(p.index, 'main', s)}
       />
       {r?.grade && (
-        <p className={`stage-result ${r.grade === 'inside' ? 'ok' : r.grade === 'near' ? 'partial' : 'bad'}`}>
+        <p className={`stage-result ${r.grade === 'inside' ? 'ok' : r.grade === 'near' || r.grade === 'wide' ? 'partial' : 'bad'}`}>
           {GRADE_MARK[r.grade]} Your {berText(r.value)} is {GRADE_TEXT[r.grade]}, {r.points}/{field.points} pts
         </p>
       )}
@@ -420,11 +423,12 @@ function ApplyPredict(p: StagePanelProps & { step: ApplyStep; index: number; sta
 function RetryRun(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState }) {
   const { state } = p;
   const rr = state.retryRun;
-  const grade = rr?.result && rr.prediction !== undefined ? scorePrediction(rr.prediction, rr.result, 0).grade : undefined;
+  const grade = rr?.result && rr.prediction !== undefined ? scorePrediction(rr.prediction, rr.result, 0, predictField(p.step.fields)?.fullWithinFactor).grade : undefined;
   return (
     <div className="stage-fields">
       <RunBox
-        plan={p.runPlan(p.index)}
+        plan={p.runPlan(p.index, 'retry')}
+        note={p.runNote?.(p.index, 'retry')}
         needsPrediction
         value={{ prediction: rr?.prediction, result: rr?.result }}
         canRun={!rr?.result}
@@ -432,7 +436,7 @@ function RetryRun(p: StagePanelProps & { step: ApplyStep; index: number; state: 
         onDone={(s) => p.onRunDone(p.index, 'retry', s)}
       />
       {grade && rr?.prediction !== undefined && (
-        <p className={`stage-result ${grade === 'inside' ? 'ok' : grade === 'near' ? 'partial' : 'bad'}`}>
+        <p className={`stage-result ${grade === 'inside' ? 'ok' : grade === 'near' || grade === 'wide' ? 'partial' : 'bad'}`}>
           {GRADE_MARK[grade]} Your {berText(rr.prediction)} is {GRADE_TEXT[grade]} (not scored)
         </p>
       )}
@@ -505,7 +509,8 @@ function FieldsForm({ fields, results, mode, done, worked = false, values, onSub
         const visible = groups.filter((x) => x < g).every((x) => fields.filter((f) => groupOf(f) === x).every(settled));
         if (!visible) return null;
         const locked = mode === 'retry' ? false : mode === 'apply' ? inGroup.every((f) => !!results?.[f.id]) : done || inGroup.every(settled);
-        const ready = inGroup.every((f) => Number.isFinite(parsed(f.id)));
+        const inRange = (f: FieldDef) => !f.range || (parsed(f.id) >= f.range.min && parsed(f.id) <= f.range.max);
+        const ready = inGroup.every((f) => Number.isFinite(parsed(f.id)) && inRange(f));
         return (
           <form
             key={g}
@@ -538,6 +543,9 @@ function FieldsForm({ fields, results, mode, done, worked = false, values, onSub
                       <span className="stage-unit">{f.unit}</span>
                     </span>
                   </label>
+                  {!fieldLocked && f.range && Number.isFinite(parsed(f.id)) && !inRange(f) && (
+                    <span className="stage-result bad">{f.range.message}</span>
+                  )}
                   {r && mode === 'apply' && (
                     <span className={`stage-result ${r.ok ? 'ok' : r.points > 0 ? 'partial' : 'bad'}`}>
                       {r.ok ? '✓' : r.points > 0 ? '~' : '✗'} true value {sig(r.truth)} {f.unit}

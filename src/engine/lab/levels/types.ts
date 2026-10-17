@@ -62,6 +62,11 @@ export interface FieldDef {
   kind?: 'predictBer';
   // Reduced credit for an answer outside `check` but inside this tolerance.
   partial?: { abs: number; points: number };
+  // The entry must lie inside this range before it can be submitted (a duty cycle, say, that a run will use).
+  range?: { min: number; max: number; message: string };
+  // predictBer only: full points also within this factor of the measured BER (grade 'near'), half within one more
+  // (grade 'wide'). Without it: full inside the interval, half within a factor of 2.
+  fullWithinFactor?: number;
 }
 
 export interface Tol {
@@ -137,8 +142,9 @@ export type Visual =
   | { kind: 'dbTable' }
   | { kind: 'jammedSpectra' }
   | { kind: 'despreadBars'; gpDb?: number; jsDb?: number; link?: 'practice' } // fixed values, or the practice link's
-  | { kind: 'berCurve'; mark?: 'example' | 'practice' } // marks that link's Eb/J0 on the curve
-  | { kind: 'berRunDemo' }
+  | { kind: 'berCurve'; mark?: 'example' | 'practice'; marks?: { db: number; label: string }[] } // marks that link's Eb/J0, or fixed Eb/J0 values, on the curve
+  | { kind: 'berRunDemo'; variants?: { label: string; jammer: JammerSpec }[] } // each variant has its own Run button
+  | { kind: 'threeJammers' }
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'none' };
@@ -167,7 +173,13 @@ export interface RunSpec {
   link: LinkKey;
   js: 'fixed' | 'scene';
   jsDb?: number;
+  jsDbFrom?: (truth: Truth) => number; // js 'fixed': a J/S computed from the truth
   jammer: JammerSpec;
+  // The jammer built from the values the player entered in the same step (field id to value) and the link's
+  // chips per bit. When set it replaces `jammer`.
+  jammerFrom?: (values: Record<string, number>, chipsPerBit: number) => JammerSpec;
+  // A line for the run box about the jammer that will be used, from the same inputs as jammerFrom.
+  jammerNote?: (values: Record<string, number>, chipsPerBit: number) => string | undefined;
 }
 
 // The jammer's goal: after a run at the scene's J/S the measured BER reaches berAtLeast (less 20% for counting
@@ -195,13 +207,24 @@ export interface RunSummary {
 export const DENY_TOLERANCE = 0.8;
 export const DENY_FULL_RUNS = 3;
 
-export type PredictGrade = 'inside' | 'near' | 'miss';
+export type PredictGrade = 'inside' | 'near' | 'wide' | 'miss';
 
 // A BER prediction against a run: full points inside the run's 95% interval, half within a factor of 2 of the
 // measured BER, else none.
-export function scorePrediction(prediction: number, run: { ber: number; lo: number; hi: number }, points: number): { grade: PredictGrade; points: number } {
+export function scorePrediction(
+  prediction: number,
+  run: { ber: number; lo: number; hi: number },
+  points: number,
+  fullWithinFactor?: number,
+): { grade: PredictGrade; points: number } {
   if (!Number.isFinite(prediction) || prediction <= 0) return { grade: 'miss', points: 0 };
   if (prediction >= run.lo && prediction <= run.hi) return { grade: 'inside', points };
+  if (fullWithinFactor !== undefined && run.ber > 0) {
+    const within = (f: number) => prediction <= f * run.ber && prediction >= run.ber / f;
+    if (within(fullWithinFactor)) return { grade: 'near', points };
+    if (within(fullWithinFactor + 1)) return { grade: 'wide', points: points / 2 };
+    return { grade: 'miss', points: 0 };
+  }
   if (run.ber > 0 && prediction <= 2 * run.ber && prediction >= run.ber / 2) return { grade: 'near', points: points / 2 };
   return { grade: 'miss', points: 0 };
 }
@@ -291,6 +314,8 @@ export interface LevelDef {
   units: UnitDef[];
   debrief: string;
   passMark: number;
+  // The practice J/S for a "Try another" counter, when the level does not use level 2's.
+  practiceJs?: (counter: number, link: KnownLinkInfo) => number;
 }
 
 export interface FlatStep {

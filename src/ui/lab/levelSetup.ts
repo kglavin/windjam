@@ -10,11 +10,13 @@ import {
   level1Truth,
   level2Truth,
   level2Values,
+  level3Truth,
+  level3Values,
   textValues,
 } from '../../engine/lab/levels';
 import type { Scene, SceneBudget } from '../../engine/lab/scene';
-import { type FactsCard, factsOfTruth, knownFacts, level2Card } from './knownFacts';
-import { level1Scene, level2Scene } from './levelScene';
+import { type FactsCard, factsOfTruth, knownFacts, level2Card, level3Card } from './knownFacts';
+import { level1Scene, level2Scene, level3Scene } from './levelScene';
 import type { StepState } from './levelState';
 
 export interface SetupArgs {
@@ -28,7 +30,7 @@ export interface SetupArgs {
   budget: SceneBudget; // the scene now
   base: SceneBudget; // the scene the level started with
   interceptSnrDb?: number;
-  run?: { prediction?: number; summary?: RunSummary };
+  run?: { prediction?: number; summary?: RunSummary; fields?: Record<string, { value: number }> };
 }
 
 export interface LevelSetup {
@@ -94,4 +96,33 @@ const setup2: LevelSetup = {
   },
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 1: setup1, 2: setup2 };
+const setup3: LevelSetup = {
+  truth: level3Truth,
+  scene: level3Scene,
+  hidden: ['intercept'],
+  editable: [],
+  values: (a) => level3Values(a.truth, { jsDb: a.base.jsDb, ebJ0Db: a.base.ebJ0Db }, a.practice, a.practiceJsDb, a.run),
+  hiddenRows: () => [],
+  card: (a) => {
+    if (!a.step || a.step.kind === 'lesson' || !'BCDE'.includes(a.flat[a.shownIdx].unit.id)) return null;
+    if (a.step.kind === 'practice') {
+      return level3Card('practice', a.flat, a.states, a.shownIdx, {
+        n: a.practice.n,
+        gpDb: a.practice.gpDb,
+        chipRateMcps: a.practice.chipRateMcps,
+        jsDb: a.practiceJsDb,
+        ebJ0Db: Math.round(a.practice.gpDb * 10) / 10 - a.practiceJsDb,
+      });
+    }
+    return level3Card('enemy', a.flat, a.states, a.shownIdx, {
+      n: a.truth.n,
+      gpDb: a.truth.gpDb,
+      chipRateMcps: a.truth.chipRateMcps,
+      jsDb: a.budget.jsDb,
+      // The same rounded arithmetic the texts show, so card and reveals agree.
+      ebJ0Db: Math.round(a.truth.gpDb * 10) / 10 - Math.round(a.base.jsDb * 10) / 10,
+    });
+  },
+};
+
+export const SETUPS: Record<number, LevelSetup> = { 1: setup1, 2: setup2, 3: setup3 };

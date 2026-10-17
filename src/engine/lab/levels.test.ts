@@ -86,7 +86,7 @@ const allSteps = (): StepDef[] => LEVEL_1.units.flatMap((u) => u.steps);
 
 describe('LEVEL_1 structure', () => {
   it('is in LEVELS with well-formed units and steps', () => {
-    expect(LEVELS).toEqual([LEVEL_1, LEVEL_2]);
+    expect(LEVELS.slice(0, 2)).toEqual([LEVEL_1, LEVEL_2]);
     expect(LEVEL_1.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
     const ids = allSteps().map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);

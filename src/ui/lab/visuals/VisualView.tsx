@@ -11,6 +11,7 @@ import { DespreadBars } from './DespreadBars';
 import { InterceptCompare } from './InterceptCompare';
 import { JammedSpectra } from './JammedSpectra';
 import { SpreadVsUnspread } from './SpreadVsUnspread';
+import { ThreeJammers } from './ThreeJammers';
 import { Spreading } from './Spreading';
 
 export interface HiddenShot {
@@ -69,10 +70,12 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12 }: {
           : visual.mark === 'practice'
             ? knownLinkInfo(links.practice).gpDb - practiceJsDb
             : undefined;
-      return <BerCurve markDb={mark} />;
+      return <BerCurve markDb={mark} marks={visual.marks} />;
     }
     case 'berRunDemo':
-      return <BerRunDemo />;
+      return <BerRunDemo variants={visual.variants} />;
+    case 'threeJammers':
+      return <ThreeJammers />;
     case 'spectrum':
     case 'autocorr': {
       if (visual.link === 'hidden') {

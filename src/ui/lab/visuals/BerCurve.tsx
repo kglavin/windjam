@@ -10,8 +10,8 @@ const LOG_LO = Math.log10(1e-6);
 const LOG_HI = Math.log10(0.5);
 
 // BPSK bit error rate against Eb/J0 on a log axis, the table's points marked, and the table beside it.
-// markDb draws a vertical line at one link's Eb/J0.
-export function BerCurve({ markDb }: { markDb?: number }) {
+// markDb draws a vertical line at one link's Eb/J0; marks draw labelled lines and points at fixed Eb/J0 values.
+export function BerCurve({ markDb, marks = [] }: { markDb?: number; marks?: { db: number; label: string }[] }) {
   const fx = (v: number) => PAD.l + ((v - X0) / (X1 - X0)) * INNER_W;
   const fy = (b: number) => PAD.t + ((LOG_HI - Math.log10(Math.max(1e-6, Math.min(0.5, b)))) / (LOG_HI - LOG_LO)) * INNER_H;
   const rows = useMemo(berTable, []);
@@ -44,6 +44,22 @@ export function BerCurve({ markDb }: { markDb?: number }) {
               <text x={fx(markDb) + 4} y={PAD.t + 10} className="inst-axis">this link: {Number(markDb.toFixed(1))} dB</text>
             </g>
           )}
+          {marks
+            .filter((m) => m.db >= X0 && m.db <= X1)
+            .map((m, i) => (
+              <g key={m.label}>
+                <line x1={fx(m.db)} x2={fx(m.db)} y1={PAD.t} y2={PAD.t + INNER_H} className="inst-cursor" />
+                <circle cx={fx(m.db)} cy={fy(berBpsk(undb(m.db)))} r={4.5} className="inst-pred" />
+                <text
+                  x={fx(m.db) + (m.db > (X0 + X1) / 2 ? -4 : 4)}
+                  y={PAD.t + 10 + i * 12}
+                  textAnchor={m.db > (X0 + X1) / 2 ? 'end' : 'start'}
+                  className="inst-axis"
+                >
+                  {m.label}
+                </text>
+              </g>
+            ))}
           <g className="c2">
             {rows.map((r) => (
               <circle key={r.db} cx={fx(r.db)} cy={fy(r.ber)} r={3.5} className="inst-pt" />

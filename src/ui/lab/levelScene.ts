@@ -39,13 +39,12 @@ export function level1Scene(t: Truth): Scene {
   return at(km);
 }
 
-// Level 2's scene: the truth's rates, a transmitter power that puts the friendly receiver's Eb/N0 near 25 dB
-// (noise negligible), and the jammer on its default bearing at the distance that gives Eb/J0 between 3.5 and
-// 5.5 dB. The intercept is not used.
-export function level2Scene(t: Truth): Scene {
-  const rng = createRng(t.seed ^ 0x2c1b3c6d);
+// A level's scene with a jammer: the truth's rates, a transmitter power that puts the friendly receiver's Eb/N0 near
+// 25 dB (noise negligible), and the jammer on its default bearing at the distance that gives the target Eb/J0.
+function jammerScene(t: Truth, salt: number, ebJ0LoDb: number, ebJ0SpanDb: number): Scene {
+  const rng = createRng(t.seed ^ salt);
   const targetEbN0Db = Math.round((24.5 + rng()) * 10) / 10;
-  const targetEbJ0Db = Math.round((3.5 + 2 * rng()) * 10) / 10;
+  const targetEbJ0Db = Math.round((ebJ0LoDb + ebJ0SpanDb * rng()) * 10) / 10;
   let scene: Scene = {
     ...DEFAULT_SCENE,
     chipRateMcps: t.chipRateMcps,
@@ -70,3 +69,10 @@ export function level2Scene(t: Truth): Scene {
     },
   };
 }
+
+// Level 2's scene: Eb/J0 between 3.5 and 5.5 dB. The intercept is not used.
+export const level2Scene = (t: Truth): Scene => jammerScene(t, 0x2c1b3c6d, 3.5, 2);
+
+// Level 3's scene: a link with margin, Eb/J0 between 8.5 and 10.5 dB (8 to 11 as the texts round it). The
+// jammer stays where it is and the intercept is not used.
+export const level3Scene = (t: Truth): Scene => jammerScene(t, 0x1b873593, 8.5, 2);

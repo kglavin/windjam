@@ -1689,3 +1689,26 @@ select {
 .run-stats {
   margin-top: 6px;
 }
+.vis-three {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.vis-three-col {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.vis-three-col figcaption {
+  font-size: 12px;
+  color: var(--muted);
+}
+.vis-variant-dot {
+  margin-right: 6px;
+}
+.vis-variant-dot.c2 { background: #f59e0b; }
+.vis-variant-dot.c3 { background: #34d399; }
+.vis-variant-dot.c4 { background: #f472b6; }
+.vis-variant-dot.c5 { background: #a78bfa; }
+.vis-variant-dot.c6 { background: #f87171; }

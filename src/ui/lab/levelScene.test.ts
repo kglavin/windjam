@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { level1Truth, level2Truth } from '../../engine/lab/levels';
+import { level1Truth, level2Truth, level3Truth } from '../../engine/lab/levels';
+import { berPulsedBpsk, undb } from '../../engine/lab/theory';
 import { sceneBudget } from '../../engine/lab/scene';
-import { level1Scene, level2Scene } from './levelScene';
+import { level1Scene, level2Scene, level3Scene } from './levelScene';
 
 describe('level1Scene', () => {
   it('starts the intercept below 3 dB and the friendly link below the noise with margin', () => {
@@ -49,6 +50,32 @@ describe('level2Scene', () => {
       const need = t.gpDb + 0.9;
       const raised = sceneBudget({ ...s, jammer: { ...s.jammer, powerW: 1000 } });
       expect(raised.jsDb).toBeGreaterThan(need - 0.5);
+    }
+  });
+});
+
+describe('level3Scene', () => {
+  it('starts a link with margin: Eb/N0 near 25 dB, broadband Eb/J0 of 8 to 11 dB as the texts print it, a measurable pulsed BER', () => {
+    for (let seed = 1; seed <= 120; seed++) {
+      const t = level3Truth(seed);
+      const s = level3Scene(t);
+      const b = sceneBudget(s);
+      expect(b.ebN0Db).toBeGreaterThan(24);
+      expect(b.ebN0Db).toBeLessThan(26);
+      const printed = Math.round(t.gpDb * 10) / 10 - Math.round(b.jsDb * 10) / 10;
+      expect(printed).toBeGreaterThanOrEqual(8);
+      expect(printed).toBeLessThanOrEqual(11);
+      expect(b.ebJ0Db).toBeGreaterThan(8);
+      expect(b.ebJ0Db).toBeLessThan(11);
+      const pulsed = berPulsedBpsk(undb(b.ebN0Db), undb(b.ebJ0Db), 0.1);
+      expect(pulsed).toBeGreaterThan(0.001);
+      expect(pulsed).toBeLessThan(0.05);
+      expect(s.tx.powerW).toBeGreaterThanOrEqual(0.1);
+      expect(s.tx.powerW).toBeLessThanOrEqual(1000);
+      expect(s.jammer.powerW).toBeGreaterThan(0);
+      expect(Math.abs(s.jammer.xKm)).toBeLessThan(200);
+      expect(Math.abs(s.jammer.yKm)).toBeLessThan(200);
+      expect(b.jamDistanceKm).toBeGreaterThan(1);
     }
   });
 });

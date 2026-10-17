@@ -1,6 +1,7 @@
 // The "What you know" card: what the player has confirmed about the enemy link, or what is established
 // about the practice link, with the player's own first entry beside each confirmed value.
 import { type FlatStep, type KnownLinkInfo, type Truth, berText } from '../../engine/lab/levels';
+import { berBpsk, undb } from '../../engine/lab/theory';
 import type { StepState } from './levelState';
 
 export interface FactRow {
@@ -136,3 +137,74 @@ export function level2Card(
   ];
   return { heading: mode === 'practice' ? 'Practice link' : 'What you know', rows };
 }
+
+// Level 3's card. The enemy link: Gp and the scene's J/S are given, the bit length, the pulsed BER at 10% and the
+// best duty fill in as the "Your turn" steps are submitted. The practice link: filled in by the practice steps.
+export interface Level3Facts {
+  n: number;
+  gpDb: number;
+  chipRateMcps: number;
+  jsDb: number; // enemy: the scene's J/S now; practice: the practice J/S
+  ebJ0Db: number; // broadband: Gp less the J/S the level started with (enemy), or less the practice J/S
+}
+
+const SOURCES3 = {
+  enemy: { bit: ['D2', 'bitUs'], ber: ['C3', 'ber'], duty: ['E3', 'duty'] },
+  practice: { bit: ['', ''], ber: ['C2', 'ber'], duty: ['E2', 'duty'] },
+} as const;
+
+export function level3Card(
+  mode: 'enemy' | 'practice',
+  flat: FlatStep[],
+  states: StepState[],
+  shownIndex: number,
+  f: Level3Facts,
+): FactsCard {
+  const src = SOURCES3[mode];
+  const lookup = (key: keyof typeof src) => {
+    const [stepId, fieldId] = src[key];
+    const i = flat.findIndex((x) => x.step.id === stepId);
+    const st = i >= 0 ? states[i] : undefined;
+    const r = st?.fields?.[fieldId];
+    const first = st?.first?.[fieldId] ?? (r ? { value: r.value, ok: r.ok } : undefined);
+    const known = i >= 0 && (mode === 'enemy' ? !!r : shownIndex > i || !!st?.worked || !!r?.ok);
+    return { known, first, r, st };
+  };
+  const bit = lookup('bit');
+  const ber = lookup('ber');
+  const duty = lookup('duty');
+  const youFmt = (x: ReturnType<typeof lookup>, fmt: (v: number) => string) =>
+    x.known && x.first ? { text: `you: ${fmt(x.first.value)}`, ok: x.first.ok } : undefined;
+  const runs = ber.st?.runs ?? [];
+  const measured = runs[0];
+  const ratio = 10 ** (f.ebJ0Db / 10);
+  const rows: FactRow[] = [
+    { label: mode === 'enemy' ? 'Gp (given)' : 'Gp', value: `${f.n} times (${trim1(f.gpDb)} dB)` },
+    { label: 'Chips per bit', value: String(f.n) },
+  ];
+  if (mode === 'enemy') {
+    rows.push({ label: 'Bit length', value: bit.known ? `${trim1(f.n / f.chipRateMcps)} µs` : null, you: youFmt(bit, trim1) });
+  }
+  rows.push(
+    { label: mode === 'enemy' ? 'J/S now' : 'J/S', value: `${trim1(f.jsDb)} dB` },
+    { label: 'Broadband Eb/J0', value: `${trim1(f.ebJ0Db)} dB` },
+    mode === 'enemy'
+      ? {
+          label: 'Pulsed BER at 10%, measured',
+          value: ber.known && measured ? `${berText(measured.ber)} (range ${berText(measured.lo)} to ${berText(measured.hi)})` : null,
+          you: ber.known && ber.st?.prediction !== undefined && ber.r ? { text: `you: ${berText(ber.st.prediction)}`, ok: ber.r.grade !== 'miss' } : undefined,
+        }
+      : {
+          label: 'Pulsed BER at 10%',
+          value: ber.known ? berText(0.1 * berBpskLin(f.ebJ0Db - 10)) : null,
+        },
+    {
+      label: 'Best duty',
+      value: duty.known ? String(Number(Math.min(1, 0.7 / ratio).toPrecision(2))) : null,
+      you: youFmt(duty, String),
+    },
+  );
+  return { heading: mode === 'practice' ? 'Practice link' : 'What you know', rows };
+}
+
+const berBpskLin = (ebJ0Db: number): number => berBpsk(undb(ebJ0Db));

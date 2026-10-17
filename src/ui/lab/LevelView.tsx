@@ -53,7 +53,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const [practiceN, setPracticeN] = useState(0);
   const practiceLink = useMemo(() => practiceLinkAt(practiceN), [practiceN]);
   const practiceInfo = useMemo(() => knownLinkInfo(practiceLink), [practiceLink]);
-  const practiceJsDb = useMemo(() => practiceJsAt(practiceN, practiceInfo), [practiceN, practiceInfo]);
+  const practiceJsDb = useMemo(() => (level.practiceJs ?? practiceJsAt)(practiceN, practiceInfo), [level, practiceN, practiceInfo]);
 
   const patch = (i: number, p: Partial<StepState>) =>
     setStates((all) => all.map((s, j) => (j === i ? { ...s, ...p } : s)));
@@ -120,7 +120,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     base,
     interceptSnrDb,
     // A step with a run: the prediction and the run that counts (the one that reached the goal, else the first).
-    run: { prediction: shownState?.prediction, summary: shownState?.goal?.run ?? shownState?.runs?.[0] },
+    run: { prediction: shownState?.prediction, summary: shownState?.goal?.run ?? shownState?.runs?.[0], fields: shownState?.fields },
   };
   const hiddenRows = setup.hiddenRows(setupArgs);
   const values = setup.values(setupArgs);
@@ -129,9 +129,20 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
 
   // The BER run a step offers, from the scene as it is now. Seeded from the level seed, the step, the practice
   // link and how many runs the step has had.
-  const runPlan = (i: number) => {
+  // `mode` 'retry' takes what the player entered in the retry instead of the scored submission.
+  const enteredFor = (i: number, mode: 'main' | 'retry'): Record<string, number> =>
+    Object.fromEntries(Object.entries((mode === 'retry' ? states[i].retry : states[i].fields) ?? {}).map(([id, r]) => [id, r.value]));
+  // A run whose jammer depends on a field waits for a value of that field inside its range.
+  const rangeOk = (i: number, mode: 'main' | 'retry'): boolean => {
+    const st = flat[i].step;
+    if (st.kind !== 'apply') return true;
+    const entered = enteredFor(i, mode);
+    return st.fields.every((f) => !f.range || (entered[f.id] >= f.range.min && entered[f.id] <= f.range.max));
+  };
+  const runPlan = (i: number, mode: 'main' | 'retry' = 'main') => {
     const st = flat[i].step;
     if ((st.kind !== 'practice' && st.kind !== 'apply') || !st.run) return undefined;
+    if (st.run.jammerFrom && !rangeOk(i, mode)) return undefined;
     const s = states[i];
     const n = (s.runs?.length ?? 0) * 8 + (s.retries ?? 0);
     return planRun(st.run, {
@@ -141,7 +152,19 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
       practiceJsDb,
       scene: { jsDb: budget.jsDb, ebN0Db: budget.ebN0Db },
       seed: (Math.imul(truth.seed, 0x9e3779b1) ^ Math.imul(i + 1, 0x85ebca6b) ^ Math.imul(practiceN + 1, 0xc2b2ae35) ^ n) >>> 0,
+      entered: enteredFor(i, mode),
     });
+  };
+  // What to tell the player about the run's jammer, or why Run is not ready yet.
+  const runNote = (i: number, mode: 'main' | 'retry' = 'main'): string | undefined => {
+    const st = flat[i].step;
+    if (st.kind !== 'apply' || !st.run?.jammerFrom) return undefined;
+    const plan = runPlan(i, mode);
+    if (!plan) {
+      const f = st.fields.find((x) => x.range);
+      return f ? `Enter the ${f.label.toLowerCase()} above and press ${mode === 'retry' ? 'Check' : 'Submit'} to enable Run.` : undefined;
+    }
+    return st.run.jammerNote?.(enteredFor(i, mode), plan.request.link.chipsPerBit);
   };
 
   const score = scoreLevel(level, states);
@@ -236,6 +259,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         }}
         onRetryStart={(i) => update(i, (s) => ({ ...s, retrying: true, retry: undefined, retryRun: undefined, retries: (s.retries ?? 0) + 1 }))}
         runPlan={runPlan}
+        runNote={runNote}
         onRunStart={(i, mode, prediction) => {
           if (mode === 'retry') update(i, (s) => ({ ...s, retryRun: { prediction } }));
           else if (prediction !== undefined) update(i, (s) => ({ ...s, prediction }));

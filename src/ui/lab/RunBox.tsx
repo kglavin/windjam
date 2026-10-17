@@ -71,12 +71,13 @@ export interface RunValue {
 
 // The Run button of a step, with the prediction field when the step asks for one. The step owns the state:
 // the prediction is locked once it is set, and onStart is called with it when Run is pressed.
-export function RunBox({ plan, needsPrediction, value, canRun, label = 'Run', onStart, onDone }: {
+export function RunBox({ plan, needsPrediction, value, canRun, label = 'Run', note, onStart, onDone }: {
   plan: RunPlan | undefined;
   needsPrediction: boolean;
   value: RunValue;
   canRun: boolean; // false once the step's run is final
   label?: string;
+  note?: string; // a line about the run's jammer, shown under the J/S
   onStart: (prediction?: number) => void;
   onDone: (s: RunSummary) => void;
 }) {
@@ -106,6 +107,7 @@ export function RunBox({ plan, needsPrediction, value, canRun, label = 'Run', on
         </label>
       )}
       {plan && <p className="stage-note">J/S for this run: {plan.jsDb.toFixed(1)} dB</p>}
+      {note && <p className="stage-note">{note}</p>}
       {canRun && (
         <button
           type="button"
