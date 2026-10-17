@@ -1,17 +1,25 @@
 import { useState } from 'react';
+import type { RunPlan } from '../../engine/lab/berRun';
 import {
   type ApplyStep,
   type FieldDef,
   type LessonStep,
   type LevelDef,
   type PracticeStep,
+  type PredictGrade,
   type Question,
+  type RunSummary,
   type StepDef,
+  DENY_FULL_RUNS,
+  DENY_TOLERANCE,
+  berText,
   fillText,
   flatSteps,
+  scorePrediction,
 } from '../../engine/lab/levels';
 import type { FactsCard } from './knownFacts';
 import type { FieldResult, Score, StepState } from './levelState';
+import { RunBox } from './RunBox';
 
 export interface StagePanelProps {
   level: LevelDef;
@@ -29,7 +37,11 @@ export interface StagePanelProps {
   onRetryStart: (stepIndex: number) => void;
   onCheckRetry: (stepIndex: number, entered: Record<string, number>) => void;
   onBack: () => void;
-  card: FactsCard | null; // the "What you know" card, units C to F
+  runPlan: (stepIndex: number) => RunPlan | undefined; // the BER run a step offers, from the scene now
+  onRunStart: (stepIndex: number, mode: 'main' | 'retry', prediction?: number) => void;
+  onRunDone: (stepIndex: number, mode: 'main' | 'retry', summary: RunSummary) => void;
+  onPredictAgain: (stepIndex: number) => void; // practice: unlock the prediction for another run
+  card: FactsCard | null; // the "What you know" card
   onAnswer: (stepIndex: number, questionId: string, choice: number) => void;
   onContinue: () => void;
   score: Score;
@@ -98,7 +110,7 @@ export function StagePanel(p: StagePanelProps) {
         <Debrief {...p} />
       ) : (
         <StepBody
-          key={`${flat[shown].step.id}-${p.values.pN}-${p.values.pChipRate}`}
+          key={`${flat[shown].step.id}-${p.values.pN}-${p.values.pChipRate}-${p.values.pJsDb}`}
           step={flat[shown].step}
           index={shown}
           state={states[shown] ?? { done: false }}
@@ -263,15 +275,18 @@ function Practice(p: StagePanelProps & { step: PracticeStep; index: number; stat
     <>
       <p className="stage-task">{fillText(step.task, p.values)}</p>
       <Hint text={step.hint} values={p.values} />
-      <FieldsForm
-        fields={step.fields}
-        results={state.fields}
-        mode="practice"
-        done={state.done}
-        worked={!!state.worked}
-        values={p.values}
-        onSubmit={(e) => p.onCheckPractice(p.index, e)}
-      />
+      {numeric(step.fields).length > 0 && (
+        <FieldsForm
+          fields={numeric(step.fields)}
+          results={state.fields}
+          mode="practice"
+          done={state.done}
+          worked={!!state.worked}
+          values={p.values}
+          onSubmit={(e) => p.onCheckPractice(p.index, e)}
+        />
+      )}
+      {step.run && predictField(step.fields) && <PracticeRun {...p} field={predictField(step.fields)!} />}
       {!state.worked && (
         <button type="button" className="link-button" onClick={() => p.onShowWorked(p.index)}>
           Show the worked answer
@@ -294,18 +309,24 @@ function Practice(p: StagePanelProps & { step: PracticeStep; index: number; stat
 
 function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState }) {
   const { step, state } = p;
+  // A run waits for the numeric fields: they come first.
+  const settled = numeric(step.fields).every((f) => !!state.fields?.[f.id]);
   return (
     <>
       <p className="stage-task">{fillText(step.task, p.values)}</p>
       <Hint text={step.hint} values={p.values} />
-      <FieldsForm
-        fields={step.fields}
-        results={state.fields}
-        mode="apply"
-        done={state.done}
-        values={p.values}
-        onSubmit={(e) => p.onSubmitFields(p.index, e)}
-      />
+      {numeric(step.fields).length > 0 && (
+        <FieldsForm
+          fields={numeric(step.fields)}
+          results={state.fields}
+          mode="apply"
+          done={state.done}
+          values={p.values}
+          onSubmit={(e) => p.onSubmitFields(p.index, e)}
+        />
+      )}
+      {step.run && settled && predictField(step.fields) && <ApplyPredict {...p} field={predictField(step.fields)!} />}
+      {step.run && settled && step.goal && <DenyRun {...p} goal={step.goal} />}
       {state.done && (
         <>
           <p className="stage-subhead">Worked answer</p>
@@ -315,19 +336,145 @@ function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: Ste
           ) : (
             <div className="stage-retry">
               <p className="stage-subhead">Retry (not scored)</p>
-              <FieldsForm
-                fields={step.fields}
-                results={state.retry}
-                mode="retry"
-                done={false}
-                values={p.values}
-                onSubmit={(e) => p.onCheckRetry(p.index, e)}
-              />
+              {numeric(step.fields).length > 0 && (
+                <FieldsForm
+                  fields={numeric(step.fields)}
+                  results={state.retry}
+                  mode="retry"
+                  done={false}
+                  values={p.values}
+                  onSubmit={(e) => p.onCheckRetry(p.index, e)}
+                />
+              )}
+              {step.run && predictField(step.fields) && <RetryRun {...p} />}
             </div>
           )}
         </>
       )}
     </>
+  );
+}
+
+const numeric = (fields: FieldDef[]) => fields.filter((f) => f.kind !== 'predictBer');
+const predictField = (fields: FieldDef[]) => fields.find((f) => f.kind === 'predictBer');
+
+const GRADE_TEXT: Record<PredictGrade, string> = {
+  inside: 'inside the measured range',
+  near: 'within a factor of 2 of the measured BER',
+  miss: 'not within a factor of 2 of the measured BER',
+};
+const GRADE_MARK: Record<PredictGrade, string> = { inside: '✓', near: '~', miss: '✗' };
+
+// Practice: predict, run, compare. Unscored; another prediction and run until it is right.
+function PracticeRun(p: StagePanelProps & { step: PracticeStep; index: number; state: StepState; field: FieldDef }) {
+  const { state, field } = p;
+  const locked = state.prediction !== undefined;
+  const result = locked ? state.runs?.[state.runs.length - 1] : undefined;
+  const r = state.fields?.[field.id];
+  return (
+    <div className="stage-fields">
+      <RunBox
+        plan={p.runPlan(p.index)}
+        needsPrediction
+        value={{ prediction: state.prediction, result }}
+        canRun={!state.done && !result}
+        onStart={(pred) => p.onRunStart(p.index, 'main', pred)}
+        onDone={(s) => p.onRunDone(p.index, 'main', s)}
+      />
+      {result && r?.grade && (
+        <p className={`stage-result ${r.ok ? 'ok' : 'bad'}`}>
+          {r.ok ? '✓ Right' : '✗ Not yet'}: your {berText(r.value)} is {GRADE_TEXT[r.grade]}.
+          {state.worked && ` Theory: ${berText(result.theoryBer)}.`}
+        </p>
+      )}
+      {result && !state.done && <button type="button" onClick={() => p.onPredictAgain(p.index)}>Predict again</button>}
+    </div>
+  );
+}
+
+// Scored: one prediction, one run, scored against its 95% range.
+function ApplyPredict(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState; field: FieldDef }) {
+  const { state, field } = p;
+  const result = state.runs?.[0];
+  const r = state.fields?.[field.id];
+  return (
+    <div className="stage-fields">
+      <RunBox
+        plan={p.runPlan(p.index)}
+        needsPrediction
+        value={{ prediction: state.prediction, result }}
+        canRun={!result}
+        onStart={(pred) => p.onRunStart(p.index, 'main', pred)}
+        onDone={(s) => p.onRunDone(p.index, 'main', s)}
+      />
+      {r?.grade && (
+        <p className={`stage-result ${r.grade === 'inside' ? 'ok' : r.grade === 'near' ? 'partial' : 'bad'}`}>
+          {GRADE_MARK[r.grade]} Your {berText(r.value)} is {GRADE_TEXT[r.grade]}, {r.points}/{field.points} pts
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Unscored retry of a predict-and-run step.
+function RetryRun(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState }) {
+  const { state } = p;
+  const rr = state.retryRun;
+  const grade = rr?.result && rr.prediction !== undefined ? scorePrediction(rr.prediction, rr.result, 0).grade : undefined;
+  return (
+    <div className="stage-fields">
+      <RunBox
+        plan={p.runPlan(p.index)}
+        needsPrediction
+        value={{ prediction: rr?.prediction, result: rr?.result }}
+        canRun={!rr?.result}
+        onStart={(pred) => p.onRunStart(p.index, 'retry', pred)}
+        onDone={(s) => p.onRunDone(p.index, 'retry', s)}
+      />
+      {grade && rr?.prediction !== undefined && (
+        <p className={`stage-result ${grade === 'inside' ? 'ok' : grade === 'near' ? 'partial' : 'bad'}`}>
+          {GRADE_MARK[grade]} Your {berText(rr.prediction)} is {GRADE_TEXT[grade]} (not scored)
+        </p>
+      )}
+      {rr?.result && <button type="button" onClick={() => p.onRetryStart(p.index)}>Another retry</button>}
+    </div>
+  );
+}
+
+// The jammer's goal: adjust the scene, run, until the measured BER reaches the goal.
+function DenyRun(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState; goal: NonNullable<ApplyStep['goal']> }) {
+  const { state, goal } = p;
+  const runs = state.runs ?? [];
+  const last = runs[runs.length - 1];
+  const need = goal.berAtLeast * DENY_TOLERANCE;
+  return (
+    <div className="stage-fields">
+      <p className="stage-task">{fillText(goal.task, p.values)}</p>
+      <p className="stage-note">
+        Goal: a measured BER of at least {berText(need)} ({berText(goal.berAtLeast)} less 20% for counting noise). Full points if you get there
+        within {DENY_FULL_RUNS} runs, half after.
+      </p>
+      <RunBox
+        plan={p.runPlan(p.index)}
+        needsPrediction={false}
+        value={{ result: last }}
+        canRun
+        label={runs.length > 0 ? 'Run again' : 'Run'}
+        onStart={() => p.onRunStart(p.index, 'main')}
+        onDone={(s) => p.onRunDone(p.index, 'main', s)}
+      />
+      {state.goal ? (
+        <p className="stage-result ok">
+          ✓ Run {state.goal.runNo}: J/S {state.goal.run.jsDb.toFixed(1)} dB gave BER {berText(state.goal.run.ber)}, {state.goal.points}/{goal.points} pts
+        </p>
+      ) : (
+        last && (
+          <p className="stage-result bad">
+            ✗ Run {runs.length}: J/S {last.jsDb.toFixed(1)} dB gave BER {berText(last.ber)}. Not there yet: more J/S, then run again.
+          </p>
+        )
+      )}
+    </div>
   );
 }
 

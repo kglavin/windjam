@@ -10,25 +10,14 @@ import {
   rxGainDbi,
   sceneBudget,
 } from '../../engine/lab/scene';
+import type { SceneField } from '../../engine/lab/levels';
 import { NumberField } from '../NumberField';
 import { type SceneView, fitView, sceneFitPoints, scaleBarKm, toKm, toPx } from './sceneView';
 
-export type SceneField =
-  | 'positions'
-  | 'intercept'
-  | 'freq'
-  | 'txPower'
-  | 'jamPower'
-  | 'heights'
-  | 'gains'
-  | 'rxAntenna'
-  | 'paths'
-  | 'obstacles'
-  | 'noise'
-  | 'rates';
+export type { SceneField };
 
 const ALL_FIELDS: SceneField[] = [
-  'positions', 'intercept', 'freq', 'txPower', 'jamPower', 'heights', 'gains', 'rxAntenna', 'paths', 'obstacles', 'noise', 'rates',
+  'positions', 'intercept', 'jammer', 'freq', 'txPower', 'jamPower', 'heights', 'gains', 'rxAntenna', 'paths', 'obstacles', 'noise', 'rates',
 ];
 
 const W = 520;
@@ -54,8 +43,8 @@ function circleRadius(scene: Scene, targetJsDb?: number): number {
   return r > 0.1 && r < 1000 ? r : 0;
 }
 
-function fitScene(scene: Scene, circleKm: number, hideJammer: boolean): SceneView {
-  return fitView(sceneFitPoints(scene, circleKm, hideJammer), W, H, MARGIN);
+function fitScene(scene: Scene, circleKm: number, hideJammer: boolean, hideIntercept: boolean): SceneView {
+  return fitView(sceneFitPoints(scene, circleKm, hideJammer, hideIntercept), W, H, MARGIN);
 }
 
 export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hiddenRows }: {
@@ -63,19 +52,22 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
   onChange: (s: Scene) => void;
   editable?: SceneField[];
   targetJsDb?: number;
-  hidden?: 'jammer'[]; // stations a level does not show: not drawn, no lines, no controls, no J/S circle
+  hidden?: ('jammer' | 'intercept')[]; // stations a level does not show: not drawn, no lines, no controls, no J/S circle
   hiddenRows?: string[]; // budget ladder rows to hide, by label
 }) {
   const noJammer = !!hidden?.includes('jammer');
+  const noIntercept = !!hidden?.includes('intercept');
   if (noJammer) targetJsDb = undefined;
   const hiddenSet = new Set(hiddenRows ?? []);
   const can = (f: SceneField) => (editable ?? ALL_FIELDS).includes(f);
+  // Dragging a station needs its own field; 'positions' covers the transmitter, receiver and jammer together.
+  const canMove = (key: StationKey) => (key === 'intercept' ? can('intercept') : can('positions') || (key === 'jammer' && can('jammer')));
   const svgRef = useRef<SVGSVGElement>(null);
   // Fit frozen for the duration of a drag, so the stations do not move under the pointer.
   const [frozen, setFrozen] = useState<SceneView | null>(null);
   const [dragging, setDragging] = useState<StationKey | null>(null);
   const targetR = targetJsDb === undefined ? 0 : jammerDistanceForJs(scene, targetJsDb);
-  const view = frozen ?? fitScene(scene, circleRadius(scene, targetJsDb), noJammer);
+  const view = frozen ?? fitScene(scene, circleRadius(scene, targetJsDb), noJammer, noIntercept);
   const budget = sceneBudget(scene);
 
   const setStation = (key: StationKey, patch: Partial<Station>) =>
@@ -98,9 +90,9 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
   };
 
   const onDown = (key: StationKey) => (e: React.PointerEvent) => {
-    if (!can(key === 'intercept' ? 'intercept' : 'positions')) return;
+    if (!canMove(key)) return;
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    setFrozen(fitScene(scene, circleRadius(scene, targetJsDb), noJammer));
+    setFrozen(fitScene(scene, circleRadius(scene, targetJsDb), noJammer, noIntercept));
     setDragging(key);
   };
   const onMove = (e: React.PointerEvent) => {
@@ -120,7 +112,7 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
   const jamP = pos(scene.jammer);
   const bar = scaleBarKm(view, 120);
   // Labels go on the side away from the centroid of the drawn stations, so they stay clear of the lines between them.
-  const shown = noJammer ? [txP, rxP, icP] : [txP, rxP, icP, jamP];
+  const shown = [txP, rxP, ...(noIntercept ? [] : [icP]), ...(noJammer ? [] : [jamP])];
   const cen = { x: shown.reduce((a, p) => a + p.x, 0) / shown.length, y: shown.reduce((a, p) => a + p.y, 0) / shown.length };
   const labelSide = (p: { x: number; y: number }) => (p.y >= cen.y ? 1 : -1); // +1 below the station
   const awayNormal = (a: { x: number; y: number }, b: { x: number; y: number }) => {
@@ -201,7 +193,9 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
     </tr>
   );
 
-  const icRows = budget.interceptLadder.filter((r) => !hiddenSet.has(r.label) && !(noJammer && /^J(amming|\/S)/.test(r.label)));
+  const icRows = noIntercept
+    ? []
+    : budget.interceptLadder.filter((r) => !hiddenSet.has(r.label) && !(noJammer && /^J(amming|\/S)/.test(r.label)));
   const icKey = new Set(['Signal S at intercept', 'Jamming J at intercept', 'Noise floor N']);
   const icRatio = new Set(['Chip SNR', 'J/S at intercept']);
 
@@ -272,8 +266,8 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
           {scene.rxAntenna === 'directional' && wedge()}
           {pathLine(scene.tx, scene.rx, scene.txPath, false, '#60a5fa')}
           {!noJammer && pathLine(scene.jammer, scene.rx, scene.jamPath, true, '#ef4444')}
-          <line x1={txP.x} y1={txP.y} x2={icP.x} y2={icP.y} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="1 4" strokeLinecap="round" />
-          {(() => {
+          {!noIntercept && <line x1={txP.x} y1={txP.y} x2={icP.x} y2={icP.y} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="1 4" strokeLinecap="round" />}
+          {!noIntercept && (() => {
             const { nx, ny } = awayNormal(txP, icP);
             return (
               <text x={(txP.x + icP.x) / 2 + nx * 9} y={(txP.y + icP.y) / 2 + ny * 9 + 3} className="axis" textAnchor="middle" fill="#f59e0b">
@@ -281,10 +275,10 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
               </text>
             );
           })()}
-          {!noJammer && (
+          {!noJammer && !noIntercept && (
             <line x1={jamP.x} y1={jamP.y} x2={icP.x} y2={icP.y} stroke="#f59e0b" strokeWidth={1} strokeDasharray="1 4" strokeLinecap="round" opacity={0.35} />
           )}
-          {[...STATIONS, INTERCEPT].filter(({ key }) => !(noJammer && key === 'jammer')).map(({ key, color }) => {
+          {[...STATIONS, INTERCEPT].filter(({ key }) => !(noJammer && key === 'jammer') && !(noIntercept && key === 'intercept')).map(({ key, color }) => {
             const p = pos(scene[key]);
             const side = labelSide(p);
             const lx = Math.min(Math.max(p.x, 45), W - 45);
@@ -292,7 +286,7 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
             const subY = side > 0 ? p.y + 33 : p.y - 15;
             const l = labelOf(key);
             return (
-              <g key={key} className={can(key === 'intercept' ? 'intercept' : 'positions') ? 'scene-station draggable' : 'scene-station'}
+              <g key={key} className={canMove(key) ? 'scene-station draggable' : 'scene-station'}
                 onPointerDown={onDown(key)}>
                 <circle cx={p.x} cy={p.y} r={16} fill="transparent" />
                 {key === 'tx' && <polygon points={`${p.x},${p.y - 10} ${p.x - 8},${p.y + 7} ${p.x + 8},${p.y + 7}`} fill={color} />}
@@ -319,7 +313,7 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
               {noiseRows.map((r) => ladderRow(r))}
               {ratioRows.length > 0 && <tr className="head"><th colSpan={2}>Ratios</th></tr>}
               {ratioRows.map((r) => ladderRow(r, 'ratio'))}
-              <tr className="head"><th colSpan={2}>At the intercept</th></tr>
+              {!noIntercept && <tr className="head"><th colSpan={2}>At the intercept</th></tr>}
               {icRows.map((r) => (
                 <tr key={r.label} className={`${icKey.has(r.label) ? 'key' : ''} ${icRatio.has(r.label) ? 'ratio' : ''}`}>
                   <td>{r.label}</td>
@@ -338,7 +332,13 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
             {STATIONS.filter((s) => !(noJammer && s.key === 'jammer')).map((s) => stationInputs(s.key, s.name))}
           </div>
         )}
-        {can('intercept') && (
+        {can('jammer') && !can('positions') && !noJammer && (
+          <div className="scene-group">
+            <h4>Jammer position</h4>
+            {stationInputs('jammer', 'Jammer')}
+          </div>
+        )}
+        {can('intercept') && !noIntercept && (
           <div className="scene-group">
             <h4>Intercept station</h4>
             <div className="scene-row">
@@ -357,11 +357,11 @@ export function LinkScene({ scene, onChange, editable, targetJsDb, hidden, hidde
         {(can('txPower') || can('jamPower') || can('gains')) && (
           <div className="scene-group">
             <h4>Power and gain</h4>
-            <div className="scene-row">
+            {(can('txPower') || can('gains')) && <div className="scene-row">
               <span className="scene-tag">Tx</span>
               {can('txPower') && <NumberField label="W" value={scene.tx.powerW} min={0.1} max={1000} step={0.1} onChange={(v) => setStation('tx', { powerW: v })} />}
               {can('gains') && <NumberField label="dBi" value={scene.tx.gainDbi} min={-10} max={30} step={0.5} onChange={(v) => setStation('tx', { gainDbi: v })} />}
-            </div>
+            </div>}
             {!noJammer && <div className="scene-row">
               <span className="scene-tag">Jammer</span>
               {can('jamPower') && <NumberField label="W" value={scene.jammer.powerW} min={0.1} max={1000} step={0.1} onChange={(v) => setStation('jammer', { powerW: v })} />}

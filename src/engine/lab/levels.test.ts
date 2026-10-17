@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   LEVEL_1,
+  LEVEL_2,
   LEVELS,
   type ApplyStep,
   type Ctx,
@@ -85,7 +86,7 @@ const allSteps = (): StepDef[] => LEVEL_1.units.flatMap((u) => u.steps);
 
 describe('LEVEL_1 structure', () => {
   it('is in LEVELS with well-formed units and steps', () => {
-    expect(LEVELS).toEqual([LEVEL_1]);
+    expect(LEVELS).toEqual([LEVEL_1, LEVEL_2]);
     expect(LEVEL_1.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
     const ids = allSteps().map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -229,5 +230,16 @@ describe('practiceLinkAt', () => {
     const c: Ctx = { rxSnrDb: 0, rxEbN0Db: 0, practice: other };
     expect(step.fields[0].truth(t, c)).toBeCloseTo(10 * Math.log10(31), 9);
     expect(step.fields[1].truth(t, c)).toBeCloseTo(500 / 31, 9);
+  });
+});
+
+describe('Tol factor', () => {
+  it('accepts values within a factor of the truth on both sides', () => {
+    expect(withinTol({ factor: 1.5 }, 0.0097, 0.0065)).toBe(true);
+    expect(withinTol({ factor: 1.5 }, 0.0044, 0.0065)).toBe(true);
+    expect(withinTol({ factor: 1.5 }, 0.0099, 0.0065)).toBe(false);
+    expect(withinTol({ factor: 1.5 }, 0.004, 0.0065)).toBe(false);
+    expect(withinTol({ factor: 1.5 }, 0, 0.0065)).toBe(false);
+    expect(withinTol({ factor: 1.5 }, -0.0065, 0.0065)).toBe(false);
   });
 });

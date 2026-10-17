@@ -4,9 +4,8 @@ import { Bench } from './Bench';
 import { LevelView } from './LevelView';
 import { type Progress, loadProgress, recordScore } from './progress';
 
-// Levels 2 to 5 from design section 8: not built yet.
+// Levels 3 to 5 from design section 8: not built yet.
 const COMING = [
-  { id: 2, title: 'Processing gain', blurb: 'Long code, broadband noise: measure BER against Gp/(J/S).' },
   { id: 3, title: 'Where to put the power', blurb: 'Partial-band and pulsed noise: frequency against time.' },
   { id: 4, title: 'Tones', blurb: 'Single and multitone jammers against short and long codes.' },
   { id: 5, title: 'Saturation and timing', blurb: 'Front-end overload and pulses aligned to repetition groups.' },

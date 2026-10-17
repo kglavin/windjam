@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { capture } from '../../engine/lab/capture';
+import { planRun } from '../../engine/lab/berRun';
 import type { LinkParams } from '../../engine/lab/dsss';
 import {
   type Ctx,
@@ -8,34 +9,26 @@ import {
   checkField,
   flatSteps,
   knownLinkInfo,
-  level1Truth,
+  practiceJsAt,
   practiceLinkAt,
-  textValues,
   withinTol,
 } from '../../engine/lab/levels';
 import { mSequence } from '../../engine/lab/pn';
 import { type Scene, sceneBudget } from '../../engine/lab/scene';
 import { undb } from '../../engine/lab/theory';
+import { CurvePlot } from './instruments/CurvePlot';
 import { Autocorr } from './instruments/Autocorr';
 import { Spectrum } from './instruments/Spectrum';
 import { Calculator } from './Calculator';
-import { factsOfTruth, knownFacts } from './knownFacts';
 import { LinkScene } from './LinkScene';
-import { level1Scene } from './levelScene';
-import { type StepState, scoreLevel } from './levelState';
+import { SETUPS } from './levelSetup';
+import { type StepState, applyDone, runDone, scoreLevel } from './levelState';
 import { StagePanel } from './StagePanel';
 import { VisualView, nullNotes, periodNotes } from './visuals/VisualView';
 
 const S = 4;
 const N_BITS = 300;
 const RECAPTURE_MS = 300;
-
-const JAMMER_ROWS = [
-  'Jammer power', 'Jammer antenna', 'Jammer path loss', 'Rx antenna toward jammer', 'Jamming J', 'J/S', 'Eb/J0',
-  'Jamming J at intercept', 'J/S at intercept',
-];
-// Shown only once the prediction step has been revealed.
-const LATE_ROWS = ['Processing gain', 'Eb/N0', 'Eb/(N0+J0)'];
 
 export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   level: LevelDef;
@@ -44,10 +37,14 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   onReplay: () => void;
   onFinish: (levelId: number, score: number, passed: boolean) => void;
 }) {
-  const truth = useMemo(() => level1Truth(seed), [seed]);
+  const setup = SETUPS[level.id];
+  const truth = useMemo(() => setup.truth(seed), [setup, seed]);
   const flat = useMemo(() => flatSteps(level), [level]);
-  const [scene, setScene] = useState<Scene>(() => level1Scene(truth));
+  const [scene, setScene] = useState<Scene>(() => setup.scene(truth));
   const budget = useMemo(() => sceneBudget(scene), [scene]);
+  // The scene the level started with: texts and answers about "the enemy link's J/S" refer to it, even after the
+  // last unit lets the player move the jammer.
+  const base = useMemo(() => sceneBudget(setup.scene(truth)), [setup, truth]);
   const [states, setStates] = useState<StepState[]>(() => flat.map(() => ({ done: false })));
   const [current, setCurrent] = useState(0);
   const [viewing, setViewing] = useState<number | null>(null);
@@ -56,10 +53,19 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const [practiceN, setPracticeN] = useState(0);
   const practiceLink = useMemo(() => practiceLinkAt(practiceN), [practiceN]);
   const practiceInfo = useMemo(() => knownLinkInfo(practiceLink), [practiceLink]);
+  const practiceJsDb = useMemo(() => practiceJsAt(practiceN, practiceInfo), [practiceN, practiceInfo]);
 
   const patch = (i: number, p: Partial<StepState>) =>
     setStates((all) => all.map((s, j) => (j === i ? { ...s, ...p } : s)));
-  const ctx: Ctx = { rxSnrDb: budget.snrDb, rxEbN0Db: budget.ebN0Db, practice: practiceInfo };
+  const update = (i: number, f: (s: StepState) => StepState) => setStates((all) => all.map((s, j) => (j === i ? f(s) : s)));
+  const ctx: Ctx = {
+    rxSnrDb: budget.snrDb,
+    rxEbN0Db: budget.ebN0Db,
+    practice: practiceInfo,
+    practiceJsDb,
+    jsDb: base.jsDb,
+    ebJ0Db: base.ebJ0Db,
+  };
 
   // The find step completes by itself when the intercept's chip SNR reaches the target.
   const step = flat[current]?.step;
@@ -92,7 +98,6 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   }, [code, truth, icEbN0Db]);
   const sampleRateHz = truth.chipRateMcps * 1e6 * S;
 
-  const doneStep = (id: string) => flat.some((f, i) => f.step.id === id && states[i].done);
   const annotated = (kind: 'nulls' | 'codePeriods') =>
     flat.some((f, i) => f.step.kind === 'apply' && f.step.annotate === kind && states[i].done);
   const periodUs = truth.n / truth.chipRateMcps;
@@ -102,25 +107,42 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const debrief = current >= flat.length;
   const shownIdx = viewing ?? current;
   const shown = shownIdx >= flat.length ? undefined : flat[shownIdx].step;
-  const hiddenRows = [...JAMMER_ROWS, ...(doneStep('F2') ? [] : LATE_ROWS)];
-
-  const values = textValues(
+  const shownState = states[shownIdx] as StepState | undefined;
+  const setupArgs = {
     truth,
-    { interceptSnrDb, rxSnrDb: budget.snrDb, rxEbN0Db: budget.ebN0Db },
-    practiceInfo,
-  );
+    flat,
+    states,
+    shownIdx,
+    step: shown,
+    practice: practiceInfo,
+    practiceJsDb,
+    budget,
+    base,
+    interceptSnrDb,
+    // A step with a run: the prediction and the run that counts (the one that reached the goal, else the first).
+    run: { prediction: shownState?.prediction, summary: shownState?.goal?.run ?? shownState?.runs?.[0] },
+  };
+  const hiddenRows = setup.hiddenRows(setupArgs);
+  const values = setup.values(setupArgs);
+  // The "What you know" card: the practice link's values on practice steps, else the enemy link's.
+  const card = setup.card(setupArgs);
 
-  // The "What you know" card in units C to F: the practice link's values on practice steps, else the enemy link's.
-  const card =
-    shown && 'CDEF'.includes(flat[shownIdx].unit.id)
-      ? knownFacts(
-          shown.kind === 'practice' ? 'practice' : 'enemy',
-          flat,
-          states,
-          shownIdx,
-          shown.kind === 'practice' ? practiceInfo : factsOfTruth(truth),
-        )
-      : null;
+  // The BER run a step offers, from the scene as it is now. Seeded from the level seed, the step, the practice
+  // link and how many runs the step has had.
+  const runPlan = (i: number) => {
+    const st = flat[i].step;
+    if ((st.kind !== 'practice' && st.kind !== 'apply') || !st.run) return undefined;
+    const s = states[i];
+    const n = (s.runs?.length ?? 0) * 8 + (s.retries ?? 0);
+    return planRun(st.run, {
+      truth,
+      example: knownLinkInfo(level.links.example),
+      practice: practiceInfo,
+      practiceJsDb,
+      scene: { jsDb: budget.jsDb, ebN0Db: budget.ebN0Db },
+      seed: (Math.imul(truth.seed, 0x9e3779b1) ^ Math.imul(i + 1, 0x85ebca6b) ^ Math.imul(practiceN + 1, 0xc2b2ae35) ^ n) >>> 0,
+    });
+  };
 
   const score = scoreLevel(level, states);
   const reported = useRef(false);
@@ -139,6 +161,31 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const showCalc = !!shown && (shown.kind === 'lesson' || shown.kind === 'practice' || shown.kind === 'apply');
   const instruments = shown && (shown.kind === 'find' || shown.kind === 'apply') ? shown.instruments : [];
   const visual = shown && (shown.kind === 'lesson' || shown.kind === 'practice' || shown.kind === 'apply') ? shown.visual : undefined;
+
+  // The BER curve for a step with a run: its runs against the theory (the theory only once there is a run, so a
+  // prediction is not given away), and the prediction as a hollow marker.
+  const runStep = shown && (shown.kind === 'practice' || shown.kind === 'apply') && shown.run ? shown : undefined;
+  const curvePlan = runStep ? runPlan(shownIdx) : undefined;
+  const runCurve =
+    runStep && curvePlan && shownState ? (
+      <div className="level-instruments">
+        <CurvePlot
+          points={[
+            ...(shownState.runs ?? []).map((r) => ({ jsDb: r.jsDb, ber: r.ber, lo: r.lo, hi: r.hi, label: 'measured' })),
+            ...(shownState.retryRun?.result
+              ? [{ jsDb: shownState.retryRun.result.jsDb, ber: shownState.retryRun.result.ber, lo: shownState.retryRun.result.lo, hi: shownState.retryRun.result.hi, kind: 'retry' }]
+              : []),
+          ]}
+          theory={shownState.runs?.length || shownState.done ? [{ label: 'theory', f: curvePlan.curve }] : []}
+          predictions={
+            shownState.prediction !== undefined && shownState.runs?.length
+              ? [{ jsDb: shownState.runs[shownState.runs.length - 1].jsDb, ber: shownState.prediction }]
+              : []
+          }
+          xRange={[0, 30]}
+        />
+      </div>
+    ) : null;
 
   return (
     <main className="level-view">
@@ -171,6 +218,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           const fields = { ...states[i].fields, ...entries(st.fields, entered) };
           const first = { ...states[i].first };
           for (const f of st.fields) if (f.id in entered && !first[f.id]) first[f.id] = { value: entered[f.id], ok: fields[f.id].ok };
+          // The run's prediction field is settled by its run, not here.
           const allOk = st.fields.every((f) => fields[f.id]?.ok);
           patch(i, { fields, first, done: allOk, tries: allOk ? states[i].tries : (states[i].tries ?? 0) + 1 });
         }}
@@ -184,9 +232,20 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           if (st.kind !== 'apply') return;
           const fresh = Object.fromEntries(Object.entries(entered).filter(([id]) => !states[i].fields?.[id]));
           const fields = { ...states[i].fields, ...entries(st.fields, fresh) };
-          patch(i, { fields, done: st.fields.every((f) => fields[f.id]) });
+          patch(i, { fields, done: applyDone(st, { ...states[i], fields }) });
         }}
-        onRetryStart={(i) => patch(i, { retrying: true, retry: undefined })}
+        onRetryStart={(i) => update(i, (s) => ({ ...s, retrying: true, retry: undefined, retryRun: undefined, retries: (s.retries ?? 0) + 1 }))}
+        runPlan={runPlan}
+        onRunStart={(i, mode, prediction) => {
+          if (mode === 'retry') update(i, (s) => ({ ...s, retryRun: { prediction } }));
+          else if (prediction !== undefined) update(i, (s) => ({ ...s, prediction }));
+        }}
+        onRunDone={(i, mode, summary) => {
+          const st = flat[i].step;
+          if (st.kind !== 'practice' && st.kind !== 'apply') return;
+          update(i, (s) => runDone(st, s, summary, mode));
+        }}
+        onPredictAgain={(i) => update(i, (s) => ({ ...s, prediction: undefined }))}
         onCheckRetry={(i, entered) => {
           const st = flat[i].step;
           if (st.kind !== 'apply') return;
@@ -222,8 +281,8 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           <LinkScene
             scene={scene}
             onChange={setScene}
-            editable={['intercept']}
-            hidden={['jammer']}
+            editable={shown?.kind === 'apply' && shown.editable ? shown.editable : setup.editable}
+            hidden={setup.hidden}
             hiddenRows={hiddenRows}
           />
         )}
@@ -232,6 +291,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
             <VisualView
               visual={visual}
               links={{ example: level.links.example, practice: practiceLink }}
+              practiceJsDb={practiceJsDb}
               hidden={{
                 x: shot.rx,
                 sampleRateHz,
@@ -243,6 +303,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
             />
           </div>
         )}
+        {runCurve}
         {instruments.length > 0 && (
           <div className="level-instruments">
             {instruments.includes('spectrum') && <Spectrum x={shot.rx} sampleRateHz={sampleRateHz} annotations={specNotes} envelope={specNotes ? { chipRateMHz: truth.chipRateMcps } : undefined} />}

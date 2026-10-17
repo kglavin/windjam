@@ -64,6 +64,11 @@ describe('sceneFitPoints', () => {
     const { xKm, yKm } = scene.rx;
     for (const [dx, dy] of [[-r, 0], [r, 0], [0, -r], [0, r]]) check(xKm + dx, yKm + dy);
   });
+  it('leaves out the intercept or the jammer when a level hides it', () => {
+    expect(sceneFitPoints(DEFAULT_SCENE, 0, false, true)).toHaveLength(3);
+    expect(sceneFitPoints(DEFAULT_SCENE, 0, false, true)).not.toContainEqual(DEFAULT_SCENE.intercept);
+    expect(sceneFitPoints(DEFAULT_SCENE, 0, true, true)).toHaveLength(2);
+  });
   it('without a circle uses only the stations', () => {
     expect(sceneFitPoints(DEFAULT_SCENE)).toHaveLength(4);
     expect(sceneFitPoints(DEFAULT_SCENE, 5)).toHaveLength(8);

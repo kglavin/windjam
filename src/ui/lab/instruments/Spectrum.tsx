@@ -7,12 +7,13 @@ import { INNER_H, INNER_W, PAD, PH, PW, niceTicks, plotX, poly } from './plot';
 const NFFTS = [64, 128, 256, 1024, 4096];
 
 // Welch power spectrum in dB, MHz relative to the carrier, with a click-to-place marker.
-export function Spectrum({ x, sampleRateHz, annotations, title = 'Spectrum', envelope }: {
+export function Spectrum({ x, sampleRateHz, annotations, title = 'Spectrum', envelope, yRange }: {
   x: IQ;
   sampleRateHz: number;
   annotations?: { xMHz: number; label: string }[];
   title?: string;
   envelope?: { chipRateMHz: number }; // dashed sinc² curve, levelled to the measured mean inside |f| < Rc/2
+  yRange?: [number, number]; // fixed [bottom, top] in dB, so two spectra can be compared
 }) {
   const [nfft, setNfft] = useState(128);
   const [marker, setMarker] = useState<number | null>(null); // frequency in MHz
@@ -27,8 +28,9 @@ export function Spectrum({ x, sampleRateHz, annotations, title = 'Spectrum', env
       hi = Math.max(hi, v);
     }
     const top = Math.ceil(hi / 10) * 10 + 10;
+    if (yRange) return { mhz, db, top: yRange[1], bottom: yRange[0] };
     return { mhz, db, top, bottom: Math.max(Math.floor(lo / 10) * 10, top - 90) };
-  }, [x, nfft, sampleRateHz]);
+  }, [x, nfft, sampleRateHz, yRange]);
 
   const half = sampleRateHz / 2e6;
   const fx = (v: number) => PAD.l + ((v + half) / (2 * half)) * INNER_W;

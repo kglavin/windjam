@@ -34,6 +34,10 @@ function render(current: number, set: (st: StepState[]) => void, viewing: number
     onRetryStart: noop,
     onCheckRetry: noop,
     onBack: noop,
+    runPlan: () => undefined,
+    onRunStart: noop,
+    onRunDone: noop,
+    onPredictAgain: noop,
     onAnswer: noop,
     onContinue: noop,
     card: step && 'CDEF'.includes(flat[shown].unit.id)

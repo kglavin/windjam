@@ -3,9 +3,13 @@ import { type KnownLink, type Visual, knownLinkInfo } from '../../../engine/lab/
 import { Autocorr } from '../instruments/Autocorr';
 import { Spectrum } from '../instruments/Spectrum';
 import { knownCapture } from '../knownCapture';
+import { BerCurve } from './BerCurve';
+import { BerRunDemo, DEMO_JS_DB } from './BerRunDemo';
 import { DbTable } from './DbTable';
 import { Despread } from './Despread';
+import { DespreadBars } from './DespreadBars';
 import { InterceptCompare } from './InterceptCompare';
+import { JammedSpectra } from './JammedSpectra';
 import { SpreadVsUnspread } from './SpreadVsUnspread';
 import { Spreading } from './Spreading';
 
@@ -33,10 +37,11 @@ export const periodNotes = (periodUs: number) =>
   [1, 2, 3].map((k) => ({ lagUs: k * periodUs, label: `${trim(k * periodUs)} µs` }));
 
 // The figure or instrument for a lesson or practice step.
-export function VisualView({ visual, links, hidden }: {
+export function VisualView({ visual, links, hidden, practiceJsDb = 12 }: {
   visual: Visual;
   links: { example: KnownLink; practice: KnownLink };
   hidden?: HiddenShot;
+  practiceJsDb?: number; // level 2: J/S on the practice link
 }) {
   switch (visual.kind) {
     case 'spreading':
@@ -51,6 +56,23 @@ export function VisualView({ visual, links, hidden }: {
       return <DbTable />;
     case 'none':
       return null;
+    case 'jammedSpectra':
+      return <JammedSpectra />;
+    case 'despreadBars': {
+      if (visual.link === 'practice') return <DespreadBars gpDb={knownLinkInfo(links.practice).gpDb} jsDb={practiceJsDb} showValue={false} />;
+      return <DespreadBars gpDb={visual.gpDb ?? knownLinkInfo(links.example).gpDb} jsDb={visual.jsDb ?? DEMO_JS_DB} />;
+    }
+    case 'berCurve': {
+      const mark =
+        visual.mark === 'example'
+          ? knownLinkInfo(links.example).gpDb - DEMO_JS_DB
+          : visual.mark === 'practice'
+            ? knownLinkInfo(links.practice).gpDb - practiceJsDb
+            : undefined;
+      return <BerCurve markDb={mark} />;
+    }
+    case 'berRunDemo':
+      return <BerRunDemo />;
     case 'spectrum':
     case 'autocorr': {
       if (visual.link === 'hidden') {

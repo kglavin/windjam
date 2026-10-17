@@ -12,13 +12,15 @@ export interface KmPoint {
 
 const MIN_SPAN_KM = 1;
 
-// Everything the drawing must keep in view: the four stations and, if given, the J/S circle around the receiver.
+// Everything the drawing must keep in view: the stations (but not one a level hides) and, if given, the J/S circle around the receiver.
 export function sceneFitPoints(
   scene: { tx: KmPoint; rx: KmPoint; jammer: KmPoint; intercept: KmPoint },
   circleRadiusKm = 0,
   hideJammer = false,
+  hideIntercept = false,
 ): KmPoint[] {
-  const pts: KmPoint[] = [scene.tx, scene.rx, scene.intercept];
+  const pts: KmPoint[] = [scene.tx, scene.rx];
+  if (!hideIntercept) pts.push(scene.intercept);
   if (!hideJammer) pts.push(scene.jammer);
   const r = circleRadiusKm;
   if (r > 0) {

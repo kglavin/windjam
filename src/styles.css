@@ -1647,3 +1647,45 @@ select {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* Level 2: jammer figures, BER curve table, run box */
+.vis-bar-sig {
+  fill: #60a5fa;
+}
+.vis-bar-jam {
+  fill: #f87171;
+}
+.vis-gap {
+  stroke: #facc15;
+  stroke-width: 1.5;
+}
+.vis-gap-label {
+  fill: #facc15;
+  font-size: 11px;
+  font-weight: 600;
+}
+.vis-curve-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+.vis-curve-body .inst-svg {
+  flex: 1 1 320px;
+  width: auto;
+  min-width: 0;
+}
+.vis-ber-table {
+  flex: 0 0 auto;
+  width: auto;
+}
+.vis-run-demo {
+  display: grid;
+  gap: 12px;
+}
+.stage-run {
+  margin: 6px 0;
+}
+.run-stats {
+  margin-top: 6px;
+}

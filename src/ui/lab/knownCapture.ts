@@ -18,8 +18,9 @@ export interface KnownShot extends Capture {
 const cache = new Map<string, KnownShot>();
 
 // One code period per bit, 32 preamble periods, no carrier offset, chip SNR as given (Eb/N0 = chip SNR * Gp).
-export function knownCapture(k: KnownLink, chipSnrDb = KNOWN_CHIP_SNR_DB): KnownShot {
-  const key = `${k.degree}:${k.chipRateMcps}:${chipSnrDb}`;
+// jsDb adds broadband noise from a jammer at that J/S.
+export function knownCapture(k: KnownLink, chipSnrDb = KNOWN_CHIP_SNR_DB, jsDb?: number): KnownShot {
+  const key = `${k.degree}:${k.chipRateMcps}:${chipSnrDb}:${jsDb ?? ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const code = mSequence(k.degree);
@@ -31,7 +32,8 @@ export function knownCapture(k: KnownLink, chipSnrDb = KNOWN_CHIP_SNR_DB): Known
     carrierCyclesPerChip: 0,
     ebN0: undb(chipSnrDb) * code.length,
   };
-  const c = capture({ link, s: KNOWN_S, nBits: N_BITS, seed: SEED });
+  const jam = jsDb === undefined ? undefined : { spec: { kind: 'bbn' } as const, js: undb(jsDb) };
+  const c = capture({ link, s: KNOWN_S, nBits: N_BITS, seed: SEED, jammer: jam });
   const shot = { ...c, sampleRateHz: k.chipRateMcps * 1e6 * KNOWN_S, preambleSamples: c.frame.preambleChips * c.s };
   cache.set(key, shot);
   return shot;
