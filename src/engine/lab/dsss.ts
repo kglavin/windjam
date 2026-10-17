@@ -56,6 +56,7 @@ export interface RxResult {
   bits: Int8Array;
   clippedFraction: number;
   compressedFraction: number;
+  blankedFraction: number;
 }
 
 // Front end, chip filter, derotation, integrate-and-dump per channel bit, then majority logic.
@@ -63,11 +64,13 @@ export function receive(p: LinkParams, rx: IQ, s: number, f: Frame, fe?: FrontEn
   let x = rx;
   let clippedFraction = 0;
   let compressedFraction = 0;
+  let blankedFraction = 0;
   if (fe) {
     const r = frontEnd(x, fe);
     x = r.out;
     clippedFraction = r.clippedFraction;
     compressedFraction = r.compressedFraction;
+    blankedFraction = r.blankedFraction;
   }
   if (s > 1) x = chipMatchedFilter(x, s);
   const gp = p.chipsPerBit;
@@ -94,7 +97,7 @@ export function receive(p: LinkParams, rx: IQ, s: number, f: Frame, fe?: FrontEn
     for (let c2 = 0; c2 < r; c2++) v += copies[i * r + c2];
     bits[i] = v < 0 ? -1 : 1;
   }
-  return { corr, copies, bits, clippedFraction, compressedFraction };
+  return { corr, copies, bits, clippedFraction, compressedFraction, blankedFraction };
 }
 
 // The jammer at the receiver input: n complex samples at s samples per chip.
@@ -119,6 +122,7 @@ export interface SimResult {
   corr: Float32Array;
   clippedFraction: number;
   compressedFraction: number;
+  blankedFraction: number;
 }
 
 // Seeded BER run: random bits, transmit, AWGN, optional interference, receive, count errors.
@@ -146,5 +150,6 @@ export function simulate(p: LinkParams, o: SimOptions): SimResult {
     corr: r.corr,
     clippedFraction: r.clippedFraction,
     compressedFraction: r.compressedFraction,
+    blankedFraction: r.blankedFraction,
   };
 }

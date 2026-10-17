@@ -39,23 +39,46 @@ export function adcClip(x: IQ, fullScale: number): { out: IQ; clippedFraction: n
 }
 
 // p1dbPower is the input power (signal power = 1) at which the limiter is 1 dB compressed.
+// recoverySamples: after an input sample at or above overloadPower (default 100 x p1dbPower, 20 dB into
+// compression) the receiver is blind, output zero, for that sample and the next recoverySamples, as a real
+// front end is while its gain control recovers. This is what lets a short, strong pulse do damage out of
+// proportion to its average power (design section 5).
 export interface FrontEndConfig {
   p1dbPower: number;
   p?: number;
   adcFullScale: number;
+  recoverySamples?: number;
+  overloadPower?: number;
 }
 
-// Rapp limiter then ADC clip. compressedFraction is the share of input samples with |x|^2 >= p1dbPower.
+// Rapp limiter, ADC clip, then blanking while recovering from overload. compressedFraction is the share of
+// input samples with |x|^2 >= p1dbPower; blankedFraction the share of output samples blanked.
 export function frontEnd(
   x: IQ,
   cfg: FrontEndConfig,
-): { out: IQ; clippedFraction: number; compressedFraction: number } {
+): { out: IQ; clippedFraction: number; compressedFraction: number; blankedFraction: number } {
+  const n = x.re.length;
   const p = cfg.p ?? 2;
   let compressed = 0;
-  for (let i = 0; i < x.re.length; i++) {
+  for (let i = 0; i < n; i++) {
     if (x.re[i] * x.re[i] + x.im[i] * x.im[i] >= cfg.p1dbPower) compressed++;
   }
   const limited = rapp(x, rappSaturationForP1db(Math.sqrt(cfg.p1dbPower), p), p);
   const { out, clippedFraction } = adcClip(limited, cfg.adcFullScale);
-  return { out, clippedFraction, compressedFraction: x.re.length === 0 ? 0 : compressed / x.re.length };
+  let blanked = 0;
+  if (cfg.recoverySamples !== undefined) {
+    const overload = cfg.overloadPower ?? 100 * cfg.p1dbPower;
+    let blind = 0;
+    for (let i = 0; i < n; i++) {
+      if (x.re[i] * x.re[i] + x.im[i] * x.im[i] >= overload) blind = cfg.recoverySamples + 1;
+      if (blind > 0) {
+        out.re[i] = 0;
+        out.im[i] = 0;
+        blanked++;
+        blind--;
+      }
+    }
+  }
+  const frac = (k: number) => (n === 0 ? 0 : k / n);
+  return { out, clippedFraction, compressedFraction: frac(compressed), blankedFraction: frac(blanked) };
 }

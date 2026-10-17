@@ -84,11 +84,13 @@ Two simulation rates (D2):
 1. BER runs use one complex sample per chip, the output of an ideal chip-matched filter. Noise and broadband jamming are drawn per chip. Tone and partial-band jammers are generated as their chip-matched-filter outputs: a tone at offset f contributes `A·sinc(f·Tc)·exp(j(2πf(k+½)Tc + φ))` at chip k, and band-limited noise is drawn with the spectrum the chip filter passes, folded into one chip rate.
 2. Instrument captures, and BER runs whose jammer peak reaches the front end's compression point, use s = 4 samples per chip (configurable), because the limiter acts on the waveform.
 
-Front end: before despreading the receiver applies a soft limiter (Rapp model, smoothness p = 2) whose output saturates at a level set by the receiver's 1 dB compression point, and an ADC clip at full scale. Below compression it is transparent; high-peak jammers drive it into compression, suppressing the signal along with them.
+Front end: before despreading the receiver applies a soft limiter (Rapp model, smoothness p = 2) whose output saturates at a level set by the receiver's 1 dB compression point, and an ADC clip at full scale. Below compression it is transparent; high-peak jammers drive it into compression, suppressing the signal along with them. A recovery time models the receiver's gain control: after an input sample 20 dB or more into compression (configurable), the output is blanked for a set number of samples. A memoryless limiter would only hurt while a pulse lasts, and clipping a short pulse even helps the receiver; the recovery time is what lets a short, strong pulse blind the receiver for longer than the pulse (D6).
 
 ## 5. Attacks
 
 The player picks a jammer and its parameters. The J/S ratio (jammer to signal power, average, at the receiver input) comes from the scene: the player changes it by moving the jammer or changing its power, and a sweep steps jammer power with the geometry fixed. Each attack is generated at sample level and added before the front end. Every run reports both average and peak J/S.
+
+J/S is the jammer's average power within ±Rc/2 of the carrier (the bandwidth Wss = Rc), relative to the signal power (D7). Broadband noise is white over the whole simulated band, so its J/S is J0·Rc and `Eb/J0 = Gp/(J/S)` holds exactly; its power outside ±Rc/2 does not count in J/S but does count at the front end. Every other attack puts all its power within ±Rc/2. Under this definition partial-band noise can gain at most 1.1 dB over broadband noise at equal J/S, from the sinc² weighting of the chip integrator near the carrier (`berPartialBandDsss`).
 
 | Attack | Parameters | Expected effect (theory curve) |
 |---|---|---|
@@ -133,7 +135,7 @@ Attack efficiency, shown in every debrief: the average J/S and the peak J/S each
 | 1. A quiet signal | short code (N = 63), no repetition | none | chip rate and bandwidth from spectrum and autocorrelation; code length from the preamble and the fluctuation display; Gp = N |
 | 2. Processing gain | long code, bit rate given; two links with Gp 10 dB apart; jammer position and power free | BBN | J/S from the scene (distances, powers, path models); measured BER against `Gp/(J/S)`; a 10 dB increase in Gp moves the curve 10 dB and shortens the jammer's effective range; why the lab's BPSK curve sits 4 dB left of the map game's |
 | 3. Where to put the power | long code, no repetition | BBN, partial-band, pulsed with pulse duration from well under to over a bit | frequency concentration does nothing; time concentration works when pulses cover whole bits; the worst-case ρ |
-| 4. Tones | short code (N = 31), then a long code | single tone at swept offsets, multitone | line spectrum of a short code; tone phase; PAPR and compression |
+| 4. Tones | short code (N = 31), then a long code | single tone at swept offsets, multitone | line spectrum of a short code; tone phase; PAPR and compression. A multitone run's BER depends on its tone phases, which stay fixed for the run (spread between runs about ten times the counting noise), so each point averages several runs with fresh phases and shows their spread |
 | 5. Saturation and timing | short code (N = 63), repetition r = 3 | pulsed with high peak, pulsed aligned to repetition groups | repetition from the autocorrelation; front-end saturation; majority logic defeated by timing |
 | 6 (later). Chaos | CSK link | low-power tone, low-level noise | synchronisation of a chaotic decoder fails at power levels a DSSS link ignores |
 
@@ -203,6 +205,8 @@ D2. BER runs at one sample per chip with chip-matched jammer models; captures an
 D3. Bit period, first-bit time and repetition are characterisation outputs, and timed attacks align to the player's estimate.
 D4. Every transmission starts with an unmodulated preamble; a fluctuation display shows a short code's period under data; level 1 uses a short code, long codes start at level 2 with the bit rate given.
 D5. No hex map. The lab draws one link as a scene whose physical assumptions the player varies; J/S and Eb/N0 come from that scene through `rf.ts`.
+D6. The front end blanks its output for a recovery time after overload (section 4.2).
+D7. J/S is measured within ±Rc/2 of the carrier (section 5).
 
 Risks:
 

@@ -66,5 +66,27 @@ describe('frontEnd', () => {
     // powers 1, 100, 100, 25 against p1dbPower 25: three at or above
     const r = frontEnd(x, { p1dbPower: 25, adcFullScale: 100 });
     expect(r.compressedFraction).toBe(0.75);
+    expect(r.blankedFraction).toBe(0);
+  });
+  it('blanks the overload sample and the next recoverySamples', () => {
+    const x = iq(20);
+    x.re.fill(1);
+    x.re[5] = 100; // power 1e4, at the default overload of 100 x p1dbPower
+    const r = frontEnd(x, { p1dbPower: 100, adcFullScale: 1000, recoverySamples: 3 });
+    for (let i = 0; i < 20; i++) {
+      if (i >= 5 && i <= 8) expect(r.out.re[i]).toBe(0);
+      else expect(r.out.re[i]).not.toBe(0);
+    }
+    expect(r.blankedFraction).toBe(4 / 20);
+  });
+  it('restarts recovery on a later overload', () => {
+    const x = iq(20);
+    x.re.fill(1);
+    x.re[2] = 50;
+    x.re[4] = 50; // inside the first recovery: blind runs from 2 to 4 + 3 = 7
+    const r = frontEnd(x, { p1dbPower: 1, adcFullScale: 1000, recoverySamples: 3, overloadPower: 2000 });
+    expect(r.blankedFraction).toBe(6 / 20);
+    expect(r.out.re[7]).toBe(0);
+    expect(r.out.re[8]).not.toBe(0);
   });
 });

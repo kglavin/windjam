@@ -287,3 +287,23 @@ describe('determinism', () => {
     expect(db(1)).toBe(0);
   });
 });
+
+describe('pulsed jamming against a front end that recovers slowly', () => {
+  // Short code, s = 4. Pulses of 2 bits every 100 bits, strong enough to overload the front end.
+  // With a recovery time of 10 bits the receiver stays blind long after each pulse ends.
+  const link: LinkParams = { code: mSequence(5), chipsPerBit: 31, repetition: 1, preamblePeriods: 0, carrierCyclesPerChip: 0, ebN0: undb(10) };
+  const pulses = jammer({ kind: 'pulsed', duty: 0.02, periodChips: 3100, offsetChips: 0 }, 10);
+  const fe = { p1dbPower: 50, adcFullScale: 1e3, overloadPower: 1000 };
+  it('does damage out of proportion to its duty once recovery is modelled', { timeout: 60_000 }, () => {
+    const base = { nBits: 10_000, seed: 42, s: 4, interference: pulses };
+    const fast = simulate(link, { ...base, frontEnd: fe });
+    const slow = simulate(link, { ...base, frontEnd: { ...fe, recoverySamples: 10 * 31 * 4 } });
+    // Blind for the pulse (2 bits) plus recovery (10 bits) out of every 100: about 12% of samples.
+    expect(slow.blankedFraction).toBeGreaterThan(0.1);
+    expect(slow.blankedFraction).toBeLessThan(0.13);
+    // A blanked bit is a coin toss, so roughly half the blind bits are wrong.
+    expect(slow.errors / slow.bits).toBeGreaterThan(0.04);
+    expect(slow.errors).toBeGreaterThan(3 * fast.errors);
+    expect(fast.blankedFraction).toBe(0);
+  });
+});
