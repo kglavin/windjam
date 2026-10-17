@@ -1,0 +1,4616 @@
+{
+  "mission": "uav",
+  "seed": 1234,
+  "turnMin": 5,
+  "turns": 8,
+  "endedAt": 36,
+  "status": "draw",
+  "winner": "draw",
+  "finishedAt": "2026-10-15T04:58:33.623Z",
+  "c2": {
+    "blue": {
+      "agents": [
+        "sq1",
+        "sq3",
+        "uav"
+      ]
+    }
+  },
+  "messages": [
+    {
+      "n": 1,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq1",
+      "text": "go to 124,70, free hex next to it if refused, then cover the sector east of you for 15 minutes, repeating the listening without a gap; sq2 listens east from 116,80 at the same time; report the first time you hear 65 MHz",
+      "sentMin": 0,
+      "status": "on time",
+      "arriveMin": 0,
+      "ackMin": 0
+    },
+    {
+      "n": 2,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq3",
+      "text": "go to 124,90, free hex next to it if refused, then cover the sector east of you for 15 minutes, repeating without a gap; sq2 is at 116,80 and sq1 at 124,70; report the first time you hear 65 MHz",
+      "sentMin": 0,
+      "status": "on time",
+      "arriveMin": 0,
+      "ackMin": 0
+    },
+    {
+      "n": 3,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-uav",
+      "text": "fly a silent sortie to 126,76, listen east for 5 minutes, and repeat it each time you are home; sq2 listens east at the same time",
+      "sentMin": 0,
+      "status": "on time",
+      "arriveMin": 0,
+      "ackMin": 0
+    },
+    {
+      "n": 4,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 0,
+      "status": "on time",
+      "arriveMin": 0,
+      "ackMin": 0
+    },
+    {
+      "n": 5,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq1",
+      "text": "124,70 and 125,70 are mountain; move to open ground about 10 columns east of you on rows 72-76 (try 124,74 first, a free hex next to it if refused), then cover the sector east for 15 minutes without a gap; sq2 (116,80) listens east at the same time; report the first time you hear 65 MHz",
+      "sentMin": 5,
+      "status": "on time",
+      "arriveMin": 5,
+      "ackMin": 5
+    },
+    {
+      "n": 6,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 10,
+      "status": "on time",
+      "arriveMin": 10,
+      "ackMin": 10
+    },
+    {
+      "n": 7,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-ew",
+      "text": "jam uavlink",
+      "sentMin": 10,
+      "status": "on time",
+      "arriveMin": 10,
+      "ackMin": 10
+    },
+    {
+      "n": 8,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 15,
+      "status": "on time",
+      "arriveMin": 15,
+      "ackMin": 15
+    },
+    {
+      "n": 9,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 20,
+      "status": "on time",
+      "arriveMin": 20,
+      "ackMin": 20
+    },
+    {
+      "n": 10,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-uav",
+      "text": "fly a silent sortie to 126,76, listen east for 5 minutes, and repeat each time you are home; sq2 and sq3 (124,90) listen east at the same time; the UAV was heard at T+6 bearing 85 degrees from 126,76",
+      "sentMin": 20,
+      "status": "on time",
+      "arriveMin": 20,
+      "ackMin": 20
+    },
+    {
+      "n": 11,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq3",
+      "text": "you are at 124,90; listen east now for 15 minutes without a gap, repeating; the Red UAV flies east along row 76 toward Red HQ; sq2 listens at the same time; report the first time you hear 65 MHz",
+      "sentMin": 20,
+      "status": "on time",
+      "arriveMin": 20,
+      "ackMin": 20
+    },
+    {
+      "n": 12,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 25,
+      "status": "on time",
+      "arriveMin": 25,
+      "ackMin": 25
+    },
+    {
+      "n": 13,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq1",
+      "text": "you are at 124,74; listen east now for 15 minutes without a gap, repeating; sq2 at 116,80 and sq3 at 124,90 listen at the same time; report the first time you hear 65 MHz",
+      "sentMin": 25,
+      "status": "on time",
+      "arriveMin": 25,
+      "ackMin": 25
+    },
+    {
+      "n": 14,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 30,
+      "status": "on time",
+      "arriveMin": 30,
+      "ackMin": 30
+    },
+    {
+      "n": 15,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq1",
+      "text": "start listening east immediately for 15 minutes with no gap, restarting each 5-minute task the minute it ends; the Red UAV transmits every 3 minutes (T+30, 33, 36...) and sq3 at 124,90 hears it at bearing 73 to 90 degrees; report the first time you hear 65 MHz",
+      "sentMin": 30,
+      "status": "on time",
+      "arriveMin": 30,
+      "ackMin": 30
+    },
+    {
+      "n": 16,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 35,
+      "status": "on time",
+      "arriveMin": 35,
+      "ackMin": 35
+    },
+    {
+      "n": 17,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq1",
+      "text": "listen east for 15 minutes with no gap, restarting each task as it ends; report the first time you hear 65 MHz",
+      "sentMin": 35,
+      "status": "on time",
+      "arriveMin": 35,
+      "ackMin": 35
+    },
+    {
+      "n": 18,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq3",
+      "text": "listen east for 15 minutes with no gap, restarting each task as it ends; report the first time you hear 65 MHz",
+      "sentMin": 35,
+      "status": "on time",
+      "arriveMin": 35,
+      "ackMin": 35
+    }
+  ],
+  "units": [
+    {
+      "id": "b-hq",
+      "name": "Blue HQ",
+      "side": "blue"
+    },
+    {
+      "id": "b-relay",
+      "name": "Blue Relay",
+      "side": "blue"
+    },
+    {
+      "id": "b-sq1",
+      "name": "Blue Squad 1",
+      "side": "blue"
+    },
+    {
+      "id": "b-sq2",
+      "name": "Blue Squad 2",
+      "side": "blue"
+    },
+    {
+      "id": "b-sq3",
+      "name": "Blue Squad 3",
+      "side": "blue"
+    },
+    {
+      "id": "b-uav",
+      "name": "Blue UAV",
+      "side": "blue"
+    },
+    {
+      "id": "b-ew",
+      "name": "Blue EW Team",
+      "side": "blue"
+    },
+    {
+      "id": "r-hq",
+      "name": "Red HQ",
+      "side": "red"
+    },
+    {
+      "id": "r-relay",
+      "name": "Red Relay",
+      "side": "red"
+    },
+    {
+      "id": "r-ew",
+      "name": "Red EW Team",
+      "side": "red"
+    },
+    {
+      "id": "r-sq1",
+      "name": "Red Squad 1",
+      "side": "red"
+    },
+    {
+      "id": "r-sq2",
+      "name": "Red Squad 2",
+      "side": "red"
+    },
+    {
+      "id": "r-sq3",
+      "name": "Red Squad 3",
+      "side": "red"
+    },
+    {
+      "id": "n-cell",
+      "name": "Cell Tower",
+      "side": "neutral"
+    },
+    {
+      "id": "n-fm",
+      "name": "FM Broadcast",
+      "side": "neutral"
+    },
+    {
+      "id": "r-uav",
+      "name": "Red UAV",
+      "side": "red"
+    }
+  ],
+  "calls": [
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=es"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=red&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/uav"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/red"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=8"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/ask"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=8"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=8"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=red&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=8"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=8"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=8"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/uav"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=8"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=red&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=12"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=12"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=red&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=12"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=12"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=12"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=red&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=12"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/staff/ops"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=12"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=red&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=12"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=14"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&after=4"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=12"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=14"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=12"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=red&after=4"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=12"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=14"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=12"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=red&after=56"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=12"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=57"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=57"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=red&after=56"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=57"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=57"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=57"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=red&after=56"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&after=56"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=70"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=57"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=57"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=red&after=70"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=70"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=57"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=57"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=72"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=red&after=70"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/red"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=red&after=95"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=95"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&after=70"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=red&after=95"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=96"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=96"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=72"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=red&after=95"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=95"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&after=96"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/ask"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/analyse/predict?side=blue&track=E6"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/analyse/fix?side=blue&track=E6"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/analyse/fix?side=blue&track=E6&add=130%2C70&sigma=2"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/analyse/fix?side=blue&track=E6&add=124%2C90&sigma=2"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/analyse/detect?side=blue&sensor=sq3&at=124%2C77&kind=drone&powerW=0.3&antennaM=150&f=65"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/staff/es"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=97"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=117"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=120"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/uav"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=120"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=120"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=red&after=117"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=121"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=120"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=120"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/red"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=red&after=143"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=143"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=120"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&after=117"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=120"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=144"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=120"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=red&after=143"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=120"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=144"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=120"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=red&after=143"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=146"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/sq3/report"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=147"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=143"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=144"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/ask"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=2"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/analyse/predict?side=blue&track=E6"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/analyse/fix?side=blue&track=E6"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/analyse/path?side=blue&from=124%2C90&to=126%2C76&f=65"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/analyse/detect?side=blue&sensor=sq2&at=126%2C76&kind=drone&powerW=0.3&antennaM=150&f=65"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/analyse/detect?side=blue&sensor=sq1&at=126%2C76&kind=drone&powerW=0.3&antennaM=150&f=65"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/staff/es"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=146"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=173"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=173"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=173"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=174"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=red&after=171"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=173"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=173"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=red&after=195"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=195"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&after=171"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=173"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=173"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=195"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=red&after=195"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=173"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=ewp&after=0"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=173"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=es&after=3"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=195"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=ewa&after=0"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=red&after=195"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/blue/staff?role=ops&after=1"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=198"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    }
+  ],
+  "analyses": {
+    "blue": 10,
+    "red": 0
+  },
+  "staff": [
+    {
+      "id": "t1",
+      "side": "blue",
+      "role": "ops",
+      "question": "Turn 1, T+0, nothing heard yet. Tasking table for sq1 (113,69), sq3 (114,92), uav (120,78), sq2 auto at 116,80, so we get two sensors listening east together within 20 min.",
+      "turn": 0,
+      "minute": 0,
+      "askedAt": "2026-10-15T04:54:43.774Z",
+      "answer": "ASSESSMENT (confidence: medium)\nGoal for the next two turns: get a UAV position fix under 1 km. Needs two sensors on the same sector and the same minutes, a few km apart, not on the same hex. Nothing heard yet, no track, so no es prediction, no ewa jam option, no ewp delivery odds. Planned from status_lines only.\nState: all units idle, all links ok. sq1 (113,69) and sq3 (114,92) are the widest pair, about 23 rows apart; the hex spacing for that gap is not in the picture, so the fix pair is unconfirmed. sq2 (116,80) is auto and relays the uav link. uav (120,78) is 2 km from sq2, inside the linked DF range.\nNote: the status shows 4 orders already sent (n1 to sq1, n2 to sq3, n3 to uav, n4 to sq2), all pending. Their text is not visible to me. Compare them with the lines below before sending more, so nothing is sent twice.\n\nRECOMMENDATION\nTurn now (T+0):\nsend sq1: df e 5\nwhy: east sector 5 min, first sensor for a fix pair with sq3; cost: 2 bursts on cmd\nsend sq3: df e 5\nwhy: same sector, same minutes as sq1; second sensor of the pair; cost: 2 bursts on cmd\nsend uav: df e 5\nwhy: linked DF from 2 km of sq2, same sector and minutes; cost: 2 bursts on cmd\nNo order to sq2: it is auto and keeps the uav link as a standing relay; cost: 0\nNext turn (T+5), if sq1 or sq3 reports a receipt:\nsend sq1: df e 5\nwhy: repeat the sector on the same minutes so the pair stays aligned; cost: 2 bursts on cmd\nTotal: 6 bursts, 3 orders this turn (plus 4 pending orders already sent)\nAlternative if sq3's link degrades: sq3 holds its DF but gives no fix; sq1 and uav still give a bearing pair if their hexes separate by 3 km or more.\n\nWOULD CHANGE IF\nA receipt on any sensor (new bearing sector), a track with a fix (use fix add= for a second site), sq3 or uav moving (wait for moving, N hexes to go to finish before DF), or a link to HQ going degraded.",
+      "answeredTurn": 0,
+      "answeredMinute": 0
+    },
+    {
+      "id": "t2",
+      "side": "blue",
+      "role": "es",
+      "question": "Track E6 (65 MHz UAV link): where will it transmit next, and where should two sensors stand to fix it?",
+      "turn": 4,
+      "minute": 20,
+      "askedAt": "2026-10-15T04:55:47.487Z",
+      "answer": "ASSESSMENT (confidence: low)\nE6 is a moving UAV link at 65 MHz. Heard once, at T+6, bearing 85° ± 3.6° from Blue UAV at 126,76. No fix, no period (predict lists one transmission, minute 6, and no nextMinute). Silence since T+6 may be a jammed link (ew is jamming red-uav) or a quiet drone; the picture does not separate the two.\nNext transmission: unknown. Do not assume the 3-minute report schedule from one burst.\nSecond site: none can be chosen with a computed CEP yet. A fix needs two sites on the same burst in the same minute, and fix add= returns nothing with one bearing. The 85° line runs roughly east from 126,76. A second bearing crosses it near 90° from a site north or south of that line. Candidates: sq2 at 116,80 (idle, direct link) or sq3 at 124,90 (idle, direct link). Each needs a DF task to hear anything, and a sensor that is idle hears nothing.\n\nRECOMMENDATION\nno new orders\n\nwhy: a DF order now buys a bearing only if the drone transmits in that minute, and the picture gives no timing for it.\n\nWOULD CHANGE IF\nA second E6 burst (any minute) from the UAV: with a bearing from a second site in the same minute, I compute the CEP. A second E6 burst at a fixed minute would give a period and nextMinute. A 65 MHz DSSS signature on E6 would mean a waveform change and a much lower detection rate.",
+      "answeredTurn": 4,
+      "answeredMinute": 20
+    },
+    {
+      "id": "t3",
+      "side": "blue",
+      "role": "es",
+      "question": "Track E6: sq3 heard it at T+21 (73 deg) and T+24 (90 deg), UAV heard T+6. Period, next transmission, and where should sq1 and sq2 stand or point to share the next burst?",
+      "turn": 6,
+      "minute": 30,
+      "askedAt": "2026-10-15T04:56:37.844Z",
+      "answer": "ASSESSMENT (confidence: medium)\nE6 is a moving UAV link at 65 MHz. Three bursts: T+6 (UAV, 85°), T+21 (sq3, 73°), T+24 (sq3, 90°). All three minutes are multiples of 3, and predict gives period 3, phase 0, score 1, nextMinute 30. Three transmissions is a thin basis. Treat the schedule as likely, not confirmed. The gaps at T+9, 12, 15, 18, 27 may be missed bursts or no listener: sq3 was idle then, so the schedule is not disproved.\nPosition: no fix. Both sq3 bearings come from one site, so they give no crossing. The emitter lies east of sq3 (124,90) between 73° and 90°, roughly rows 82 to 90, from T+21 to T+24. Its range is unknown.\nSecond site: sq1 at 124,74 is 16 rows (8 km) north of sq3, so a bearing from it crosses the sq3 line. Its DF east sector (45°-135°) covers the emitter's likely bearing. Path from sq3 to the UAV's last spot is line of sight, 6.1 km, 107 dB loss. Detect from sq1 at 126,76 gives SNR 66 dB, so sq1 hears a burst at that range with margin. CEP cannot be computed until the minute-30 bearing exists.\nBearings from a task reach HQ only when the task ends, so a T+30 bearing from sq1 arrives at T+35 at the earliest.\n\nRECOMMENDATION\nsend sq1: df e 5\nwhy: a second site on the same minute-30 burst gives the first crossing for E6. sq3 already listens until T+35, so this order adds the second bearing only.\n\nWOULD CHANGE IF\nA T+30 burst is silent on sq3 (schedule wrong, or the UAV is in radio silent with DF east to T+33, so it may not transmit). A next burst at a minute other than 30 or 33 breaks the period. A 65 MHz DSSS signature would mean a waveform change.",
+      "answeredTurn": 6,
+      "answeredMinute": 30
+    }
+  ],
+  "orders": [
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: power 0.3",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uavlink: waveform dsss",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: antenna toward hq",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: launch",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "send sq1: go to 124,70, free hex next to it if refused, then cover the sector east of you for 15 minutes, repeating the listening without a gap; sq2 listens east from 116,80 at the same time; report the first time you hear 65 MHz",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "send sq3: go to 124,90, free hex next to it if refused, then cover the sector east of you for 15 minutes, repeating without a gap; sq2 is at 116,80 and sq1 at 124,70; report the first time you hear 65 MHz",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "send uav: fly a silent sortie to 126,76, listen east for 5 minutes, and repeat it each time you are home; sq2 listens east at the same time",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "uav: sortie 126,76 e 5",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "sq3: move 124,90",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "sq1: move 124,70",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "sq1: move 125,70",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "sq1: df e 5",
+      "minute": 0
+    },
+    {
+      "turn": 1,
+      "side": "blue",
+      "line": "send sq1: 124,70 and 125,70 are mountain; move to open ground about 10 columns east of you on rows 72-76 (try 124,74 first, a free hex next to it if refused), then cover the sector east for 15 minutes without a gap; sq2 (116,80) listens east at the same time; report the first time you hear 65 MHz",
+      "minute": 5
+    },
+    {
+      "turn": 1,
+      "side": "blue",
+      "line": "sq1: move 124,74",
+      "minute": 5
+    },
+    {
+      "turn": 2,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 10
+    },
+    {
+      "turn": 2,
+      "side": "blue",
+      "line": "send ew: jam uavlink",
+      "minute": 10
+    },
+    {
+      "turn": 3,
+      "side": "red",
+      "line": "uav: power 1",
+      "minute": 15
+    },
+    {
+      "turn": 3,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 15
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "send uav: fly a silent sortie to 126,76, listen east for 5 minutes, and repeat each time you are home; sq2 and sq3 (124,90) listen east at the same time; the UAV was heard at T+6 bearing 85 degrees from 126,76",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "send sq3: you are at 124,90; listen east now for 15 minutes without a gap, repeating; the Red UAV flies east along row 76 toward Red HQ; sq2 listens at the same time; report the first time you hear 65 MHz",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "uav: sortie 126,76 e 5",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "sq3: df e 15",
+      "minute": 20
+    },
+    {
+      "turn": 5,
+      "side": "red",
+      "line": "uav: power 0.3",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "send sq1: you are at 124,74; listen east now for 15 minutes without a gap, repeating; sq2 at 116,80 and sq3 at 124,90 listen at the same time; report the first time you hear 65 MHz",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "sq1: df e 5",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "sq3: report",
+      "minute": 25
+    },
+    {
+      "turn": 6,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 30
+    },
+    {
+      "turn": 6,
+      "side": "blue",
+      "line": "send sq1: start listening east immediately for 15 minutes with no gap, restarting each 5-minute task the minute it ends; the Red UAV transmits every 3 minutes (T+30, 33, 36...) and sq3 at 124,90 hears it at bearing 73 to 90 degrees; report the first time you hear 65 MHz",
+      "minute": 30
+    },
+    {
+      "turn": 6,
+      "side": "blue",
+      "line": "sq1: df e 5",
+      "minute": 30
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 35
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "send sq1: listen east for 15 minutes with no gap, restarting each task as it ends; report the first time you hear 65 MHz",
+      "minute": 35
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "send sq3: listen east for 15 minutes with no gap, restarting each task as it ends; report the first time you hear 65 MHz",
+      "minute": 35
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "sq1: df e 5",
+      "minute": 35
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "sq3: df e 15",
+      "minute": 35
+    }
+  ],
+  "console": {
+    "blue": [
+      "[T+00] Mission: track the UAV. Red's UAV flies a 10-waypoint route and must report to Red HQ at least every 3 minutes.",
+      "[T+00] Blue wins with 5 position fixes under 1 km on the UAV. Red wins if the route is flown with at most 1 report lost and Blue has fewer fixes. Otherwise a draw at T+60.",
+      "[T+00] The UAV reports only when it transmits. Take bearings from two sites in the same minute to fix where it was. ew: jam uavlink costs Red reports. Type help.",
+      "[T+00] HQ: order 1 to Blue Squad 1 sent.",
+      "[T+00] HQ: order 2 to Blue Squad 3 sent.",
+      "[T+00] HQ: order 3 to Blue UAV sent.",
+      "[T+00] HQ: order 4 to Blue Squad 2 sent.",
+      "[T+00] Blue UAV: silent sortie, 1 leg: 126,76 DF east (45°-135°) 5 min; then home. About 20 min, radio silent until it returns.",
+      "[T+00] Blue Squad 3: moving to 124,90, 13 hexes, about 20 min.",
+      "[T+00] Blue Squad 1: no route to 124,70 (mountain: Relay & EW only).",
+      "[T+00] Blue Squad 1: no route to 125,70 (mountain: Relay & EW only).",
+      "[T+00] Blue Squad 1: DF east (45°-135°) for 5 min.",
+      "[T+01] Blue Squad 1: order 1 received: go to 124,70, free hex next to it if refused, then cover the sector east of you for 15 minutes, repeating the listening without a gap; sq2 listens east from 116,80 at the same time; report the first time you hear 65 MHz",
+      "[T+01] HQ: order 1 acknowledged by Blue Squad 1.",
+      "[T+01] Blue Squad 3: order 2 received: go to 124,90, free hex next to it if refused, then cover the sector east of you for 15 minutes, repeating without a gap; sq2 is at 116,80 and sq1 at 124,70; report the first time you hear 65 MHz",
+      "[T+01] HQ: order 2 acknowledged by Blue Squad 3.",
+      "[T+01] Blue UAV: order 3 received: fly a silent sortie to 126,76, listen east for 5 minutes, and repeat it each time you are home; sq2 listens east at the same time",
+      "[T+01] HQ: order 3 acknowledged by Blue UAV.",
+      "[T+01] Blue Squad 2: order 4 received: df e 5",
+      "[T+01] HQ: order 4 acknowledged by Blue Squad 2.",
+      "[T+00] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+05] Blue Squad 1: DF east (45°-135°) done. 3 emitters, 128 measurements. Reported to HQ.",
+      "[T+05] HQ: new track E1 (48 MHz fixed).",
+      "[T+05] HQ: new track E2 (52 MHz fixed).",
+      "[T+05] HQ: new track E3 (45 MHz hopper).",
+      "[T+05] Blue Squad 2: DF east (45°-135°) done. 3 emitters, 127 measurements. Reported to HQ.",
+      "[T+05] HQ: E1 fixed: CEP 1.86 km from 2 bearings.",
+      "[T+05] HQ: E2 fixed: CEP 0.62 km from 2 bearings.",
+      "[T+05] HQ: E3 fixed: CEP 1.64 km from 2 bearings.",
+      "[T+05] HQ: order 5 to Blue Squad 1 sent.",
+      "[T+05] Blue Squad 1: moving to 124,74, 13 hexes, about 20 min.",
+      "[T+06] Blue Squad 1: order 5 received: 124,70 and 125,70 are mountain; move to open ground about 10 columns east of you on rows 72-76 (try 124,74 first, a free hex next to it if refused), then cover the sector east for 15 minutes without a gap; sq2 (116,80) listens east at the same time; report the first time you hear 65 MHz",
+      "[T+06] HQ: order 5 acknowledged by Blue Squad 1.",
+      "[T+06] Blue UAV: leg 1/1 on station, DF east (45°-135°) for 5 min, radio silent.",
+      "[T+10] HQ: order 6 to Blue Squad 2 sent.",
+      "[T+10] HQ: order 7 to Blue EW Team sent.",
+      "[T+11] Blue Squad 2: order 6 received: df e 5",
+      "[T+11] HQ: order 6 acknowledged by Blue Squad 2.",
+      "[T+11] Blue EW Team: order 7 received: jam uavlink",
+      "[T+11] HQ: order 7 acknowledged by Blue EW Team.",
+      "[T+10] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+10] Blue EW Team: spot-jamming Red UAV Link. Their reports will be held while their links are down. You are now their loudest emitter.",
+      "[T+11] Blue UAV: leg 1 done, 6 emitters heard.",
+      "[T+11] Blue UAV: plan complete, returning to Blue Squad 2, about 9 min.",
+      "[T+15] Blue Squad 2: DF east (45°-135°) done. 3 emitters, 196 measurements. Reported to HQ.",
+      "[T+15] HQ: new track E4 (52 MHz fixed).",
+      "[T+15] HQ: order 8 to Blue Squad 2 sent.",
+      "[T+16] Blue Squad 2: order 8 received: df e 5",
+      "[T+16] HQ: order 8 acknowledged by Blue Squad 2.",
+      "[T+15] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+19] Blue UAV: back from sortie (1 leg), handed over. 6 emitters, 274 measurements. Reported to HQ.",
+      "[T+19] HQ: new track E5 (45 MHz hopper).",
+      "[T+19] HQ: E4 fixed: CEP 0.58 km from 2 bearings.",
+      "[T+19] HQ: new track E6 (65 MHz UAV link).",
+      "[T+19] HQ: E2 refined: CEP 0.44 km from 4 bearings.",
+      "[T+20] Blue Squad 3: arrived at 124,90.",
+      "[T+20] Blue Squad 2: DF east (45°-135°) done. 3 emitters, 212 measurements. Reported to HQ.",
+      "[T+20] HQ: order 9 to Blue Squad 2 sent.",
+      "[T+20] HQ: order 10 to Blue UAV sent.",
+      "[T+20] HQ: order 11 to Blue Squad 3 sent.",
+      "[T+20] Blue UAV: silent sortie, 1 leg: 126,76 DF east (45°-135°) 5 min; then home. About 22 min, radio silent until it returns.",
+      "[T+20] Blue Squad 3: DF east (45°-135°) for 15 min.",
+      "[T+21] Blue Squad 2: order 9 received: df e 5",
+      "[T+21] HQ: order 9 acknowledged by Blue Squad 2.",
+      "[T+21] Blue UAV: order 10 received: fly a silent sortie to 126,76, listen east for 5 minutes, and repeat each time you are home; sq2 and sq3 (124,90) listen east at the same time; the UAV was heard at T+6 bearing 85 degrees from 126,76",
+      "[T+21] HQ: order 10 acknowledged by Blue UAV.",
+      "[T+21] Blue Squad 3: order 11 received: you are at 124,90; listen east now for 15 minutes without a gap, repeating; the Red UAV flies east along row 76 toward Red HQ; sq2 listens at the same time; report the first time you hear 65 MHz",
+      "[T+21] HQ: order 11 acknowledged by Blue Squad 3.",
+      "[T+20] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+25] Blue Squad 1: arrived at 124,74.",
+      "[T+25] Blue Squad 2: DF east (45°-135°) done. 4 emitters, 111 measurements. Reported to HQ.",
+      "[T+25] HQ: E3 refined: CEP 1.13 km from 4 bearings.",
+      "[T+25] HQ: order 12 to Blue Squad 2 sent.",
+      "[T+25] HQ: order 13 to Blue Squad 1 sent.",
+      "[T+25] Blue Squad 1: DF east (45°-135°) for 5 min.",
+      "[T+25] Blue Squad 3: DF east (45°-135°) report so far. 6 emitters, 119 measurements. Reported to HQ.",
+      "[T+25] HQ: E3 refined: CEP 0.53 km from 5 bearings.",
+      "[T+25] HQ: E2 refined: CEP 0.24 km from 7 bearings.",
+      "[T+25] HQ: E4 refined: CEP 0.28 km from 5 bearings.",
+      "[T+25] HQ: E1 refined: CEP 0.51 km from 7 bearings.",
+      "[T+26] Blue Squad 2: order 12 received: df e 5",
+      "[T+26] HQ: order 12 acknowledged by Blue Squad 2.",
+      "[T+26] Blue Squad 1: order 13 received: you are at 124,74; listen east now for 15 minutes without a gap, repeating; sq2 at 116,80 and sq3 at 124,90 listen at the same time; report the first time you hear 65 MHz",
+      "[T+26] HQ: order 13 acknowledged by Blue Squad 1.",
+      "[T+25] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+28] Blue UAV: leg 1/1 on station, DF east (45°-135°) for 5 min, radio silent.",
+      "[T+30] Blue Squad 1: DF east (45°-135°) done. 4 emitters, 155 measurements. Reported to HQ.",
+      "[T+30] HQ: E5 fixed: CEP 0.59 km from 2 bearings.",
+      "[T+30] Blue Squad 2: DF east (45°-135°) done. 3 emitters, 108 measurements. Reported to HQ.",
+      "[T+30] HQ: order 14 to Blue Squad 2 sent.",
+      "[T+30] HQ: order 15 to Blue Squad 1 sent.",
+      "[T+30] Blue Squad 1: DF east (45°-135°) for 5 min.",
+      "[T+31] Blue Squad 2: order 14 received: df e 5",
+      "[T+31] HQ: order 14 acknowledged by Blue Squad 2.",
+      "[T+31] Blue Squad 1: order 15 received: start listening east immediately for 15 minutes with no gap, restarting each 5-minute task the minute it ends; the Red UAV transmits every 3 minutes (T+30, 33, 36...) and sq3 at 124,90 hears it at bearing 73 to 90 degrees; report the first time you hear 65 MHz",
+      "[T+31] HQ: order 15 acknowledged by Blue Squad 1.",
+      "[T+30] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+33] Blue UAV: leg 1 done, 5 emitters heard.",
+      "[T+33] Blue UAV: plan complete, returning to Blue Squad 2, about 9 min.",
+      "[T+35] Blue Squad 3: DF east (45°-135°) done. 3 emitters, 218 measurements. Reported to HQ.",
+      "[T+35] HQ: E2 refined: CEP 0.14 km from 10 bearings.",
+      "[T+35] Blue Squad 1: DF east (45°-135°) done. 4 emitters, 148 measurements. Reported to HQ.",
+      "[T+35] Blue Squad 2: DF east (45°-135°) done. 3 emitters, 103 measurements. Reported to HQ.",
+      "[T+35] HQ: order 16 to Blue Squad 2 sent.",
+      "[T+35] HQ: order 17 to Blue Squad 1 sent.",
+      "[T+35] HQ: order 18 to Blue Squad 3 sent.",
+      "[T+35] Blue Squad 1: DF east (45°-135°) for 5 min.",
+      "[T+35] Blue Squad 3: DF east (45°-135°) for 15 min.",
+      "[T+36] Blue Squad 2: order 16 received: df e 5",
+      "[T+36] HQ: order 16 acknowledged by Blue Squad 2.",
+      "[T+36] Blue Squad 1: order 17 received: listen east for 15 minutes with no gap, restarting each task as it ends; report the first time you hear 65 MHz",
+      "[T+36] HQ: order 17 acknowledged by Blue Squad 1.",
+      "[T+36] Blue Squad 3: order 18 received: listen east for 15 minutes with no gap, restarting each task as it ends; report the first time you hear 65 MHz",
+      "[T+36] HQ: order 18 acknowledged by Blue Squad 3.",
+      "[T+35] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+36] Draw at T+36: Blue has 0 of 5 fixes; route complete at T+36, 6 reports lost (1 allowed).",
+      "[T+36] Type reveal to see the truth and step through how the picture built up."
+    ],
+    "red": [
+      "[T+00] Mission: track the UAV. Red's UAV flies a 10-waypoint route and must report to Red HQ at least every 3 minutes.",
+      "[T+00] Blue wins with 5 position fixes under 1 km on the UAV. Red wins if the route is flown with at most 1 report lost and Blue has fewer fixes. Otherwise a draw at T+60.",
+      "[T+00] uav: launch starts the route; uav: burst reports now (and resets the clock); uav: hold pauses at the next waypoint. Lower uav power and a DSSS uavlink are harder to hear, and harder for HQ to receive. Type help.",
+      "[T+00] Red UAV: transmit power 0.3 W.",
+      "[T+00] Red UAV Link: waveform DSSS 5 Mcps.",
+      "[T+00] Red UAV: antenna pointed at Red HQ: +6 dBi within 30°, 20 dB down everywhere else, including towards anything off that line.",
+      "[T+00] Red UAV: launched at T+0, 10 waypoints: 142,74; 138,70; 132,72; 130,78; 126,84; 128,90; 134,90; 138,86; 144,86; 148,80. It must report to HQ every 3 min.",
+      "[T+01] Red UAV: to waypoint 1/10 at 142,74, about 6 min.",
+      "[T+01] HQ: new track B1 (60 MHz fixed).",
+      "[T+01] HQ: new track B2 (60 MHz fixed).",
+      "[T+01] HQ: new track B3 (60 MHz fixed).",
+      "[T+01] HQ: new track B4 (60 MHz fixed).",
+      "[T+01] HQ: B2 fixed: CEP 2.97 km from 2 bearings.",
+      "[T+01] HQ: B4 fixed: CEP 1.75 km from 2 bearings.",
+      "[T+01] HQ: B1 fixed: CEP 1.21 km from 3 bearings.",
+      "[T+01] HQ: B2 refined: CEP 0.87 km from 3 bearings.",
+      "[T+01] HQ: B3 fixed: CEP 0.66 km from 3 bearings.",
+      "[T+01] HQ: B4 refined: CEP 0.66 km from 3 bearings.",
+      "[T+01] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+03] HQ: B2 refined: CEP 0.59 km from 6 bearings.",
+      "[T+03] Intercepts: 70 MHz fixed (3 sensors).",
+      "[T+04] Red UAV: report (forced) at T+3 from 145,76 received by HQ (good, SNR 21 dB).",
+      "[T+04] HQ: B4 refined: CEP 0.46 km from 6 bearings.",
+      "[T+04] Intercepts: 70 MHz fixed (3 sensors), 60 MHz fixed (3 sensors).",
+      "[T+05] HQ: new track B5 (70 MHz fixed).",
+      "[T+05] HQ: B1 refined: CEP 0.87 km from 6 bearings.",
+      "[T+05] HQ: B5 fixed: CEP 1.20 km from 3 bearings.",
+      "[T+05] HQ: B3 refined: CEP 0.47 km from 6 bearings.",
+      "[T+05] Intercepts: 60 MHz fixed (3 sensors), 70 MHz fixed (3 sensors).",
+      "[T+06] Red UAV: arrived at 143,74.",
+      "[T+06] HQ: B5 refined: CEP 0.81 km from 6 bearings.",
+      "[T+06] Intercepts: 60 MHz fixed (3 sensors), 70 MHz fixed (3 sensors).",
+      "[T+07] Red UAV: to waypoint 2/10 at 138,70, about 3 min.",
+      "[T+07] Red UAV: report (forced) at T+6 from 141,73 received by HQ (good, SNR 35 dB).",
+      "[T+09] Red UAV: arrived at 138,71.",
+      "[T+10] Red UAV: to waypoint 3/10 at 132,72, about 3 min.",
+      "[T+10] Red UAV: report (forced) at T+9 from 136,71 received by HQ (good, SNR 15 dB).",
+      "[T+10] Intercepts: 70 MHz fixed (3 sensors), 60 MHz fixed (3 sensors).",
+      "[T+11] HQ: new track B6 (jammer, spot).",
+      "[T+11] HQ: B6 fixed: CEP 0.76 km from 2 bearings.",
+      "[T+11] HQ: B6 refined: CEP 0.51 km from 3 bearings.",
+      "[T+11] HQ: B6 refined: CEP 0.31 km from 4 bearings.",
+      "[T+11] Intercepts: 60 MHz fixed (3 sensors), 70 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+12] Red UAV: arrived at 133,72.",
+      "[T+12] Intercepts: jammer, spot (4 sensors).",
+      "[T+13] Red UAV: to waypoint 4/10 at 130,78, about 3 min.",
+      "[T+13] Red UAV: report (forced) at T+12 from 132,74 received by HQ (degraded, SNR 15 dB, jammed in part).",
+      "[T+13] Intercepts: 60 MHz fixed (2 sensors), jammer, spot (4 sensors).",
+      "[T+14] Intercepts: jammer, spot (4 sensors).",
+      "[T+15] Red UAV: arrived at 130,77.",
+      "[T+15] Intercepts: 60 MHz fixed (3 sensors), 70 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+15] Red UAV: transmit power 1 W.",
+      "[T+16] Red UAV: to waypoint 5/10 at 126,84, about 4 min.",
+      "[T+16] Red UAV: report (forced) at T+15 from 129,79 lost: link denied (J/S 25 dB, SNR 9 dB). 1 of 1 allowed.",
+      "[T+16] Intercepts: 60 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+17] Intercepts: jammer, spot (4 sensors).",
+      "[T+18] Intercepts: 60 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+19] Red UAV: arrived at 126,83.",
+      "[T+19] Red UAV: report (forced) at T+18 from 126,83 lost: link denied (J/S 26 dB, SNR 8 dB). 2 of 1 allowed.",
+      "[T+19] Intercepts: 60 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+20] Red UAV: to waypoint 6/10 at 128,90, about 3 min.",
+      "[T+20] Intercepts: 60 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+21] HQ: B4 refined: CEP 0.20 km from 14 bearings.",
+      "[T+21] Intercepts: 60 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+22] Red UAV: arrived at 127,89.",
+      "[T+22] Red UAV: report (forced) at T+21 from 127,89 lost: link denied (J/S 23 dB, SNR 11 dB). 3 of 1 allowed.",
+      "[T+22] Intercepts: jammer, spot (4 sensors).",
+      "[T+23] Red UAV: to waypoint 7/10 at 134,90, about 3 min.",
+      "[T+23] Intercepts: jammer, spot (4 sensors).",
+      "[T+24] Intercepts: 60 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+25] Red UAV: arrived at 133,90.",
+      "[T+25] Red UAV: report (forced) at T+24 from 133,90 lost: link denied (J/S 27 dB, SNR 7 dB). 4 of 1 allowed.",
+      "[T+25] Intercepts: 60 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+25] Red UAV: transmit power 0.3 W.",
+      "[T+26] Red UAV: to waypoint 8/10 at 138,86, about 3 min.",
+      "[T+26] HQ: B2 refined: CEP 0.15 km from 27 bearings.",
+      "[T+26] Intercepts: 60 MHz fixed (4 sensors), jammer, spot (4 sensors).",
+      "[T+27] Intercepts: jammer, spot (4 sensors).",
+      "[T+28] Red UAV: arrived at 137,87.",
+      "[T+28] Red UAV: report (forced) at T+27 from 137,87 lost: link denied (J/S 23 dB, SNR 11 dB). 5 of 1 allowed.",
+      "[T+28] Intercepts: jammer, spot (4 sensors).",
+      "[T+29] Red UAV: to waypoint 9/10 at 144,86, about 3 min.",
+      "[T+29] Intercepts: 70 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+30] Intercepts: 60 MHz fixed (4 sensors), jammer, spot (4 sensors).",
+      "[T+31] Red UAV: arrived at 143,86.",
+      "[T+31] Red UAV: report (forced) at T+30 from 143,86 lost: link denied (J/S 21 dB, SNR 14 dB). 6 of 1 allowed.",
+      "[T+31] Intercepts: 60 MHz fixed (4 sensors), jammer, spot (4 sensors).",
+      "[T+32] Red UAV: to waypoint 10/10 at 148,80, about 4 min.",
+      "[T+32] Intercepts: jammer, spot (4 sensors).",
+      "[T+33] Intercepts: 60 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+34] Red UAV: report (forced) at T+33 from 147,82 received by HQ (degraded, SNR 19 dB, jammed in part).",
+      "[T+34] Intercepts: 70 MHz fixed (4 sensors), jammer, spot (4 sensors).",
+      "[T+35] Red UAV: arrived at 147,81.",
+      "[T+35] Intercepts: 60 MHz fixed (4 sensors), jammer, spot (4 sensors).",
+      "[T+36] Red UAV: route complete at T+36, landing. No more reports.",
+      "[T+36] Intercepts: 60 MHz fixed (4 sensors), jammer, spot (4 sensors).",
+      "[T+36] Draw at T+36: Blue has 0 of 5 fixes; route complete at T+36, 6 reports lost (1 allowed).",
+      "[T+36] Type reveal to see the truth and step through how the picture built up."
+    ]
+  },
+  "reveal": [
+    "Reveal: Red UAV route 1: 142,74; 2: 138,70; 3: 132,72; 4: 130,78; 5: 126,84; 6: 128,90; 7: 134,90; 8: 138,86; 9: 144,86; 10: 148,80. Launched T+0, complete T+36.",
+    "Reveal: UAV reports (* forced): T+3*, T+6*, T+9*, T+12*, T+15* lost, T+18* lost, T+21* lost, T+24* lost, T+27* lost, T+30* lost, T+33*.",
+    "Reveal: Blue track E6 on the UAV: 3 bearings, 0 position fixes, 0 under 1 km.",
+    "Reveal: Blue HQ at 102,80: Red B1, fix 0.30 km off (CEP 0.31 km).",
+    "Reveal: Blue Relay at 111,74: Red B5, fix 2.68 km off (CEP 0.57 km).",
+    "Reveal: Blue Squad 1 at 124,74: Red B2, fix 0.19 km off (CEP 0.07 km).",
+    "Reveal: Blue Squad 2 at 116,80: Red B3, fix 0.80 km off (CEP 0.17 km).",
+    "Reveal: Blue Squad 3 at 124,90: Red B4, fix 0.65 km off (CEP 0.11 km).",
+    "Reveal: Blue UAV at 123,77: Red never heard.",
+    "Reveal: Blue EW Team at 123,72: Red B6, fix 0.78 km off (CEP 0.06 km)."
+  ],
+  "summary": {
+    "blue": [
+      "T+36 of 60 min. UAV position fixes under 1 km: 0/5. Track E6: 3 bearings, 0 fixes.",
+      "Unit agents: sq1, sq3, uav. Auto: relay, sq2, ew.",
+      "Orders: 18 sent; acknowledged 18 (on time 18, late 0); pending 0; lost 0.",
+      "hq    Blue HQ       at 102,80 · idle · link to HQ: ok (at HQ) · 50 W",
+      "relay Blue Relay    at 111,74 · idle · link to HQ: ok (direct, on time) · 20 W",
+      "sq1   Blue Squad 1  at 124,74 · DF east (45°-135°) until T+40 · link to HQ: ok (direct, on time) · 5 W",
+      "sq2   Blue Squad 2  at 116,80 · DF east (45°-135°) until T+40 · link to HQ: ok (direct, on time) · 5 W",
+      "sq3   Blue Squad 3  at 124,90 · DF east (45°-135°) until T+50 · link to HQ: ok (direct, on time) · 5 W",
+      "uav   Blue UAV      at 123,77 · sortie leg 1/1, returning (8 hexes), radio silent · link to HQ: ok (via Blue Squad 2, direct, on time)",
+      "ew    Blue EW Team  at 123,72 · idle · link to HQ: no radio net · 200 W, jamming red-uav"
+    ],
+    "red": [
+      "T+36 of 60 min. route complete at T+36. Reports: 5 received, 6 lost (1 allowed). Tracks on Blue: 6.",
+      "net cmd     Red Command Net  45 MHz · hopping 100/s · chatter 20%",
+      "net retrans Red Retrans      48 MHz · fixed · chatter 20%",
+      "net squad   Red Squad Net    52 MHz · fixed · chatter 20%",
+      "net uavlink Red UAV Link     65 MHz · DSSS 5 Mcps · chatter 0%",
+      "hq    Red HQ        at 152,80 · idle · link to HQ: ok (at HQ) · 50 W",
+      "relay Red Relay     at 150,82 · idle · link to HQ: ok (direct, on time) · 20 W",
+      "ew    Red EW Team   at 138,87 · idle · link to HQ: no radio net · 200 W",
+      "sq1   Red Squad 1   at 140,68 · idle · link to HQ: ok (relay, on time) · 5 W",
+      "sq2   Red Squad 2   at 138,80 · idle · link to HQ: ok (relay, on time) · 5 W",
+      "sq3   Red Squad 3   at 140,92 · idle · link to HQ: ok (relay, on time) · 5 W",
+      "uav   Red UAV       at 147,81 · idle · link to HQ: ok (via Red HQ, at HQ) · antenna → Red HQ"
+    ]
+  }
+}

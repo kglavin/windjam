@@ -1,0 +1,1741 @@
+{
+  "mission": "uav",
+  "seed": 1234,
+  "turnMin": 5,
+  "turns": 8,
+  "endedAt": 36,
+  "status": "lost",
+  "winner": "red",
+  "finishedAt": "2026-10-15T03:09:51.406Z",
+  "c2": {
+    "blue": {
+      "agents": [
+        "sq1",
+        "sq3",
+        "uav"
+      ]
+    }
+  },
+  "messages": [
+    {
+      "n": 1,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq1",
+      "text": "move 123,72",
+      "sentMin": 0,
+      "status": "on time",
+      "arriveMin": 0,
+      "ackMin": 0
+    },
+    {
+      "n": 2,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq3",
+      "text": "move 124,90",
+      "sentMin": 0,
+      "status": "on time",
+      "arriveMin": 0,
+      "ackMin": 0
+    },
+    {
+      "n": 3,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 0,
+      "status": "on time",
+      "arriveMin": 0,
+      "ackMin": 0
+    },
+    {
+      "n": 4,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-uav",
+      "text": "sortie 126,76 e 5",
+      "sentMin": 0,
+      "status": "on time",
+      "arriveMin": 0,
+      "ackMin": 0
+    },
+    {
+      "n": 5,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq1",
+      "text": "move 122,70",
+      "sentMin": 5,
+      "status": "on time",
+      "arriveMin": 5,
+      "ackMin": 5
+    },
+    {
+      "n": 6,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 5,
+      "status": "on time",
+      "arriveMin": 5,
+      "ackMin": 5
+    },
+    {
+      "n": 7,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 10,
+      "status": "on time",
+      "arriveMin": 10,
+      "ackMin": 10
+    },
+    {
+      "n": 8,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 15,
+      "status": "on time",
+      "arriveMin": 15,
+      "ackMin": 15
+    },
+    {
+      "n": 9,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq1",
+      "text": "df e 5",
+      "sentMin": 20,
+      "status": "on time",
+      "arriveMin": 20,
+      "ackMin": 20
+    },
+    {
+      "n": 10,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq3",
+      "text": "df e 5",
+      "sentMin": 20,
+      "status": "on time",
+      "arriveMin": 20,
+      "ackMin": 20
+    },
+    {
+      "n": 11,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "df e 5",
+      "sentMin": 20,
+      "status": "on time",
+      "arriveMin": 20,
+      "ackMin": 20
+    },
+    {
+      "n": 12,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-uav",
+      "text": "sortie 126,76 e 5",
+      "sentMin": 20,
+      "status": "on time",
+      "arriveMin": 20,
+      "ackMin": 20
+    },
+    {
+      "n": 13,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq3",
+      "text": "df e 5",
+      "sentMin": 25,
+      "status": "on time",
+      "arriveMin": 25,
+      "ackMin": 25
+    },
+    {
+      "n": 14,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq1",
+      "text": "move 124,80",
+      "sentMin": 25,
+      "status": "on time",
+      "arriveMin": 25,
+      "ackMin": 25
+    },
+    {
+      "n": 15,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq2",
+      "text": "move 123,84",
+      "sentMin": 25,
+      "status": "on time",
+      "arriveMin": 25,
+      "ackMin": 25
+    },
+    {
+      "n": 16,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq3",
+      "text": "df e 5",
+      "sentMin": 30,
+      "status": "on time",
+      "arriveMin": 30,
+      "ackMin": 30
+    },
+    {
+      "n": 17,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-ew",
+      "text": "jam uavlink",
+      "sentMin": 35,
+      "status": "on time",
+      "arriveMin": 35,
+      "ackMin": 35
+    },
+    {
+      "n": 18,
+      "side": "blue",
+      "fromId": "b-hq",
+      "toId": "b-sq3",
+      "text": "df e 5",
+      "sentMin": 35,
+      "status": "on time",
+      "arriveMin": 35,
+      "ackMin": 35
+    }
+  ],
+  "units": [
+    {
+      "id": "b-hq",
+      "name": "Blue HQ",
+      "side": "blue"
+    },
+    {
+      "id": "b-relay",
+      "name": "Blue Relay",
+      "side": "blue"
+    },
+    {
+      "id": "b-sq1",
+      "name": "Blue Squad 1",
+      "side": "blue"
+    },
+    {
+      "id": "b-sq2",
+      "name": "Blue Squad 2",
+      "side": "blue"
+    },
+    {
+      "id": "b-sq3",
+      "name": "Blue Squad 3",
+      "side": "blue"
+    },
+    {
+      "id": "b-uav",
+      "name": "Blue UAV",
+      "side": "blue"
+    },
+    {
+      "id": "b-ew",
+      "name": "Blue EW Team",
+      "side": "blue"
+    },
+    {
+      "id": "r-hq",
+      "name": "Red HQ",
+      "side": "red"
+    },
+    {
+      "id": "r-relay",
+      "name": "Red Relay",
+      "side": "red"
+    },
+    {
+      "id": "r-ew",
+      "name": "Red EW Team",
+      "side": "red"
+    },
+    {
+      "id": "r-sq1",
+      "name": "Red Squad 1",
+      "side": "red"
+    },
+    {
+      "id": "r-sq2",
+      "name": "Red Squad 2",
+      "side": "red"
+    },
+    {
+      "id": "r-sq3",
+      "name": "Red Squad 3",
+      "side": "red"
+    },
+    {
+      "id": "n-cell",
+      "name": "Cell Tower",
+      "side": "neutral"
+    },
+    {
+      "id": "n-fm",
+      "name": "FM Broadcast",
+      "side": "neutral"
+    },
+    {
+      "id": "r-uav",
+      "name": "Red UAV",
+      "side": "red"
+    }
+  ],
+  "calls": [
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=red&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&after=0"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/red"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/uav"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=red&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=11"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=15"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=blue&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "GET",
+      "path": "/state?side=red&after=4"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 0,
+      "minute": 0,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=15"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=17"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=red&after=4"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=17"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&after=17"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=17"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=47"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=17"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=47"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=red&after=47"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=47"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 1,
+      "minute": 5,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=49"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=red&after=47"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=49"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&after=47"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=49"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=49"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=red&after=68"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=68"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=49"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=red&after=68"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=68"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 2,
+      "minute": 10,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&after=68"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=69"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=69"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=red&after=68"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=69"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=69"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=red&after=83"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=83"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=84"
+    },
+    {
+      "turn": 3,
+      "minute": 15,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=83"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&after=83"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=84"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=84"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=84"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=100"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=84"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=100"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=red&after=100"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/uav"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=100"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "GET",
+      "path": "/state?side=blue&after=100"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 4,
+      "minute": 20,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=104"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=red&after=100"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=104"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=106"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=104"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=127"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/red"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=red&after=127"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&after=106"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=104"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=127"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=red&after=127"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=127"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=104"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=104"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=red&after=127"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=128"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=128"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/sq1"
+    },
+    {
+      "turn": 5,
+      "minute": 25,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=127"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=131"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=131"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/red"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=148"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=131"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&after=128"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=131"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=131"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=148"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=148"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=149"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=131"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "GET",
+      "path": "/state?side=red&after=148"
+    },
+    {
+      "turn": 6,
+      "minute": 30,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=150"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=150"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=150"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=red&after=148"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&after=149"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=150"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=164"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/red/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=red&after=164"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=uav&after=150"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq3&after=164"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=blue&unit=sq1&after=164"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "GET",
+      "path": "/state?side=red&after=164"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/sq3"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/uav/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/sq3/end"
+    },
+    {
+      "turn": 7,
+      "minute": 35,
+      "method": "POST",
+      "path": "/blue/sq1/end"
+    }
+  ],
+  "orders": [
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: power 0.3",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uavlink: waveform dsss",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: antenna toward hq",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "emcon cmd 0",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "emcon retrans 0",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "emcon squad 0",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "red",
+      "line": "uav: launch",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "send sq1: move 123,72",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "send sq3: move 124,90",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "send uav: sortie 126,76 e 5",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "sq3: move 124,90",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "uav: sortie 126,76 e 5",
+      "minute": 0
+    },
+    {
+      "turn": 0,
+      "side": "blue",
+      "line": "sq1: move 123,72",
+      "minute": 0
+    },
+    {
+      "turn": 1,
+      "side": "blue",
+      "line": "send sq1: move 122,70",
+      "minute": 5
+    },
+    {
+      "turn": 1,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 5
+    },
+    {
+      "turn": 1,
+      "side": "blue",
+      "line": "sq1: move 122,70",
+      "minute": 5
+    },
+    {
+      "turn": 2,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 10
+    },
+    {
+      "turn": 3,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 15
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "send sq1: df e 5",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "send sq3: df e 5",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "send sq2: df e 5",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "send uav: sortie 126,76 e 5",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "sq1: df e 5",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "uav: sortie 126,76 e 5",
+      "minute": 20
+    },
+    {
+      "turn": 4,
+      "side": "blue",
+      "line": "sq3: df e 5",
+      "minute": 20
+    },
+    {
+      "turn": 5,
+      "side": "red",
+      "line": "uav: power 0.5",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "send sq3: df e 5",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "send sq1: move 124,80",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "send sq2: move 123,84",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "sq3: df e 5",
+      "minute": 25
+    },
+    {
+      "turn": 5,
+      "side": "blue",
+      "line": "sq1: move 124,80",
+      "minute": 25
+    },
+    {
+      "turn": 6,
+      "side": "red",
+      "line": "uav: power 0.2",
+      "minute": 30
+    },
+    {
+      "turn": 6,
+      "side": "blue",
+      "line": "send sq3: df e 5",
+      "minute": 30
+    },
+    {
+      "turn": 6,
+      "side": "blue",
+      "line": "sq3: df e 5",
+      "minute": 30
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "send ew: jam uavlink",
+      "minute": 35
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "send sq3: df e 5",
+      "minute": 35
+    },
+    {
+      "turn": 7,
+      "side": "blue",
+      "line": "sq3: df e 5",
+      "minute": 35
+    }
+  ],
+  "console": {
+    "blue": [
+      "[T+00] Mission: track the UAV. Red's UAV flies a 10-waypoint route and must report to Red HQ at least every 3 minutes.",
+      "[T+00] Blue wins with 5 position fixes under 1 km on the UAV. Red wins if the route is flown with at most 1 report lost and Blue has fewer fixes. Otherwise a draw at T+60.",
+      "[T+00] The UAV reports only when it transmits. Take bearings from two sites in the same minute to fix where it was. ew: jam uavlink costs Red reports. Type help.",
+      "[T+00] HQ: order 1 to Blue Squad 1 sent.",
+      "[T+00] HQ: order 2 to Blue Squad 3 sent.",
+      "[T+00] HQ: order 3 to Blue Squad 2 sent.",
+      "[T+00] HQ: order 4 to Blue UAV sent.",
+      "[T+00] Blue Squad 3: moving to 124,90, 13 hexes, about 20 min.",
+      "[T+00] Blue UAV: silent sortie, 1 leg: 126,76 DF east (45°-135°) 5 min; then home. About 20 min, radio silent until it returns.",
+      "[T+00] Blue Squad 1: no route to 123,72 (occupied).",
+      "[T+01] Blue Squad 1: order 1 received: move 123,72",
+      "[T+01] HQ: order 1 acknowledged by Blue Squad 1.",
+      "[T+01] Blue Squad 3: order 2 received: move 124,90",
+      "[T+01] HQ: order 2 acknowledged by Blue Squad 3.",
+      "[T+01] Blue Squad 2: order 3 received: df e 5",
+      "[T+01] HQ: order 3 acknowledged by Blue Squad 2.",
+      "[T+01] Blue UAV: order 4 received: sortie 126,76 e 5",
+      "[T+01] HQ: order 4 acknowledged by Blue UAV.",
+      "[T+00] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+05] Blue Squad 2: DF east (45°-135°) done. Nothing heard.",
+      "[T+05] HQ: order 5 to Blue Squad 1 sent.",
+      "[T+05] HQ: order 6 to Blue Squad 2 sent.",
+      "[T+05] Blue Squad 1: moving to 122,70, 9 hexes, about 14 min.",
+      "[T+06] Blue Squad 1: order 5 received: move 122,70",
+      "[T+06] HQ: order 5 acknowledged by Blue Squad 1.",
+      "[T+06] Blue Squad 2: order 6 received: df e 5",
+      "[T+06] HQ: order 6 acknowledged by Blue Squad 2.",
+      "[T+05] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+06] Blue UAV: leg 1/1 on station, DF east (45°-135°) for 5 min, radio silent.",
+      "[T+10] Blue Squad 2: DF east (45°-135°) done. Nothing heard.",
+      "[T+10] HQ: order 7 to Blue Squad 2 sent.",
+      "[T+11] Blue Squad 2: order 7 received: df e 5",
+      "[T+11] HQ: order 7 acknowledged by Blue Squad 2.",
+      "[T+10] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+11] Blue UAV: leg 1 done, 1 emitter heard.",
+      "[T+11] Blue UAV: plan complete, returning to Blue Squad 2, about 9 min.",
+      "[T+15] Blue Squad 2: DF east (45°-135°) done. Nothing heard.",
+      "[T+15] HQ: order 8 to Blue Squad 2 sent.",
+      "[T+16] Blue Squad 2: order 8 received: df e 5",
+      "[T+16] HQ: order 8 acknowledged by Blue Squad 2.",
+      "[T+15] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+19] Blue UAV: back from sortie (1 leg), handed over. 1 emitter, 3 measurements. Reported to HQ.",
+      "[T+19] HQ: new track E1 (65 MHz UAV link).",
+      "[T+19] Blue Squad 1: arrived at 122,70.",
+      "[T+20] Blue Squad 3: arrived at 124,90.",
+      "[T+20] Blue Squad 2: DF east (45°-135°) done. Nothing heard.",
+      "[T+20] HQ: order 9 to Blue Squad 1 sent.",
+      "[T+20] HQ: order 10 to Blue Squad 3 sent.",
+      "[T+20] HQ: order 11 to Blue Squad 2 sent.",
+      "[T+20] HQ: order 12 to Blue UAV sent.",
+      "[T+20] Blue Squad 1: DF east (45°-135°) for 5 min.",
+      "[T+20] Blue UAV: silent sortie, 1 leg: 126,76 DF east (45°-135°) 5 min; then home. About 22 min, radio silent until it returns.",
+      "[T+20] Blue Squad 3: DF east (45°-135°) for 5 min.",
+      "[T+21] Blue Squad 1: order 9 received: df e 5",
+      "[T+21] HQ: order 9 acknowledged by Blue Squad 1.",
+      "[T+21] Blue Squad 3: order 10 received: df e 5",
+      "[T+21] HQ: order 10 acknowledged by Blue Squad 3.",
+      "[T+21] Blue Squad 2: order 11 received: df e 5",
+      "[T+21] HQ: order 11 acknowledged by Blue Squad 2.",
+      "[T+21] Blue UAV: order 12 received: sortie 126,76 e 5",
+      "[T+21] HQ: order 12 acknowledged by Blue UAV.",
+      "[T+20] Blue Squad 2: DF east (45°-135°) for 5 min.",
+      "[T+25] Blue Squad 1: DF east (45°-135°) done. Nothing heard.",
+      "[T+25] Blue Squad 3: DF east (45°-135°) done. 2 emitters, 6 measurements. Reported to HQ.",
+      "[T+25] Blue Squad 2: DF east (45°-135°) done. Nothing heard.",
+      "[T+25] HQ: order 13 to Blue Squad 3 sent.",
+      "[T+25] HQ: order 14 to Blue Squad 1 sent.",
+      "[T+25] HQ: order 15 to Blue Squad 2 sent.",
+      "[T+25] Blue Squad 3: DF east (45°-135°) for 5 min.",
+      "[T+25] Blue Squad 1: moving to 124,80, 10 hexes, about 15 min.",
+      "[T+26] Blue Squad 3: order 13 received: df e 5",
+      "[T+26] HQ: order 13 acknowledged by Blue Squad 3.",
+      "[T+26] Blue Squad 1: order 14 received: move 124,80",
+      "[T+26] HQ: order 14 acknowledged by Blue Squad 1.",
+      "[T+26] Blue Squad 2: order 15 received: move 123,84",
+      "[T+26] HQ: order 15 acknowledged by Blue Squad 2.",
+      "[T+25] Blue Squad 2: moving to 123,84, 9 hexes, about 14 min.",
+      "[T+28] Blue UAV: leg 1/1 on station, DF east (45°-135°) for 5 min, radio silent.",
+      "[T+30] Blue Squad 3: DF east (45°-135°) done. Nothing heard.",
+      "[T+30] HQ: order 16 to Blue Squad 3 sent.",
+      "[T+30] Blue Squad 3: DF east (45°-135°) for 5 min.",
+      "[T+31] Blue Squad 3: order 16 received: df e 5",
+      "[T+31] HQ: order 16 acknowledged by Blue Squad 3.",
+      "[T+33] Blue UAV: leg 1 done, 1 emitter heard.",
+      "[T+33] Blue UAV: plan complete, returning to Blue Squad 2, about 6 min.",
+      "[T+35] Blue Squad 3: DF east (45°-135°) done. Nothing heard.",
+      "[T+35] HQ: order 17 to Blue EW Team sent.",
+      "[T+35] HQ: order 18 to Blue Squad 3 sent.",
+      "[T+35] Blue Squad 3: DF east (45°-135°) for 5 min.",
+      "[T+36] Blue EW Team: order 17 received: jam uavlink",
+      "[T+36] HQ: order 17 acknowledged by Blue EW Team.",
+      "[T+36] Blue Squad 3: order 18 received: df e 5",
+      "[T+36] HQ: order 18 acknowledged by Blue Squad 3.",
+      "[T+35] Blue EW Team: spot-jamming Red UAV Link. Their reports will be held while their links are down. You are now their loudest emitter.",
+      "[T+36] Red wins at T+36: route complete at T+36 with 0 reports lost; Blue fixed it 0 times.",
+      "[T+36] Type reveal to see the truth and step through how the picture built up."
+    ],
+    "red": [
+      "[T+00] Mission: track the UAV. Red's UAV flies a 10-waypoint route and must report to Red HQ at least every 3 minutes.",
+      "[T+00] Blue wins with 5 position fixes under 1 km on the UAV. Red wins if the route is flown with at most 1 report lost and Blue has fewer fixes. Otherwise a draw at T+60.",
+      "[T+00] uav: launch starts the route; uav: burst reports now (and resets the clock); uav: hold pauses at the next waypoint. Lower uav power and a DSSS uavlink are harder to hear, and harder for HQ to receive. Type help.",
+      "[T+00] Red UAV: transmit power 0.3 W.",
+      "[T+00] Red UAV Link: waveform DSSS 5 Mcps.",
+      "[T+00] Red UAV: antenna pointed at Red HQ: +6 dBi within 30°, 20 dB down everywhere else, including towards anything off that line.",
+      "[T+00] Red Command Net: chatter set to 0% of minutes (silence: orders only).",
+      "[T+00] Red Retrans: chatter set to 0% of minutes (silence: orders only).",
+      "[T+00] Red Squad Net: chatter set to 0% of minutes (silence: orders only).",
+      "[T+00] Red UAV: launched at T+0, 10 waypoints: 142,74; 138,70; 132,72; 130,78; 126,84; 128,90; 134,90; 138,86; 144,86; 148,80. It must report to HQ every 3 min.",
+      "[T+01] Red UAV: to waypoint 1/10 at 142,74, about 6 min.",
+      "[T+01] HQ: new track B1 (60 MHz fixed).",
+      "[T+01] HQ: new track B2 (60 MHz fixed).",
+      "[T+01] HQ: new track B3 (60 MHz fixed).",
+      "[T+01] HQ: new track B4 (60 MHz fixed).",
+      "[T+01] HQ: B2 fixed: CEP 1.30 km from 2 bearings.",
+      "[T+01] HQ: B4 fixed: CEP 2.41 km from 2 bearings.",
+      "[T+01] HQ: B1 fixed: CEP 1.09 km from 3 bearings.",
+      "[T+01] HQ: B2 refined: CEP 0.82 km from 3 bearings.",
+      "[T+01] HQ: B3 fixed: CEP 0.68 km from 3 bearings.",
+      "[T+01] HQ: B4 refined: CEP 0.82 km from 3 bearings.",
+      "[T+01] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+03] Intercepts: 70 MHz fixed (3 sensors).",
+      "[T+04] Red UAV: report (forced) at T+3 from 145,76 received by HQ (good, SNR 21 dB).",
+      "[T+04] HQ: B4 refined: CEP 0.50 km from 6 bearings.",
+      "[T+04] Intercepts: 70 MHz fixed (3 sensors), 60 MHz fixed (3 sensors).",
+      "[T+05] HQ: new track B5 (70 MHz fixed).",
+      "[T+05] HQ: B5 fixed: CEP 1.07 km from 3 bearings.",
+      "[T+05] Intercepts: 70 MHz fixed (3 sensors).",
+      "[T+06] Red UAV: arrived at 143,74.",
+      "[T+06] HQ: B1 refined: CEP 1.00 km from 4 bearings.",
+      "[T+06] HQ: B5 refined: CEP 0.98 km from 4 bearings.",
+      "[T+06] HQ: B3 refined: CEP 0.47 km from 6 bearings.",
+      "[T+06] Intercepts: 60 MHz fixed (3 sensors), 70 MHz fixed (3 sensors).",
+      "[T+07] Red UAV: to waypoint 2/10 at 138,70, about 3 min.",
+      "[T+07] Red UAV: report (forced) at T+6 from 141,73 received by HQ (good, SNR 35 dB).",
+      "[T+09] Red UAV: arrived at 138,71.",
+      "[T+10] Red UAV: to waypoint 3/10 at 132,72, about 3 min.",
+      "[T+10] Red UAV: report (forced) at T+9 from 136,71 received by HQ (good, SNR 15 dB).",
+      "[T+10] Intercepts: 70 MHz fixed (3 sensors), 60 MHz fixed (3 sensors).",
+      "[T+11] Intercepts: 60 MHz fixed (3 sensors), 70 MHz fixed (3 sensors).",
+      "[T+12] Red UAV: arrived at 133,72.",
+      "[T+13] Red UAV: to waypoint 4/10 at 130,78, about 3 min.",
+      "[T+13] Red UAV: report (forced) at T+12 from 132,74 received by HQ (good, SNR 15 dB).",
+      "[T+13] Intercepts: 60 MHz fixed (2 sensors).",
+      "[T+15] Red UAV: arrived at 130,77.",
+      "[T+15] HQ: B4 refined: CEP 0.27 km from 12 bearings.",
+      "[T+15] Intercepts: 70 MHz fixed (3 sensors).",
+      "[T+16] Red UAV: to waypoint 5/10 at 126,84, about 4 min.",
+      "[T+16] Red UAV: report (forced) at T+15 from 129,79 received by HQ (good, SNR 4 dB).",
+      "[T+16] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+18] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+19] Red UAV: arrived at 126,83.",
+      "[T+19] Red UAV: report (forced) at T+18 from 126,83 received by HQ (good, SNR 3 dB).",
+      "[T+19] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+20] Red UAV: to waypoint 6/10 at 128,90, about 3 min.",
+      "[T+21] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+22] Red UAV: arrived at 127,89.",
+      "[T+22] Red UAV: report (forced) at T+21 from 127,89 received by HQ (good, SNR 6 dB).",
+      "[T+23] Red UAV: to waypoint 7/10 at 134,90, about 3 min.",
+      "[T+24] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+25] Red UAV: arrived at 133,90.",
+      "[T+25] Red UAV: report (forced) at T+24 from 133,90 received by HQ (good, SNR 1 dB).",
+      "[T+25] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+25] Red UAV: transmit power 0.5 W.",
+      "[T+26] Red UAV: to waypoint 8/10 at 138,86, about 3 min.",
+      "[T+26] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+28] Red UAV: arrived at 137,87.",
+      "[T+28] Red UAV: report (forced) at T+27 from 137,87 received by HQ (good, SNR 13 dB).",
+      "[T+29] Red UAV: to waypoint 9/10 at 144,86, about 3 min.",
+      "[T+29] Intercepts: 70 MHz fixed (3 sensors).",
+      "[T+30] Red UAV: transmit power 0.2 W.",
+      "[T+31] Red UAV: arrived at 143,86.",
+      "[T+31] Red UAV: report (forced) at T+30 from 143,86 received by HQ (good, SNR 12 dB).",
+      "[T+31] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+32] Red UAV: to waypoint 10/10 at 148,80, about 4 min.",
+      "[T+33] Intercepts: 60 MHz fixed (3 sensors).",
+      "[T+34] Red UAV: report (forced) at T+33 from 147,82 received by HQ (good, SNR 18 dB).",
+      "[T+34] Intercepts: 70 MHz fixed (2 sensors).",
+      "[T+35] Red UAV: arrived at 147,81.",
+      "[T+36] Red UAV: route complete at T+36, landing. No more reports.",
+      "[T+36] HQ: new track B6 (jammer, spot).",
+      "[T+36] HQ: B6 fixed: CEP 0.83 km from 2 bearings.",
+      "[T+36] HQ: B6 refined: CEP 0.52 km from 3 bearings.",
+      "[T+36] HQ: B6 refined: CEP 0.32 km from 4 bearings.",
+      "[T+36] Intercepts: 60 MHz fixed (3 sensors), jammer, spot (4 sensors).",
+      "[T+36] Red wins at T+36: route complete at T+36 with 0 reports lost; Blue fixed it 0 times.",
+      "[T+36] Type reveal to see the truth and step through how the picture built up."
+    ]
+  },
+  "reveal": [
+    "Reveal: Red UAV route 1: 142,74; 2: 138,70; 3: 132,72; 4: 130,78; 5: 126,84; 6: 128,90; 7: 134,90; 8: 138,86; 9: 144,86; 10: 148,80. Launched T+0, complete T+36.",
+    "Reveal: UAV reports (* forced): T+3*, T+6*, T+9*, T+12*, T+15*, T+18*, T+21*, T+24*, T+27*, T+30*, T+33*.",
+    "Reveal: Blue track E1 on the UAV: 3 bearings, 0 position fixes, 0 under 1 km.",
+    "Reveal: Blue HQ at 102,80: Red B1, fix 0.74 km off (CEP 0.36 km).",
+    "Reveal: Blue Relay at 111,74: Red B5, fix 2.49 km off (CEP 0.56 km).",
+    "Reveal: Blue Squad 1 at 123,77: Red B2, fix 1.50 km off (CEP 0.18 km).",
+    "Reveal: Blue Squad 2 at 122,82: Red B3, fix 1.07 km off (CEP 0.20 km).",
+    "Reveal: Blue Squad 3 at 124,90: Red B4, fix 0.70 km off (CEP 0.11 km).",
+    "Reveal: Blue UAV at 124,78: Red never heard.",
+    "Reveal: Blue EW Team at 123,72: Red B6, fix 0.72 km off (CEP 0.32 km)."
+  ],
+  "summary": {
+    "blue": [
+      "T+36 of 60 min. UAV position fixes under 1 km: 0/5. Track E1: 3 bearings, 0 fixes.",
+      "Unit agents: sq1, sq3, uav. Auto: relay, sq2, ew.",
+      "Orders: 18 sent; acknowledged 18 (on time 18, late 0); pending 0; lost 0.",
+      "hq    Blue HQ       at 102,80 · idle · link to HQ: ok (at HQ) · 50 W",
+      "relay Blue Relay    at 111,74 · idle · link to HQ: ok (direct, on time) · 20 W",
+      "sq1   Blue Squad 1  at 123,77 · moving, 3 hexes to go · link to HQ: ok (direct, on time) · 5 W",
+      "sq2   Blue Squad 2  at 122,82 · moving, 2 hexes to go · link to HQ: ok (direct, on time) · 5 W",
+      "sq3   Blue Squad 3  at 124,90 · DF east (45°-135°) until T+40 · link to HQ: ok (direct, on time) · 5 W",
+      "uav   Blue UAV      at 124,78 · sortie leg 1/1, returning (5 hexes), radio silent · link to HQ: ok (via Blue Squad 2, direct, on time)",
+      "ew    Blue EW Team  at 123,72 · idle · link to HQ: no radio net · 200 W, jamming red-uav"
+    ],
+    "red": [
+      "T+36 of 60 min. route complete at T+36. Reports: 11 received, 0 lost (1 allowed). Tracks on Blue: 6.",
+      "net cmd     Red Command Net  45 MHz · hopping 100/s · chatter 0%",
+      "net retrans Red Retrans      48 MHz · fixed · chatter 0%",
+      "net squad   Red Squad Net    52 MHz · fixed · chatter 0%",
+      "net uavlink Red UAV Link     65 MHz · DSSS 5 Mcps · chatter 0%",
+      "hq    Red HQ        at 152,80 · idle · link to HQ: ok (at HQ) · 50 W",
+      "relay Red Relay     at 150,82 · idle · link to HQ: ok (direct, on time) · 20 W",
+      "ew    Red EW Team   at 138,87 · idle · link to HQ: no radio net · 200 W",
+      "sq1   Red Squad 1   at 140,68 · idle · link to HQ: ok (relay, on time) · 5 W",
+      "sq2   Red Squad 2   at 138,80 · idle · link to HQ: ok (relay, on time) · 5 W",
+      "sq3   Red Squad 3   at 140,92 · idle · link to HQ: ok (relay, on time) · 5 W",
+      "uav   Red UAV       at 147,81 · idle · link to HQ: ok (via Red HQ, at HQ) · antenna → Red HQ"
+    ]
+  }
+}
