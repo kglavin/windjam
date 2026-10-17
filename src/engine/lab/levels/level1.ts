@@ -50,6 +50,7 @@ export const LEVEL_1: LevelDef = {
           id: 'A2',
           title: 'Spreading makes the signal wide and low',
           visual: { kind: 'spreadVsUnspread' },
+          video: 'level1-A2',
           paragraphs: [
             'This plot is a spectrum: how much power the signal has at each frequency. The orange line is the bits sent without the code. The blue line is the same bits sent with the code.',
             'Short pulses take up more frequencies than long ones. The chips are 7 times shorter than the bits, so the blue signal is 7 times wider: its hump runs from −1 MHz to +1 MHz, the orange one only from about −0.14 to +0.14 MHz.',
@@ -68,11 +69,13 @@ export const LEVEL_1: LevelDef = {
           id: 'A3',
           title: 'The receiver gets the bits back',
           visual: { kind: 'despread' },
+          video: 'level1-A3',
           paragraphs: [
             'The friendly receiver knows the code. It multiplies what it receives by the same code again. A chip times itself is always +1, so the code cancels out and the bits come back (third row).',
             "Then it adds up the 7 chips of each bit (bottom row). The signal's 7 chips all point the same way, so they add up to 7. Noise does not follow the code: its chips point up and down at random and mostly cancel.",
             'So after adding, the signal has gained 7 times on the noise. This gain is called the processing gain, Gp. It equals the number of chips per bit.',
             'A receiver without the code cannot do this. That is the advantage the link has over you, and over any jammer.',
+            'These lessons use a short code: the same 7 chips for every bit, so the pattern is easy to see. Most links in this lab do the same, because it keeps the measurements simple. Real links often send the preamble with a short code, which helps a receiver lock on, but spread the data with a long code: a pseudo-random sequence far longer than a bit, known to both ends. Every bit is then multiplied by a different stretch of it, with no repeating pattern to find, so guessing the code is hopeless. Gp is still the number of chips per bit. Level 4 meets a long code.',
           ],
           check: {
             question: 'A code has 63 chips per bit. What is its processing gain, in times?',

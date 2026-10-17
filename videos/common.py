@@ -43,6 +43,65 @@ def bracket(x1, x2, y, direction=DOWN, color=WHITE):
     ).set_stroke(color, 2.5)
 
 
+def chip_wave(values, x0, unit, y, amp, color, width=4):
+    """A chip row: one value per chip, each `unit` wide, drawn as a step wave around y."""
+    pts = []
+    for k, v in enumerate(values):
+        pts += [[x0 + k * unit, y + v * amp, 0], [x0 + (k + 1) * unit, y + v * amp, 0]]
+    return VMobject(stroke_color=color, stroke_width=width).set_points_as_corners(pts)
+
+
+def chip_bars(values, x0, unit, y, amp, color, opacity=0.8, frac=0.6):
+    """One bar per chip from y, height value × amp, frac of a chip wide: the chips before they are added up."""
+    return VGroup(*[
+        Rectangle(width=unit * frac, height=max(abs(v) * amp, 1e-3), stroke_width=0, fill_color=color, fill_opacity=opacity)
+        .move_to([x0 + (k + 0.5) * unit, y + v * amp / 2, 0])
+        for k, v in enumerate(values)
+    ])
+
+
+def stack_targets(bars, values, x, y, amp, width=0.3):
+    """Where each bar goes when the chips are added head to tail at x: the stack ends at y + sum × amp."""
+    out = []
+    level = 0.0
+    for bar, v in zip(bars, values):
+        out.append(bar.copy().stretch_to_fit_width(width).stretch_to_fit_height(max(abs(v) * amp, 1e-3))
+                   .move_to([x, y + (level + v / 2) * amp, 0]))
+        level += v
+    return out
+
+
+class Plot:
+    """A plain plot frame (no LaTeX): x from x0 over width, y from y0 over height, mapping data ranges xr and yr."""
+
+    def __init__(self, x0, width, y0, height, xr, yr):
+        self.x0, self.width, self.y0, self.height = x0, width, y0, height
+        self.xr, self.yr = xr, yr
+
+    def px(self, x):
+        return self.x0 + (x - self.xr[0]) / (self.xr[1] - self.xr[0]) * self.width
+
+    def py(self, y):
+        y = min(max(y, self.yr[0]), self.yr[1])
+        return self.y0 + (y - self.yr[0]) / (self.yr[1] - self.yr[0]) * self.height
+
+    def axes(self):
+        return VGroup(
+            Line([self.x0, self.y0, 0], [self.x0 + self.width, self.y0, 0]),
+            Line([self.x0, self.y0, 0], [self.x0, self.y0 + self.height, 0]),
+        ).set_stroke(GREY, 2)
+
+    def x_ticks(self, values, fmt=neg):
+        return VGroup(*[label(fmt(v), GREY, 20).move_to([self.px(v), self.y0 - 0.25, 0]) for v in values])
+
+    def y_ticks(self, values, fmt=neg):
+        return VGroup(*[label(fmt(v), GREY, 20).next_to([self.x0, self.py(v), 0], LEFT, buff=0.12) for v in values])
+
+    def curve(self, xs, ys, color, width=3):
+        return VMobject(stroke_color=color, stroke_width=width).set_points_as_corners(
+            [[self.px(x), self.py(y), 0] for x, y in zip(xs, ys)])
+
+
 class LessonScene(Scene):
     """A scene with a caption line at the bottom. Each caption stays up until it can be read."""
 
@@ -77,10 +136,15 @@ class LessonScene(Scene):
         self.wait(0.8)
         self.play(FadeOut(title))
 
-    def rule_card(self, lines, hold=5):
-        """The lesson's rule at the end, then fade everything."""
+    def rule_card(self, lines, hold=5, clear=False):
+        """The lesson's rule at the end, then fade everything. clear: fade the scene first and centre the rule,
+        for scenes whose figure reaches the bottom of the frame."""
         self.clear_caption()
-        rule = VGroup(*[label(t, WHITE, 28) for t in lines]).arrange(DOWN, buff=0.15).to_edge(DOWN, buff=0.35)
+        rule = VGroup(*[label(t, WHITE, 32 if clear else 28) for t in lines]).arrange(DOWN, buff=0.2)
+        if clear:
+            self.play(*[FadeOut(m) for m in self.mobjects])
+        else:
+            rule.to_edge(DOWN, buff=0.35)
         self.play(FadeIn(rule, shift=UP * 0.2))
         self.wait(hold)
         self.play(*[FadeOut(m) for m in self.mobjects])
@@ -89,9 +153,14 @@ class LessonScene(Scene):
 class Scratchpad:
     """The worked calculation panel on the right; line(i) places text on row i."""
 
-    def __init__(self, height=5.4, width=6.2):
+    def __init__(self, height=5.4, width=6.2, at=None):
+        """Top right by default; at: centre the panel there instead (a scratchpad with no figure beside it)."""
         self.panel = RoundedRectangle(width=width, height=height, corner_radius=0.15, stroke_color=GREY,
-                                      stroke_width=1.5, fill_color=PANEL, fill_opacity=1).to_corner(UR, buff=0.4)
+                                      stroke_width=1.5, fill_color=PANEL, fill_opacity=1)
+        if at is None:
+            self.panel.to_corner(UR, buff=0.4)
+        else:
+            self.panel.move_to(at)
         self.title = (label("Scratchpad", GREY, 24).next_to(self.panel.get_top(), DOWN, buff=0.25)
                       .align_to(self.panel, LEFT).shift(RIGHT * 0.35))
 
