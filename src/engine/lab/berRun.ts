@@ -84,10 +84,12 @@ const whole = (x: number, what: string): number => {
 
 // Level 7: a run of a hopping link. Gp = number of channels; the theory is fhTheoryBer at each J/S.
 export function planFhRun(spec: RunSpec, fh: NonNullable<RunSpec['fh']>, o: PlanInputs): FhRunPlan {
-  const base: FhLink | undefined = spec.link === 'hidden' ? o.truth.fh : spec.link === 'example' ? FH_EXAMPLE : fhPracticeAt(o.practiceN ?? 0);
+  const base: FhLink | undefined = fh.linkFrom
+    ? fh.linkFrom(o.truth)
+    : spec.link === 'hidden' ? o.truth.fh : spec.link === 'example' ? FH_EXAMPLE : fhPracticeAt(o.practiceN ?? 0);
   if (!base) throw new Error('a hopping run on the hidden link needs truth.fh');
   const link: FhLink = { ...base, hopsPerBit: fh.hopsPerBit ?? base.hopsPerBit, ebN0Db: spec.ebN0Db ?? KNOWN_EBN0_DB };
-  const jammer = fh.jammerFrom ? fh.jammerFrom(o.entered ?? {}, link) : fh.jammer;
+  const jammer = fh.jammerFrom ? fh.jammerFrom(o.entered ?? {}, link, o.truth) : fh.jammer;
   const jsDb = spec.js === 'scene' ? o.scene.jsDb : spec.jsDbFrom ? spec.jsDbFrom(o.truth) : (spec.jsDb ?? o.practiceJsDb);
   const gpDb = 10 * Math.log10(gpOf(link));
   const curve = (js: number) => fhTheoryBer(link, jammer, js);

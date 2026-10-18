@@ -37,16 +37,16 @@ function Meter({ title, active, plan, onSelect, onResult }: {
 // Level 7: the waterfall of the example or practice hopping link; with variants, a Run for each jammer at jsDb.
 export function WaterfallDemo({ link, variants, jsDb = 0, practiceN = 0 }: {
   link: 'example' | 'practice';
-  variants?: { label: string; jammer: FhJammer }[];
+  variants?: { label: string; jammer: FhJammer; hopsPerBit?: 1 | 3 }[];
   jsDb?: number;
   practiceN?: number;
 }) {
-  const fh = link === 'example' ? FH_EXAMPLE : fhPracticeAt(practiceN);
+  const base = link === 'example' ? FH_EXAMPLE : fhPracticeAt(practiceN);
   const seed = DEMO_SEED + practiceN;
   const plans = useMemo(
     () =>
       (variants ?? []).map((v) =>
-        planFhRun({ link, js: 'fixed', jsDb, jammer: { kind: 'bbn' } }, { jammer: v.jammer }, {
+        planFhRun({ link, js: 'fixed', jsDb, jammer: { kind: 'bbn' } }, { jammer: v.jammer, hopsPerBit: v.hopsPerBit }, {
           truth: level7Truth(1),
           example: knownLinkInfo(EXAMPLE),
           practice: FIRST_PRACTICE,
@@ -61,6 +61,7 @@ export function WaterfallDemo({ link, variants, jsDb = 0, practiceN = 0 }: {
   const [sel, setSel] = useState(0);
   const [runs, setRuns] = useState<Record<number, RunSummary>>({});
   const jammer = variants?.[sel]?.jammer;
+  const fh = { ...base, hopsPerBit: variants?.[sel]?.hopsPerBit ?? base.hopsPerBit };
   const ran = runs[sel]?.hops;
   const hops = ran ?? hopPreview(fh, seed, SHOWN_HOPS, jammer);
   return (

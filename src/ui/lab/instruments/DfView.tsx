@@ -27,7 +27,7 @@ const end = (p: Pt, deg: number, km = REACH_KM) => {
   return { x: sx(p.xKm + km * Math.sin(r)), y: sy(p.yKm + km * Math.cos(r)) };
 };
 
-export function DfView({ title = 'DF view', sites, bearings = [], wedges = true, fix, target, zone, onPlace, onRemove, notes = [], path, hyperbolas = [] }: {
+export function DfView({ title = 'DF view', sites, bearings = [], wedges = true, fix, target, zone, onPlace, onRemove, notes = [], path, hyperbolas = [], marks = [], outlines = [] }: {
   title?: string;
   sites: DfSite[];
   bearings?: BearingLine[];
@@ -40,6 +40,8 @@ export function DfView({ title = 'DF view', sites, bearings = [], wedges = true,
   notes?: string[]; // readout lines under the map
   path?: Pt[]; // a UAV's leg
   hyperbolas?: Pt[][]; // TDOA curves
+  marks?: (Pt & { label: string })[]; // level 7: the enemy transmitter and receiver
+  outlines?: Pt[][]; // level 7: the follower's ellipse
 }) {
   const click = (e: MouseEvent<SVGRectElement>) => {
     if (!onPlace) return;
@@ -116,6 +118,18 @@ export function DfView({ title = 'DF view', sites, bearings = [], wedges = true,
             <path d={`M${sx(fix.xKm) - 5},${sy(fix.yKm) - 5} l10,10 m0,-10 l-10,10`} className="df-fix" />
           )}
           {target && <circle cx={sx(target.xKm)} cy={sy(target.yKm)} r={6} className="df-target" />}
+          {outlines.map((o, i) => (
+            <polyline key={`o${i}`} points={o.map((p) => `${sx(p.xKm).toFixed(1)},${sy(p.yKm).toFixed(1)}`).join(' ')} className="df-outline" />
+          ))}
+          {marks.length > 1 && (
+            <line x1={sx(marks[0].xKm)} y1={sy(marks[0].yKm)} x2={sx(marks[1].xKm)} y2={sy(marks[1].yKm)} className="df-link" />
+          )}
+          {marks.map((m) => (
+            <g key={m.label} className="df-mark">
+              <circle cx={sx(m.xKm)} cy={sy(m.yKm)} r={5} />
+              <text x={sx(m.xKm) + 7} y={sy(m.yKm) - 6}>{m.label}</text>
+            </g>
+          ))}
         </g>
         {onPlace && <rect x={PAD.l} y={PAD.t} width={INNER} height={KM * (DF_AREA.yMax - DF_AREA.yMin)} fill="transparent" className="df-click" onClick={click} />}
         {sites.map((s, i) => (

@@ -169,15 +169,16 @@ export type Visual =
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
+  | { kind: 'follower' } // level 7: E1's map, the follower's two places and the ellipse
   | { kind: 'xcorr'; source: 'example' | 'practice' } // level 6: a cross-correlation of two sites' captures
   // level 7: the hop waterfall of the example or practice hopping link; with variants, a Run button for each jammer
-  | { kind: 'waterfall'; link: 'example' | 'practice'; variants?: { label: string; jammer: FhJammer }[]; jsDb?: number }
+  | { kind: 'waterfall'; link: 'example' | 'practice'; variants?: { label: string; jammer: FhJammer; hopsPerBit?: 1 | 3 }[]; jsDb?: number }
   | { kind: 'none' };
 
 export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr' | 'waterfall';
 
 // How a level 6 step locates: bearings from ground sites, bearings from a UAV flying a leg, or arrival times.
-export type DfMethod = 'bearings' | 'leg' | 'tdoa';
+export type DfMethod = 'bearings' | 'leg' | 'tdoa' | 'follower'; // follower: level 7, one jammer placed on the map
 
 // Scene fields the player may edit in a step. 'jammer' is the jammer's position only (drag and x/y).
 export type SceneField =
@@ -218,7 +219,13 @@ export interface RunSpec {
   jammerFrom?: (values: Record<string, number>, chipsPerBit: number, chipRateMcps: number) => JammerSpec;
   // Level 7: a run of the hopping link instead of the direct-sequence one (`jammer` is then ignored). jammerFrom
   // builds the jammer from the entered values and the link.
-  fh?: { jammer: FhJammer; jammerFrom?: (values: Record<string, number>, link: FhLink) => FhJammer; hopsPerBit?: 1 | 3 };
+  // linkFrom: a hopping link other than the truth's (level 7 E3's fast radio).
+  fh?: {
+    jammer: FhJammer;
+    jammerFrom?: (values: Record<string, number>, link: FhLink, truth: Truth) => FhJammer;
+    hopsPerBit?: 1 | 3;
+    linkFrom?: (truth: Truth) => FhLink;
+  };
   // A line for the run box about the jammer that will be used, from the same inputs as jammerFrom.
   jammerNote?: (values: Record<string, number>, chipsPerBit: number) => string | undefined;
 }

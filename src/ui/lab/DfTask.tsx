@@ -2,8 +2,9 @@ import { useMemo } from 'react';
 import type { Pt } from '../../engine/lab/geoloc';
 import {
   type ApplyStep, type Truth, LEG_MAX_KM, UAV_HEIGHT_M, dfStepTry, legEnd, legPoints, level6Scene, siteSigmaDeg, siteSnrDb,
-  siteTimingSigmaUs, tdoaHyperbola, txOf, xcorrEnemy,
+  siteTimingSigmaUs, tdoaHyperbola, txOf, xcorrEnemy, FOLLOW_PROC_US, e3Ellipse, e3Geometry, e3ShareAt,
 } from '../../engine/lab/levels';
+import { followerDelayUs } from '../../engine/lab/fh';
 import { distanceKm } from '../../engine/lab/geoloc';
 import { type DfSite, DfView } from './instruments/DfView';
 import type { StepState } from './levelState';
@@ -11,6 +12,45 @@ import type { StepState } from './levelState';
 // Level 6's DF view in an apply step: the step's own sites, the sites (or UAV leg) the player placed, the latest
 // bearings or hyperbolas and fix, and the transmitter once the step is done.
 export function DfTask({ step, state, truth, onPlace, onRemove }: {
+  step: ApplyStep;
+  state: StepState;
+  truth: Truth;
+  onPlace: (p: Pt) => void;
+  onRemove: (placedIndex: number) => void;
+}) {
+  const method = step.dfMethod ?? 'bearings';
+  if (method === 'follower') return <FollowerTask state={state} truth={truth} onPlace={onPlace} onRemove={onRemove} />;
+  return <DfLocate step={step} state={state} truth={truth} onPlace={onPlace} onRemove={onRemove} />;
+}
+
+// Level 7 E3: the enemy transmitter and receiver, the follower the player placed and the share of each dwell it
+// covers; the ellipse of 20% once the step is done.
+function FollowerTask({ state, truth, onPlace, onRemove }: {
+  state: StepState;
+  truth: Truth;
+  onPlace: (p: Pt) => void;
+  onRemove: (placedIndex: number) => void;
+}) {
+  const g = e3Geometry(truth);
+  const at = state.df?.sites?.[0];
+  const notes = at
+    ? [`Follower delay ${followerDelayUs(g.tx, g.rx, at, FOLLOW_PROC_US).toFixed(0)} µs of a ${g.dwellUs} µs dwell: it covers ${(100 * e3ShareAt(truth, at)).toFixed(0)}% of each hop`]
+    : ['Click the friendly side to place the follower.'];
+  return (
+    <DfView
+      title="Map: the follower"
+      sites={at ? [{ ...at, label: 'follower', placed: true }] : []}
+      marks={[{ ...g.tx, label: 'transmitter' }, { ...g.rx, label: 'receiver' }]}
+      zone
+      onPlace={onPlace}
+      onRemove={onRemove}
+      outlines={state.done ? [e3Ellipse(truth) ?? []] : []}
+      notes={notes}
+    />
+  );
+}
+
+function DfLocate({ step, state, truth, onPlace, onRemove }: {
   step: ApplyStep;
   state: StepState;
   truth: Truth;

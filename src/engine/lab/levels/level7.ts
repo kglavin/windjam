@@ -1,7 +1,11 @@
 // Level 7: Frequency hopping (docs/design-level-7.md). Units A to C: the hop set, broadband noise against hopping, and
 // partial-band noise against hopping. Every number in the texts is checked in level7.test.ts.
 import { createRng } from '../../rng';
-import { type FhLink, FH_EXAMPLE, FH_F0_MHZ, fhPracticeAt, fhTheoryBer, jammedChannels } from '../fh';
+import {
+  type FhLink, FH_EXAMPLE, FH_F0_MHZ, fhPracticeAt, fhTheoryBer, followerDelayUs, followerEllipse, followerShare, jammedChannels,
+} from '../fh';
+import { type Pt, C_KM_PER_US, distanceKm } from '../geoloc';
+import { DF_AREA, DF_ZONE_Y_MAX } from './level6';
 import { berText } from './level2';
 import { type LevelDef, type Truth, EXAMPLE, PRACTICE, shortCodeTruth } from './types';
 
@@ -10,6 +14,10 @@ const DWELLS = [2, 4, 5, 8, 10];
 const B3_EBJ0 = [5, 6, 7]; // broadband Eb/J0 (linear) the B3 jammer gives
 const C3_EBJ0 = [12, 14, 16]; // and the smaller C3 jammer
 export const C3_GOAL_BER = 0.01;
+export const E3_GOAL_BER = 0.1;
+export const FOLLOW_PROC_US = 60; // the follower hears the hop, finds the channel and tunes in this long
+export const E_RATE_KBPS = 200; // E's fast radio: 200 kHz channels
+const E_GOAL_SHARE = 0.2; // the share of a dwell the E3 goal needs, about: drawn as the ellipse once done
 
 export function level7Truth(seed: number): Truth {
   const rng = createRng(seed ^ 0x27d4eb2f);
@@ -39,8 +47,71 @@ export const ebJ0DbOf = (channels: number, jsDb: number): number => Number((gpDb
 export const bestChannels = (channels: number, jsDb: number): number => Math.min(channels, Math.max(1, Math.round(2 * 10 ** (jsDb / 10))));
 export const partialBer = (link: FhLink, k: number, jsDb: number): number => fhTheoryBer(link, { kind: 'partial', rho: k / link.channels }, jsDb);
 
+// --- Unit D: the enemy switches to fast hopping, 3 hops per bit -----------------------------------------------------
+
+export const fastOf = (link: FhLink): FhLink => ({ ...link, hopsPerBit: 3 });
+export const d2Ber = (t: Truth): number => {
+  const fh = fastOf(fhOf(t));
+  return partialBer(fh, bestChannels(fh.channels, c3JsDb(t)), c3JsDb(t));
+};
+
+// --- Unit E: the follower ---------------------------------------------------------------------------------------
+
+// E's enemy transmitter and receiver (north of the line), and the dwell of its fast radio, set so the best place on
+// the friendly side covers about 30% of each dwell.
+export function e3Geometry(t: Truth): { tx: Pt; rx: Pt; dwellUs: number } {
+  const r = createRng(Math.imul(t.seed, 7919) >>> 0);
+  const tx = { xKm: round1(-8 + 5 * r()), yKm: round1(8 + 4 * r()) };
+  const rx = { xKm: round1(3 + 5 * r()), yKm: round1(6 + 6 * r()) };
+  let best = Infinity;
+  for (let x = DF_AREA.xMin; x <= DF_AREA.xMax; x += 0.5) {
+    for (let y = DF_AREA.yMin; y <= DF_ZONE_Y_MAX; y += 0.5) best = Math.min(best, followerDelayUs(tx, rx, { xKm: x, yKm: y }, FOLLOW_PROC_US));
+  }
+  return { tx, rx, dwellUs: Math.round(best / 0.7 / 10) * 10 };
+}
+export const e3Link = (t: Truth): FhLink => ({ ...fhOf(t), rateKbps: E_RATE_KBPS, dwellMs: e3Geometry(t).dwellUs / 1000, hopsPerBit: 1 });
+export const e3ShareAt = (t: Truth, at: Pt): number => {
+  const g = e3Geometry(t);
+  return followerShare(g.dwellUs, followerDelayUs(g.tx, g.rx, at, FOLLOW_PROC_US));
+};
+export const e3Ellipse = (t: Truth): Pt[] | undefined => {
+  const g = e3Geometry(t);
+  return followerEllipse(g.tx, g.rx, g.dwellUs, FOLLOW_PROC_US, E_GOAL_SHARE);
+};
+
+// E1's picture: a fixed transmitter and receiver, a 150 µs dwell, and two places for the follower.
+export const FOLLOW_EXAMPLE = {
+  tx: { xKm: -5, yKm: 10 },
+  rx: { xKm: 5, yKm: 9 },
+  dwellUs: 150,
+  spots: [{ xKm: 0, yKm: 0, label: 'J1' }, { xKm: -9, yKm: -3, label: 'J2' }],
+};
+export function followerNumbers(tx: Pt, rx: Pt, at: Pt, dwellUs: number) {
+  const direct = distanceKm(tx, rx);
+  const via = distanceKm(tx, at) + distanceKm(at, rx);
+  const pathUs = (via - direct) / C_KM_PER_US;
+  const delayUs = FOLLOW_PROC_US + pathUs;
+  return { direct, via, extra: via - direct, pathUs, delayUs, share: followerShare(dwellUs, delayUs) };
+}
+
+// E2's practice numbers: distances (km) and the dwell (µs).
+const E2_SETS = [
+  { tj: 12, jr: 14, tr: 16, dwell: 200 }, { tj: 8, jr: 9, tr: 15, dwell: 120 }, { tj: 20, jr: 18, tr: 25, dwell: 300 }, { tj: 10, jr: 10, tr: 10, dwell: 150 },
+];
+export const e2Set = (n: number) => E2_SETS[((n % E2_SETS.length) + E2_SETS.length) % E2_SETS.length];
+export const e2DelayUs = (n: number) => {
+  const s = e2Set(n);
+  return FOLLOW_PROC_US + (s.tj + s.jr - s.tr) / C_KM_PER_US;
+};
+export const e2Share = (n: number) => followerShare(e2Set(n).dwell, e2DelayUs(n));
+
 const f1 = (v: number) => v.toFixed(1);
+const f2 = (v: number) => v.toFixed(2);
 const mhz = (v: number) => v.toFixed(3);
+const round1 = (v: number) => Math.round(v * 10) / 10;
+const ex = FOLLOW_EXAMPLE;
+const exNear = followerNumbers(ex.tx, ex.rx, ex.spots[0], ex.dwellUs);
+const exFar = followerNumbers(ex.tx, ex.rx, ex.spots[1], ex.dwellUs);
 
 // Placeholders for the texts.
 export function level7Values(t: Truth, practiceN: number): Record<string, string> {
@@ -52,6 +123,8 @@ export function level7Values(t: Truth, practiceN: number): Record<string, string
   const b3 = b3JsDb(t);
   const c3 = c3JsDb(t);
   const k3 = bestChannels(fh.channels, c3);
+  const e2 = e2Set(practiceN);
+  const g = e3Geometry(t);
   return {
     pN: String(practiceN),
     n: String(fh.channels),
@@ -85,6 +158,18 @@ export function level7Values(t: Truth, practiceN: number): Record<string, string
     pK: String(pK),
     pcEbJ0Lin: f1(10 ** (ebJ0DbOf(p.channels, pcJs) / 10)),
     pBest: berText(partialBer(p, pK, pcJs)),
+    d2Ber: berText(d2Ber(t)),
+    e2Tj: String(e2.tj),
+    e2Jr: String(e2.jr),
+    e2Tr: String(e2.tr),
+    e2Dwell: String(e2.dwell),
+    e2Extra: String(e2.tj + e2.jr - e2.tr),
+    e2Path: f1((e2.tj + e2.jr - e2.tr) / C_KM_PER_US),
+    e2Delay: f1(e2DelayUs(practiceN)),
+    e2Share: f2(e2Share(practiceN)),
+    e3Dwell: String(g.dwellUs),
+    e3Tx: `x ${f1(g.tx.xKm)}, y ${f1(g.tx.yKm)}`,
+    e3Rx: `x ${f1(g.rx.xKm)}, y ${f1(g.rx.yKm)}`,
   };
 }
 
@@ -339,7 +424,227 @@ export const LEVEL_7: LevelDef = {
         },
       ],
     },
+    {
+      id: 'D',
+      title: 'Slow and fast hopping',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'D1',
+          title: 'Example: one hit hop against three votes',
+          visual: {
+            kind: 'waterfall',
+            link: 'example',
+            variants: [
+              { label: 'Slow hopping, one channel jammed', jammer: { kind: 'partial', rho: 1 / 16 } },
+              { label: 'Fast hopping, 3 hops per bit, the same jammer', jammer: { kind: 'partial', rho: 1 / 16 }, hopsPerBit: 3 },
+            ],
+            jsDb: -3,
+          },
+          paragraphs: [
+            'Slow hopping sends many bits on each hop: the example sends 125 bits in each 5 ms dwell. One jammed hop breaks a burst of them.',
+            'Fast hopping sends each bit on several hops, here 3, on 3 different channels, and the receiver takes a [[majority vote|vote]], as in level 5. One jammed hop is outvoted by the two clean ones.',
+          ],
+          steps: [
+            'The same jammer as in C1: one channel at 16 times the power, J/S −3 dB.',
+            'Slow: 1 hop in 16 is hit and 18% of its bits are wrong. BER = 0.012.',
+            'Fast: each copy is wrong 0.012 of the time. The vote loses a bit only when 2 or 3 copies are wrong: 3 × 0.012² ≈ 0.0004.',
+            'About 30 times fewer errors. Spreading wider does not help the jammer: one channel is still its best.',
+          ],
+          rule: 'Fast hopping with a vote turns a partial-band jammer\'s p into about 3p².',
+          check: {
+            question: 'Each copy is wrong 0.01 of the time. About what is the bit error rate after a vote of 3?',
+            answer: 0.0003,
+            tol: { abs: 0.00002 },
+            wrong: '3 × 0.01² = 0.0003.',
+          },
+        },
+        {
+          kind: 'apply',
+          id: 'D2',
+          title: 'The enemy: fast hopping',
+          instruments: [],
+          prediction: true,
+          task: 'The enemy switches to fast hopping: each bit on 3 hops, voted. Your C3 jammer stays on its best {c3K} channels at J/S {c3Js} dB. Predict the BER, then run.',
+          hint: 'Each copy is wrong as often as a bit was in C3: {c3Best}. The vote: 3p² − 2p³.',
+          fields: [
+            { id: 'ber', label: 'Predicted BER', unit: '', kind: 'predictBer', truth: (t) => d2Ber(t), check: { factor: 2 }, points: 10 },
+          ],
+          run: {
+            link: 'hidden',
+            js: 'fixed',
+            jsDbFrom: c3JsDb,
+            jammer: { kind: 'bbn' },
+            fh: {
+              jammer: { kind: 'bbn' },
+              hopsPerBit: 3,
+              jammerFrom: (_v, link, t) => ({ kind: 'partial', rho: bestChannels(link.channels, c3JsDb(t)) / link.channels }),
+            },
+          },
+          reveal: ['Each copy is wrong {c3Best} of the time.', 'After the vote: 3p² − 2p³ = {d2Ber}. The same jammer that broke the slow link barely touches the fast one.'],
+        },
+      ],
+    },
+    {
+      id: 'E',
+      title: 'The follower jammer',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'E1',
+          title: 'Example: racing the hop',
+          visual: { kind: 'follower' },
+          paragraphs: [
+            'A follower jammer does not guess. It listens for each hop, finds its channel, tunes there and jams it with all its power. Against a slow hopper that is deadly.',
+            'But it is always late. It needs time to hear and tune, here 60 µs. Then its signal takes a longer path to the receiver: transmitter to jammer to receiver, against transmitter to receiver. At 0.3 km per µs, every extra km costs 3.3 µs.',
+            'Whatever is left of the dwell is all it gets. The places where it gets enough form an ellipse round the transmitter and the receiver (the dashed line: 20% of each dwell).',
+          ],
+          steps: [
+            `The enemy radio dwells ${ex.dwellUs} µs on each hop. Transmitter to receiver is ${f1(exNear.direct)} km.`,
+            `J1 at the front line: ${f1(exNear.via)} km via the jammer, ${f1(exNear.extra)} km extra = ${f1(exNear.pathUs)} µs. Delay = 60 + ${f1(exNear.pathUs)} = ${f1(exNear.delayUs)} µs.`,
+            `J1 covers 1 − ${f1(exNear.delayUs)} ÷ ${ex.dwellUs} = ${f2(exNear.share)} of each dwell.`,
+            `J2 far to the west: ${f1(exFar.extra)} km extra, delay ${f1(exFar.delayUs)} µs, share ${f2(exFar.share)}.`,
+          ],
+          rule: 'Share of the dwell = 1 − (processing + extra km ÷ 0.3) ÷ dwell, times in µs. Short dwells beat followers; so does a follower far from the line between transmitter and receiver.',
+          check: {
+            question: 'Dwell 200 µs, the follower arrives 150 µs into it. What share of the dwell does it cover?',
+            answer: 0.25,
+            tol: { abs: 0.005 },
+            wrong: '1 − 150 ÷ 200.',
+          },
+        },
+        {
+          kind: 'practice',
+          id: 'E2',
+          title: 'Try it',
+          link: 'practice',
+          visual: { kind: 'none' },
+          task: 'Transmitter to follower {e2Tj} km, follower to receiver {e2Jr} km, transmitter to receiver {e2Tr} km. The follower needs 60 µs to tune and the dwell is {e2Dwell} µs. When does its signal arrive, and what share of the dwell does it cover?',
+          hint: 'Extra path = {e2Tj} + {e2Jr} − {e2Tr} km, at 0.3 km per µs. Add the 60 µs.',
+          fields: [
+            { id: 'delay', label: 'Delay', unit: 'µs', truth: (_t, ctx) => e2DelayUs(ctx.practiceN ?? 0), check: { abs: 2 }, points: 0 },
+            { id: 'share', label: 'Share of the dwell', unit: '', truth: (_t, ctx) => e2Share(ctx.practiceN ?? 0), check: { abs: 0.02 }, points: 0 },
+          ],
+          worked: ['Extra path = {e2Tj} + {e2Jr} − {e2Tr} = {e2Extra} km = {e2Path} µs.', 'Delay = 60 + {e2Path} = {e2Delay} µs. Share = 1 − {e2Delay} ÷ {e2Dwell} = {e2Share}.'],
+        },
+        {
+          kind: 'apply',
+          id: 'E3',
+          title: 'The enemy: place the follower',
+          instruments: ['df'],
+          dfMethod: 'follower',
+          task: 'The enemy has a fast radio: {e3Dwell} µs dwells on 200 kHz channels. Its transmitter is at {e3Tx} and its receiver at {e3Rx}. Place your follower on the friendly side (click the map), then run at J/S {c3Js} dB.',
+          hint: 'Stand as close as you can to the line between transmitter and receiver: the extra path is what eats the dwell.',
+          fields: [],
+          run: {
+            link: 'hidden',
+            js: 'fixed',
+            jsDbFrom: c3JsDb,
+            jammer: { kind: 'bbn' },
+            fh: {
+              jammer: { kind: 'follower', share: 0 },
+              linkFrom: e3Link,
+              jammerFrom: (v, _link, t) => ({ kind: 'follower', share: e3ShareAt(t, { xKm: v.jx ?? 0, yKm: v.jy ?? -4 }) }),
+            },
+          },
+          goal: {
+            kind: 'deny',
+            berAtLeast: E3_GOAL_BER,
+            points: 20,
+            task: 'Run. Move the follower and run again until the BER reaches the goal.',
+            notYet: 'Not there yet: move the follower closer to the line between transmitter and receiver.',
+          },
+          reveal: ['The dashed ellipse holds the places where the follower covers at least 20% of each dwell.', 'Outside it, the hop is over before the follower\'s signal arrives.'],
+        },
+      ],
+    },
+    {
+      id: 'F',
+      title: 'Other ways to spread',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'F1',
+          title: 'The swept jammer',
+          visual: {
+            kind: 'waterfall',
+            link: 'example',
+            variants: [
+              { label: 'Partial band, 2 channels', jammer: { kind: 'partial', rho: 2 / 16 } },
+              { label: 'Sweep, 2 channels wide', jammer: { kind: 'sweep', widthChannels: 2, sweepMs: 37 } },
+            ],
+            jsDb: 0,
+          },
+          paragraphs: [
+            'A swept jammer is a partial band that moves: a narrow block of noise sliding across the band and starting over.',
+            'For the same width it hits the same share of hops as a fixed partial band, so its BER is about the same. Its advantage is that it reaches every channel. A link that notices a few jammed channels and stops using them, adaptive hopping, escapes a fixed partial band but not a sweep.',
+          ],
+          rule: 'A sweep w channels wide covers each channel w ÷ N of the time: the same share as a fixed partial band, spread over the whole band.',
+          check: {
+            question: 'A sweep 4 channels wide crosses a band of 32 channels. What share of the time is any one channel jammed?',
+            answer: 0.125,
+            tol: { abs: 0.001 },
+            wrong: '4 ÷ 32.',
+          },
+        },
+        {
+          kind: 'lesson',
+          id: 'F2',
+          title: 'Time hopping and hybrid links',
+          visual: { kind: 'none' },
+          paragraphs: [
+            'Time hopping sends short bursts in random time slots instead of hopping in frequency. A jammer has to cover all the time or guess the slots. The bursts are easy to see with a detector that looks for peaks, so time hopping hides only from detectors that average over a long time.',
+            'A hybrid link does both: direct sequence inside each hop. The gains multiply. 31 chips per bit (Gp 31) hopping over 16 channels gives 31 × 16 = 496, or 27.0 dB, against broadband noise.',
+          ],
+          check: {
+            question: 'A link spreads each bit over 63 chips and hops over 32 channels. What is its Gp against broadband noise, in dB?',
+            unit: 'dB',
+            answer: Number(db(63 * 32).toFixed(1)),
+            tol: { abs: 0.1 },
+            wrong: 'Gp = 63 × 32 = 2016. Then 10 × log10.',
+          },
+        },
+      ],
+    },
+    {
+      id: 'G',
+      title: 'Check',
+      steps: [
+        {
+          kind: 'questions',
+          id: 'G1',
+          title: 'Three questions',
+          task: 'Three short questions. One attempt each.',
+          questions: [
+            {
+              id: 'q1',
+              text: 'Against a hopping link, which jammer does the most for the same power?',
+              options: ['Broadband noise over the whole band', 'Noise on about 2 × J/S channels', 'Noise on half the channels'],
+              correct: 1,
+              explain: 'A few channels at full strength break every hop that lands there. The best number is about 2 × J/S as a ratio.',
+              points: 7,
+            },
+            {
+              id: 'q2',
+              text: 'What beats a follower jammer?',
+              options: ['A dwell shorter than the follower\'s delay', 'More transmitter power', 'Wider channels'],
+              correct: 0,
+              explain: 'The follower jams only what is left of the dwell after its processing time and its extra path. A short dwell leaves it nothing.',
+              points: 7,
+            },
+            {
+              id: 'q3',
+              text: 'Why does fast hopping with a vote resist partial-band jamming?',
+              options: ['The jammer cannot see fast hops', 'Each hop is sent louder', 'Each bit rides on several hops, and one hit hop is outvoted'],
+              correct: 2,
+              explain: 'With 3 hops per bit, a copy error rate p becomes about 3p².',
+              points: 6,
+            },
+          ],
+        },
+      ],
+    },
   ],
   debrief:
-    'Against a hopping link, broadband noise is weak: its power is shared by every channel. Squeezed into about 2 × J/S channels, the same power breaks every hop that lands there, and the BER falls only as 1 ÷ Eb/J0. Partial-band noise, useless against direct sequence, is the strongest simple attack on hopping.',
+    'Against a hopping link, broadband noise is weak: every channel shares its power. Squeezed into about 2 × J/S channels, the same power breaks every hop that lands there, the strongest simple attack on hopping and useless against direct sequence. Fast hopping with a vote answers it. A follower jams with all its power but only what is left of each dwell, which short dwells and distance from the link take away.',
 };

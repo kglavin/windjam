@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { FH_EXAMPLE, hopPreview } from '../../engine/lab/fh';
 import { LEVEL_7, flatSteps, knownLinkInfo, practiceLinkAt } from '../../engine/lab/levels';
 import { sceneBudget } from '../../engine/lab/scene';
+import { DfTask } from './DfTask';
 import { Waterfall } from './instruments/Waterfall';
 import { SETUPS } from './levelSetup';
 import { type StepState, scoreLevel } from './levelState';
@@ -32,6 +33,19 @@ function render(current: number) {
 describe('level 7 in the stage panel', () => {
   it('renders every step and the debrief, with no unresolved placeholder', () => {
     for (let i = 0; i <= flat.length; i++) expect(render(i)).not.toMatch(/\{\w+\}/);
+  });
+});
+
+describe('the follower map', () => {
+  it('shows the enemy pair, the follower and its share, and the ellipse once done', () => {
+    const e3 = flat.find((f) => f.step.id === 'E3')!.step;
+    if (e3.kind !== 'apply') throw new Error('E3 is an apply step');
+    const open = renderToString(createElement(DfTask, { step: e3, state: { done: false, df: { sites: [{ xKm: 0, yKm: 0 }], tries: 0 } }, truth, onPlace: () => {}, onRemove: () => {} }));
+    expect(open).toContain('transmitter');
+    expect(open).toContain('of each hop');
+    expect(open).not.toContain('df-outline');
+    const done = renderToString(createElement(DfTask, { step: e3, state: { done: true, df: { sites: [{ xKm: 0, yKm: 0 }], tries: 0 } }, truth, onPlace: () => {}, onRemove: () => {} }));
+    expect(done).toContain('df-outline');
   });
 });
 

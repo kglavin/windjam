@@ -54,8 +54,10 @@ plain words, with videos and glossary marks. The scene and J/S work as in levels
 | F Other ways to spread | F1 lesson, F2 lesson | Swept jamming (a narrow jammer sweeping the band, hits each channel briefly); time hopping (bursts in random slots); hybrid DS/FH (Gp multiplies) | – | A sweep across the waterfall; time-hopped bursts |
 | G Check | G1 questions | Three questions | 20 | – |
 
-Total 100, pass mark 60. The enemy's hop set (N from 16 to 64 channels, 25 kHz spacing, dwell 2 to 20 ms) and
-J/S come from the level seed.
+Total 100, pass mark 60. The enemy's hop set (24 to 64 channels, 25 kHz spacing, dwell 2 to 10 ms) and J/S come
+from the level seed. Unit E uses a fast radio (200 kHz channels) whose transmitter and receiver stand north of the
+line; its dwell (100 to 220 µs) is set from the seed so the best place on the friendly side covers about 30% of each
+dwell, with 60 µs of follower processing. About a third of the friendly side then reaches the goal.
 
 ## 3. The hop waterfall
 

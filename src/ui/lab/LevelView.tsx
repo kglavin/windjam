@@ -155,6 +155,9 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     const st = flat[i].step;
     const ri = mode === 'main' && st.kind === 'apply' ? st.run?.runInput : undefined;
     if (ri && ri.field in entered && states[i].runInput !== undefined) entered[ri.field] = states[i].runInput!;
+    // Level 7 E3: the follower's place on the map.
+    const at = st.kind === 'apply' && st.dfMethod === 'follower' ? states[i].df?.sites?.[0] : undefined;
+    if (at) Object.assign(entered, { jx: at.xKm, jy: at.yKm });
     return entered;
   };
   // A run whose jammer depends on a field waits for a value of that field inside its range.
@@ -172,6 +175,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     const st = flat[i].step;
     if ((st.kind !== 'practice' && st.kind !== 'apply') || !st.run) return undefined;
     if ((st.run.jammerFrom || st.run.fh?.jammerFrom) && !rangeOk(i, mode)) return undefined;
+    if (st.kind === 'apply' && st.dfMethod === 'follower' && !states[i].df?.sites?.length) return undefined;
     const s = states[i];
     const n = (s.runs?.length ?? 0) * 8 + (s.retries ?? 0);
     return planAnyRun(st.run, {
@@ -191,6 +195,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     if (st.kind !== 'apply' || !(st.run?.jammerFrom || st.run?.fh?.jammerFrom)) return undefined;
     const plan = runPlan(i, mode);
     if (!plan) {
+      if (st.dfMethod === 'follower') return 'Place the follower on the map to enable Run.';
       const f = st.fields.find((x) => x.range);
       return f ? `Enter the ${f.label.toLowerCase()} above and press ${mode === 'retry' ? 'Check' : 'Submit'} to enable Run.` : undefined;
     }
@@ -400,7 +405,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
                 state={states[shownIdx]}
                 truth={truth}
                 onPlace={(pt) => {
-                  const max = shown.locate?.maxSites ?? 0;
+                  const max = shown.locate?.maxSites ?? (shown.dfMethod === 'follower' ? 1 : 0);
                   if (!inZone(pt) || max === 0) return;
                   update(shownIdx, (s) => {
                     const sites = s.df?.sites ?? [];

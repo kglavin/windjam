@@ -52,9 +52,15 @@ export function jammerExposure(link: FhLink, j: FhJammer, js: number): { ebJ0: n
       const k = jammedChannels(n, j.rho);
       return { ebJ0: k / js, share: k / n };
     }
-    case 'follower':
+    case 'follower': {
+      // Slow hopping: the bits of each hop sent after the follower comes on (whole bits, as the run counts them).
       // Fast hopping: the follower is on for `share` of each copy's hop, so the copy meets share × its power.
-      return link.hopsPerBit === 1 ? { ebJ0: 1 / js, share: j.share } : { ebJ0: 1 / (Math.max(j.share, 1e-12) * js), share: j.share > 0 ? 1 : 0 };
+      if (link.hopsPerBit !== 1) return { ebJ0: 1 / (Math.max(j.share, 1e-12) * js), share: j.share > 0 ? 1 : 0 };
+      const b = bitsPerHop(link);
+      let hit = 0;
+      for (let k = 0; k < b; k++) if (j.share > 0 && (k + 0.5) / b >= 1 - j.share) hit++;
+      return { ebJ0: 1 / js, share: hit / b };
+    }
     case 'sweep':
       return { ebJ0: j.widthChannels / js, share: Math.min(1, j.widthChannels / n) };
   }

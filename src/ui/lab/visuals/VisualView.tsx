@@ -1,11 +1,12 @@
 import type { IQ } from '../../../engine/lab/signal';
 import {
-  type KnownLink, type Visual, DF_EXAMPLES, exampleBearings, exampleHyperbolas, knownLinkInfo, legPoints, xcorrExample, xcorrPractice,
+  type KnownLink, type Visual, DF_EXAMPLES, FOLLOW_EXAMPLE, FOLLOW_PROC_US, followerNumbers, exampleBearings, exampleHyperbolas, knownLinkInfo, legPoints, xcorrExample, xcorrPractice,
 } from '../../../engine/lab/levels';
 import { fixFromBearings } from '../../../engine/lab/geoloc';
 import { Autocorr } from '../instruments/Autocorr';
 import { DfView } from '../instruments/DfView';
 import { XcorrView } from '../instruments/XcorrView';
+import { followerEllipse } from '../../../engine/lab/fh';
 import { WaterfallDemo } from './WaterfallDemo';
 import { Spectrum } from '../instruments/Spectrum';
 import { knownCapture } from '../knownCapture';
@@ -116,6 +117,17 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
           target={ex.target}
           path={ex.leg ? legPoints(ex.sites[0], ex.sites[1]) : undefined}
           hyperbolas={exampleHyperbolas(ex)}
+        />
+      );
+    }
+    case 'follower': {
+      const f = FOLLOW_EXAMPLE;
+      return (
+        <DfView
+          title="Example: where the follower stands"
+          sites={f.spots.map((s) => ({ ...s, label: `${s.label}: ${(100 * followerNumbers(f.tx, f.rx, s, f.dwellUs).share).toFixed(0)}% of each dwell` }))}
+          marks={[{ ...f.tx, label: 'transmitter' }, { ...f.rx, label: 'receiver' }]}
+          outlines={[followerEllipse(f.tx, f.rx, f.dwellUs, FOLLOW_PROC_US, 0.2) ?? []]}
         />
       );
     }
