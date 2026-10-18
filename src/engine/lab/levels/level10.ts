@@ -123,9 +123,10 @@ export const LEVEL_10: LevelDef = {
           id: 'A1',
           title: 'Example: codes sharing a band',
           visual: { kind: 'cdma', example: 'many' },
+          video: 'level10-A1',
           paragraphs: [
-            'Give every user its own [[code|code]] and they can all send at once, in the same band. The receiver despreads with one user\'s code: that user\'s chips add up, the others\' do not. This is code-division multiple access, CDMA.',
-            'The others do not vanish. Each adds a little: its power cut by the [[processing gain|gp]]. With K users of equal power, each sees the other K − 1 as noise: SINR ≈ Gp ÷ (K − 1), when the receiver\'s own noise is small.',
+            'Give every user its own [[code|code]] and they can all send at once, in the same band. The receiver despreads with one user\'s code: that user\'s chips add up, the others\' do not. This is [[code-division multiple access|cdma]], CDMA.',
+            'The others do not vanish. Each adds a little [[interference|mai]]: its power cut by the [[processing gain|gp]]. With K users of equal power, each sees the other K − 1 as noise: SINR ≈ Gp ÷ (K − 1), when the receiver\'s own noise is small.',
             'That is a first estimate, for codes that look random to each other. Real codes, arriving at different chip offsets, do better or worse user by user: the panel works out each one exactly. Slide the number of users and watch the BER climb.',
           ],
           steps: [
@@ -180,9 +181,10 @@ export const LEVEL_10: LevelDef = {
           id: 'B1',
           title: 'Example: the loud one and the quiet one',
           visual: { kind: 'cdma', example: 'nearfar' },
+          video: 'level10-B1',
           paragraphs: [
-            'Codes only cut the others down by about the processing gain. A user close to the receiver can arrive so much stronger than a far one that even cut down it buries the far one: the near-far problem.',
-            'One cure is power control: tell the near ones to turn down. Another is successive cancellation: decode the strongest user first, rebuild its chips exactly, subtract them, then decode the next.',
+            'Codes only cut the others down by about the processing gain. A user close to the receiver can arrive so much stronger than a far one that even cut down it buries the far one: the [[near-far problem|near-far]].',
+            'One cure is power control: tell the near ones to turn down. Another is [[successive cancellation|sic]]: decode the strongest user first, rebuild its chips exactly, subtract them, then decode the next.',
           ],
           steps: [
             'The near user arrives at 14 dB per chip, the far one at −2 dB: 16 dB apart.',
@@ -222,6 +224,7 @@ export const LEVEL_10: LevelDef = {
           id: 'C1',
           title: 'Example: a code out of the noise',
           visual: { kind: 'discover', link: 'example' },
+          video: 'level10-C1',
           paragraphs: [
             'You do not know the enemy\'s code, and its chips are below the noise. But a short code repeats every bit. Cut the received chips into pieces one code period long: every piece holds the same code, flipped by its data bit, plus fresh noise.',
             'Average how each chip in a piece goes with every other chip. The noise averages away; the code\'s pattern does not, and the bit flips do not spoil it because a flip turns the whole piece over at once. The strongest pattern in that average is the code.',
@@ -264,9 +267,10 @@ export const LEVEL_10: LevelDef = {
           id: 'D1',
           title: 'Example: pointing a beam',
           visual: { kind: 'beam', mode: 'das' },
+          video: 'level10-D1',
           paragraphs: [
-            'Put M antennas in a line, half a wavelength apart: an array. A wave from an angle reaches each one a little later than the last, the level 6 interferometer\'s phase step repeated along the line.',
-            'Delay each element\'s signal to undo that step and add them up: signals from the look direction add in step, everything else adds out of step. This is delay-and-sum beamforming. Change the delays and the beam swings, with nothing moving.',
+            'Put M antennas in a line, half a wavelength apart: an [[array|array]]. A wave from an angle reaches each one a little later than the last, the level 6 interferometer\'s phase step repeated along the line.',
+            'Delay each element\'s signal to undo that step and add them up: signals from the look direction add in step, everything else adds out of step. This is delay-and-sum [[beamforming|beamforming]]. Change the delays and the beam swings, with nothing moving.',
           ],
           steps: [
             '8 elements: the signal adds 8 times stronger in power than the noise, which adds at random. Gain = 10 × log10(8) = 9.0 dB.',
@@ -320,8 +324,9 @@ export const LEVEL_10: LevelDef = {
           id: 'E1',
           title: 'Example: a null on the jammer',
           visual: { kind: 'beam', mode: 'mvdr' },
+          video: 'level10-E1',
           paragraphs: [
-            'An array can do more than point. Capon\'s method (MVDR) chooses the weights that keep the look direction at full strength and let through as little of everything else as possible. A strong jammer is most of everything else, so the weights put a deep null on it.',
+            'An array can do more than point. Capon\'s method ([[MVDR|mvdr]]) chooses the weights that keep the look direction at full strength and let through as little of everything else as possible. A strong jammer is most of everything else, so the weights put a deep [[null|array-null]] on it.',
             'In this lab the elements\' channels are matched to 35 dB, the practical limit: a null takes about 35 + 10 × log10(M) dB off the jammer. That comes straight off J/S. Nulling is protection, and it is aimed: move the jammer and the null follows.',
             'M elements give M − 1 nulls. Slide the jammers up to the number of elements and the nulls run out.',
           ],
@@ -365,7 +370,7 @@ export const LEVEL_10: LevelDef = {
           visual: { kind: 'music' },
           paragraphs: [
             'Level 6 took one bearing per antenna. An array can find several transmitters at once. Sweeping its beam (the orange curve) shows a hump for each, but two transmitters closer than a beamwidth merge into one.',
-            'MUSIC splits what the array hears into a part made by the transmitters and a part made only by noise. The noise part is at right angles to every direction a transmitter is in, so testing each angle against it gives a sharp peak exactly there (the blue curve).',
+            '[[MUSIC|music]] splits what the array hears into a part made by the transmitters and a part made only by noise. The noise part is at right angles to every direction a transmitter is in, so testing each angle against it gives a sharp peak exactly there (the blue curve).',
           ],
           steps: [
             '6 elements: the beam is about 17° wide. Two transmitters 10° apart, at −5° and +5°, merge in the scan.',
