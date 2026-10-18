@@ -1275,6 +1275,20 @@ select {
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
+.wf-jam {
+  fill: #f87171;
+  opacity: 0.16;
+}
+.wf-hop {
+  fill: #60a5fa;
+}
+.wf-hop.wf-hit {
+  fill: #f87171;
+}
+.wf-hop-jam {
+  fill: #f87171;
+  opacity: 0.55;
+}
 .df-hyperbola {
   fill: none;
   stroke: #a78bfa;

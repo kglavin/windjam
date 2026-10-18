@@ -110,4 +110,4 @@ class LessonVideo(LessonScene):
         self.caption("So they do about the same damage.")
         self.play(LaggedStart(*[FadeIn(r, shift=LEFT * 0.2) for r in res], lag_ratio=0.5))
         self.caption("Despreading undoes the squeeze, just as it spreads broadband noise.")
-        self.rule_card(["Squeezing noise into part of the band", "does not help against spread spectrum."], clear=True)
+        self.rule_card(["Squeezing noise into part of the band", "does not help against direct sequence."], clear=True)

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { RunPlan } from '../../engine/lab/berRun';
+import type { AnyRunPlan as RunPlan } from '../../engine/lab/berRun';
 import {
   type ApplyStep,
   type FieldDef,

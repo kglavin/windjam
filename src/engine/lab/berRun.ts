@@ -3,6 +3,7 @@ import { type LinkParams } from './dsss';
 import { type CodeKind, type KnownLinkInfo, type RunSpec, type Truth } from './levels/types';
 import { mSequence } from './pn';
 import type { RunRequest } from './run';
+import { type FhLink, type FhRunRequest, FH_EXAMPLE, fhPracticeAt, fhTheoryBer, gpOf } from './fh';
 import { berBlindedAt, overloadMissProb } from './blinding';
 import type { FrontEndConfig } from './frontend';
 import {
@@ -25,8 +26,18 @@ export const RUN_LIMITS = { s: 1, maxErrors: 100, maxBits: 300_000, timeBoundMs:
 // Known links are run with the noise far below the jammer.
 export const KNOWN_EBN0_DB = 30;
 
-export interface RunPlan {
+export interface RunPlan extends RunPlanBase {
   request: RunRequest;
+}
+
+// Level 7: the same for a hopping link.
+export interface FhRunPlan extends RunPlanBase {
+  request: FhRunRequest;
+}
+
+export type AnyRunPlan = RunPlan | FhRunPlan;
+
+interface RunPlanBase {
   jsDb: number;
   gpDb: number;
   ebN0Db: number;
@@ -43,6 +54,7 @@ export interface PlanInputs {
   scene: { jsDb: number; ebN0Db: number }; // the scene's J/S and receiver Eb/N0 now
   seed: number;
   entered?: Record<string, number>; // what the player entered in the step, for a run spec with jammerFrom
+  practiceN?: number; // the "Try another" counter: level 7's practice hopping link
 }
 
 // One code period per bit, as in the levels' known and hidden links.
@@ -70,7 +82,32 @@ const whole = (x: number, what: string): number => {
   return Math.round(x);
 };
 
+// Level 7: a run of a hopping link. Gp = number of channels; the theory is fhTheoryBer at each J/S.
+export function planFhRun(spec: RunSpec, fh: NonNullable<RunSpec['fh']>, o: PlanInputs): FhRunPlan {
+  const base: FhLink | undefined = spec.link === 'hidden' ? o.truth.fh : spec.link === 'example' ? FH_EXAMPLE : fhPracticeAt(o.practiceN ?? 0);
+  if (!base) throw new Error('a hopping run on the hidden link needs truth.fh');
+  const link: FhLink = { ...base, hopsPerBit: fh.hopsPerBit ?? base.hopsPerBit, ebN0Db: spec.ebN0Db ?? KNOWN_EBN0_DB };
+  const jammer = fh.jammerFrom ? fh.jammerFrom(o.entered ?? {}, link) : fh.jammer;
+  const jsDb = spec.js === 'scene' ? o.scene.jsDb : spec.jsDbFrom ? spec.jsDbFrom(o.truth) : (spec.jsDb ?? o.practiceJsDb);
+  const gpDb = 10 * Math.log10(gpOf(link));
+  const curve = (js: number) => fhTheoryBer(link, jammer, js);
+  return {
+    request: { kind: 'fh', link, jammer, jsDb, seed: o.seed, maxErrors: RUN_LIMITS.maxErrors, maxBits: RUN_LIMITS.maxBits, timeBoundMs: RUN_LIMITS.timeBoundMs },
+    jsDb,
+    gpDb,
+    ebN0Db: link.ebN0Db,
+    ebJ0Db: gpDb - jsDb,
+    theoryBer: curve(jsDb),
+    curve,
+  };
+}
+
+// A step's run of either kind.
+export const planAnyRun = (spec: RunSpec, o: PlanInputs): AnyRunPlan => (spec.fh ? planFhRun(spec, spec.fh, o) : planRun(spec, o));
+
+// A direct-sequence run (levels 1 to 5).
 export function planRun(spec: RunSpec, o: PlanInputs): RunPlan {
+  if (spec.fh) throw new Error('a hopping run: use planAnyRun');
   const kind = spec.code ?? 'short';
   const r = spec.repetition ?? 1;
   let ebN0Db = spec.ebN0Db ?? KNOWN_EBN0_DB;

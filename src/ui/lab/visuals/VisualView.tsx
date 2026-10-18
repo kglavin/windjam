@@ -6,6 +6,7 @@ import { fixFromBearings } from '../../../engine/lab/geoloc';
 import { Autocorr } from '../instruments/Autocorr';
 import { DfView } from '../instruments/DfView';
 import { XcorrView } from '../instruments/XcorrView';
+import { WaterfallDemo } from './WaterfallDemo';
 import { Spectrum } from '../instruments/Spectrum';
 import { knownCapture } from '../knownCapture';
 import { BerCurve } from './BerCurve';
@@ -118,6 +119,8 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
         />
       );
     }
+    case 'waterfall':
+      return <WaterfallDemo link={visual.link} variants={visual.variants} jsDb={visual.jsDb} practiceN={practiceN} />;
     case 'xcorr': {
       if (visual.source === 'practice') return <XcorrView data={xcorrPractice(practiceN)} />;
       const ex = DF_EXAMPLES.G2;

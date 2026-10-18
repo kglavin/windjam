@@ -5,6 +5,7 @@ import { type LinkParams, simulate } from './dsss';
 import type { FrontEndConfig } from './frontend';
 import { type JammerSpec, jammer } from './jammers';
 import { wilson } from './measure';
+import { type FhRunRequest, runFhAsync } from './fh';
 
 export interface RunRequest {
   link: LinkParams;
@@ -159,8 +160,13 @@ export function runBer(req: RunRequest, opts: RunOptions = {}): RunResult {
   }
 }
 
+// A run of either kind: a direct-sequence link (RunRequest) or a hopping link (level 7, fh.ts).
+export type AnyRunRequest = RunRequest | FhRunRequest;
+export const isFhRequest = (r: AnyRunRequest): r is FhRunRequest => 'kind' in r && r.kind === 'fh';
+
 // Same loop, yielding to the event loop before every chunk so messages (cancel) get delivered.
-export async function runBerAsync(req: RunRequest, opts: RunOptions = {}): Promise<RunResult> {
+export async function runBerAsync(req: AnyRunRequest, opts: RunOptions = {}): Promise<RunResult> {
+  if (isFhRequest(req)) return runFhAsync(req, opts);
   const run = createRun(req, opts);
   for (;;) {
     await new Promise<void>((resolve) => setTimeout(resolve, 0));

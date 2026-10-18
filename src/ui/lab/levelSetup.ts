@@ -20,6 +20,8 @@ import {
   level6Scene,
   level6Truth,
   level6Values,
+  level7Truth,
+  level7Values,
   maxPeriodUsOf,
   recoveryUsOf,
   textValues,
@@ -215,4 +217,16 @@ const setup6: LevelSetup = {
   card: () => null,
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6 };
+// Level 7 works on the hop waterfall; its J/S values are given in the texts, so the scene is not shown.
+const setup7: LevelSetup = {
+  truth: level7Truth,
+  scene: level2Scene,
+  hidden: ['intercept'],
+  editable: [],
+  noScene: true,
+  values: (a) => level7Values(a.truth, a.practiceN ?? 0),
+  hiddenRows: () => [],
+  card: () => null,
+};
+
+export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7 };

@@ -213,7 +213,7 @@ export const LEVEL_3: LevelDef = {
             "But the receiver multiplies everything by the [[code|code]]. That spreads the jammer's narrow noise back over the whole band, just as it would spread broadband noise.",
             'So at the same [[J/S|js]] the two do about the same damage.',
           ],
-          rule: 'Squeezing noise into part of the band does not help against spread spectrum.',
+          rule: 'Squeezing noise into part of the band does not help against direct sequence. Level 7 shows it does against hopping.',
         },
         {
           kind: 'apply',

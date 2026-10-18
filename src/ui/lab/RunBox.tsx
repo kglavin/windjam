@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import type { RunPlan } from '../../engine/lab/berRun';
+import type { AnyRunPlan as RunPlan } from '../../engine/lab/berRun';
 import { type RunSummary, berText } from '../../engine/lab/levels';
 import type { RunProgress } from '../../engine/lab/run';
 import { startRun } from '../../engine/lab/runner';
 
-export const summaryOf = (r: RunProgress & { stoppedBy?: string }, plan: RunPlan): RunSummary => ({
+export const summaryOf = (r: RunProgress & { stoppedBy?: string; hops?: RunSummary['hops'] }, plan: RunPlan): RunSummary => ({
   bits: r.bits,
   errors: r.errors,
   ber: r.ber,
@@ -14,6 +14,7 @@ export const summaryOf = (r: RunProgress & { stoppedBy?: string }, plan: RunPlan
   jsDb: plan.jsDb,
   ebJ0Db: plan.ebJ0Db,
   theoryBer: plan.theoryBer,
+  ...(r.hops ? { hops: r.hops } : {}),
 });
 
 // Bits, errors, BER and the 95% interval of a run, finished or in progress.

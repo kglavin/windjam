@@ -1,7 +1,7 @@
 // Main-thread client for BER runs: a Web Worker when available, otherwise the same async loop in-process.
-import { type RunProgress, type RunRequest, type RunResult, runBerAsync } from './run';
+import { type AnyRunRequest, type RunProgress, type RunResult, runBerAsync } from './run';
 
-export type ToWorker = { type: 'start'; id: number; req: RunRequest } | { type: 'cancel'; id: number };
+export type ToWorker = { type: 'start'; id: number; req: AnyRunRequest } | { type: 'cancel'; id: number };
 export type FromWorker =
   | { type: 'progress'; id: number; progress: RunProgress }
   | { type: 'done'; id: number; result: RunResult }
@@ -10,7 +10,7 @@ export type FromWorker =
 let nextId = 1;
 
 export function startRun(
-  req: RunRequest,
+  req: AnyRunRequest,
   onProgress?: (p: RunProgress) => void,
 ): { result: Promise<RunResult>; cancel: () => void } {
   if (typeof Worker === 'undefined') {

@@ -1,6 +1,7 @@
 // Link lab level framework: hidden truth, step and field types, tolerances and scoring (design sections 7 and 8).
 // Level content is in level1.ts, level2.ts and index.ts. Pure: no React, no storage.
 import { createRng } from '../../rng';
+import type { FhJammer, FhLink, HopRecord } from '../fh';
 import type { FrontEndConfig } from '../frontend';
 import type { JammerSpec } from '../jammers';
 
@@ -14,6 +15,7 @@ export interface Truth {
   gpDb: number;
   carrierCyclesPerChip: number;
   txKm?: { xKm: number; yKm: number }; // level 6: where the enemy transmitter is (x east, y north)
+  fh?: FhLink; // level 7: the enemy's hopping link
 }
 
 const DEGREES = [5, 6, 7] as const;
@@ -168,9 +170,11 @@ export type Visual =
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
   | { kind: 'xcorr'; source: 'example' | 'practice' } // level 6: a cross-correlation of two sites' captures
+  // level 7: the hop waterfall of the example or practice hopping link; with variants, a Run button for each jammer
+  | { kind: 'waterfall'; link: 'example' | 'practice'; variants?: { label: string; jammer: FhJammer }[]; jsDb?: number }
   | { kind: 'none' };
 
-export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr';
+export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr' | 'waterfall';
 
 // How a level 6 step locates: bearings from ground sites, bearings from a UAV flying a leg, or arrival times.
 export type DfMethod = 'bearings' | 'leg' | 'tdoa';
@@ -212,6 +216,9 @@ export interface RunSpec {
   // The jammer built from the values the player entered in the same step (field id to value) and the link's
   // chips per bit. When set it replaces `jammer`.
   jammerFrom?: (values: Record<string, number>, chipsPerBit: number, chipRateMcps: number) => JammerSpec;
+  // Level 7: a run of the hopping link instead of the direct-sequence one (`jammer` is then ignored). jammerFrom
+  // builds the jammer from the entered values and the link.
+  fh?: { jammer: FhJammer; jammerFrom?: (values: Record<string, number>, link: FhLink) => FhJammer; hopsPerBit?: 1 | 3 };
   // A line for the run box about the jammer that will be used, from the same inputs as jammerFrom.
   jammerNote?: (values: Record<string, number>, chipsPerBit: number) => string | undefined;
 }
@@ -240,6 +247,7 @@ export interface RunSummary {
   jsDb: number;
   ebJ0Db: number;
   theoryBer: number;
+  hops?: HopRecord[]; // level 7: the first hops of a hopping run, for the waterfall
 }
 
 export const DENY_TOLERANCE = 0.8;

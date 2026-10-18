@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { capture } from '../../engine/lab/capture';
-import { planRun } from '../../engine/lab/berRun';
+import { planAnyRun } from '../../engine/lab/berRun';
 import type { LinkParams } from '../../engine/lab/dsss';
 import {
   type Ctx,
@@ -26,6 +26,8 @@ import { Spectrum } from './instruments/Spectrum';
 import { Calculator } from './Calculator';
 import { DfTask } from './DfTask';
 import { XcorrView } from './instruments/XcorrView';
+import { Waterfall } from './instruments/Waterfall';
+import { hopPreview } from '../../engine/lab/fh';
 import { LinkScene } from './LinkScene';
 import { SETUPS } from './levelSetup';
 import { moveInterceptToSignal } from './levelScene';
@@ -169,10 +171,10 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const runPlan = (i: number, mode: 'main' | 'retry' = 'main') => {
     const st = flat[i].step;
     if ((st.kind !== 'practice' && st.kind !== 'apply') || !st.run) return undefined;
-    if (st.run.jammerFrom && !rangeOk(i, mode)) return undefined;
+    if ((st.run.jammerFrom || st.run.fh?.jammerFrom) && !rangeOk(i, mode)) return undefined;
     const s = states[i];
     const n = (s.runs?.length ?? 0) * 8 + (s.retries ?? 0);
-    return planRun(st.run, {
+    return planAnyRun(st.run, {
       truth,
       example: knownLinkInfo(level.links.example),
       practice: practiceInfo,
@@ -180,18 +182,19 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
       scene: { jsDb: budget.jsDb, ebN0Db: budget.ebN0Db },
       seed: (Math.imul(truth.seed, 0x9e3779b1) ^ Math.imul(i + 1, 0x85ebca6b) ^ Math.imul(practiceN + 1, 0xc2b2ae35) ^ n) >>> 0,
       entered: enteredFor(i, mode),
+      practiceN,
     });
   };
   // What to tell the player about the run's jammer, or why Run is not ready yet.
   const runNote = (i: number, mode: 'main' | 'retry' = 'main'): string | undefined => {
     const st = flat[i].step;
-    if (st.kind !== 'apply' || !st.run?.jammerFrom) return undefined;
+    if (st.kind !== 'apply' || !(st.run?.jammerFrom || st.run?.fh?.jammerFrom)) return undefined;
     const plan = runPlan(i, mode);
     if (!plan) {
       const f = st.fields.find((x) => x.range);
       return f ? `Enter the ${f.label.toLowerCase()} above and press ${mode === 'retry' ? 'Check' : 'Submit'} to enable Run.` : undefined;
     }
-    return st.run.jammerNote?.(enteredFor(i, mode), plan.request.link.chipsPerBit);
+    return st.run.jammerNote?.(enteredFor(i, mode), 'kind' in plan.request ? 1 : plan.request.link.chipsPerBit);
   };
 
   const score = scoreLevel(level, states);
@@ -230,6 +233,21 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
               : []
           }
           xRange={[0, 30]}
+        />
+      </div>
+    ) : null;
+
+  // A hopping run's waterfall: the last run's hops, or the hops to come with the planned jammer's coverage.
+  const lastRun = shownState?.runs?.[shownState.runs.length - 1];
+  const runWaterfall =
+    curvePlan && 'kind' in curvePlan.request ? (
+      <div className="level-instruments">
+        <Waterfall
+          link={curvePlan.request.link}
+          hops={lastRun?.hops ?? hopPreview(curvePlan.request.link, curvePlan.request.seed, 40, curvePlan.request.jammer)}
+          ran={!!lastRun?.hops}
+          jammer={curvePlan.request.jammer}
+          title={`Hop waterfall: ${runStep?.run?.link === 'hidden' ? 'enemy' : runStep?.run?.link} link`}
         />
       </div>
     ) : null;
@@ -368,9 +386,11 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
             />
           </div>
         )}
+        {runWaterfall}
         {runCurve}
         {instruments.length > 0 && (
           <div className="level-instruments">
+            {instruments.includes('waterfall') && truth.fh && <Waterfall link={truth.fh} hops={hopPreview(truth.fh, truth.seed, 40)} title="Hop waterfall: enemy link" />}
             {instruments.includes('xcorr') && (
               <XcorrView data={xcorrEnemy(truth)} names={['T1', 'T2']} markPeak={!!states[shownIdx]?.done} />
             )}
