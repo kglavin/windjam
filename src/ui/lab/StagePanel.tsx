@@ -472,11 +472,14 @@ function DenyRun(p: StagePanelProps & { step: ApplyStep; index: number; state: S
   const runs = state.runs ?? [];
   const last = runs[runs.length - 1];
   const need = goal.berAtLeast * DENY_TOLERANCE;
+  const per = goal.measure === 'per';
+  const what = per ? 'packet loss' : 'BER';
+  const val = (r: RunSummary) => berText(per ? (r.packets?.per ?? 0) : r.ber);
   return (
     <div className="stage-fields">
       <p className="stage-task"><Rich text={fillText(goal.task, p.values)} /></p>
       <p className="stage-note">
-        Goal: a measured BER of at least {berText(need)} ({berText(goal.berAtLeast)} less 20% for counting noise). Full points if you get there
+        Goal: a measured {what} of at least {berText(need)} ({berText(goal.berAtLeast)} less 20% for counting noise). Full points if you get there
         within {DENY_FULL_RUNS} runs, half after.
       </p>
       {p.step.run?.runInput && state.fields?.[p.step.run.runInput.field] && (
@@ -497,12 +500,12 @@ function DenyRun(p: StagePanelProps & { step: ApplyStep; index: number; state: S
       />
       {state.goal ? (
         <p className="stage-result ok">
-          ✓ Run {state.goal.runNo}: J/S {state.goal.run.jsDb.toFixed(1)} dB gave BER {berText(state.goal.run.ber)}, {state.goal.points}/{goal.points} pts
+          ✓ Run {state.goal.runNo}: J/S {state.goal.run.jsDb.toFixed(1)} dB gave {what} {val(state.goal.run)}, {state.goal.points}/{goal.points} pts
         </p>
       ) : (
         last && (
           <p className="stage-result bad">
-            ✗ Run {runs.length}: J/S {last.jsDb.toFixed(1)} dB gave BER {berText(last.ber)}. {goal.notYet ?? 'Not there yet: more J/S, then run again.'}
+            ✗ Run {runs.length}: J/S {last.jsDb.toFixed(1)} dB gave {what} {val(last)}. {goal.notYet ?? 'Not there yet: more J/S, then run again.'}
           </p>
         )
       )}

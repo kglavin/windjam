@@ -28,6 +28,7 @@ import { DfTask } from './DfTask';
 import { XcorrView } from './instruments/XcorrView';
 import { Waterfall } from './instruments/Waterfall';
 import { RebuildView } from './instruments/RebuildView';
+import { PacketView } from './instruments/PacketView';
 import { hopPreview } from '../../engine/lab/fh';
 import { LinkScene } from './LinkScene';
 import { SETUPS } from './levelSetup';
@@ -223,7 +224,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const runStep = shown && (shown.kind === 'practice' || shown.kind === 'apply') && shown.run ? shown : undefined;
   const curvePlan = runStep ? runPlan(shownIdx) : undefined;
   const runCurve =
-    runStep && curvePlan && shownState ? (
+    runStep && curvePlan && shownState && !('kind' in curvePlan.request && curvePlan.request.kind === 'sync') ? (
       <div className="level-instruments">
         <CurvePlot
           points={[
@@ -246,7 +247,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   // A hopping run's waterfall: the last run's hops, or the hops to come with the planned jammer's coverage.
   const lastRun = shownState?.runs?.[shownState.runs.length - 1];
   const runWaterfall =
-    curvePlan && 'kind' in curvePlan.request ? (
+    curvePlan && 'kind' in curvePlan.request && curvePlan.request.kind === 'fh' ? (
       <div className="level-instruments">
         <Waterfall
           link={curvePlan.request.link}
@@ -255,6 +256,14 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           jammer={curvePlan.request.jammer}
           title={`Hop waterfall: ${runStep?.run?.link === 'hidden' ? 'enemy' : runStep?.run?.link} link`}
         />
+      </div>
+    ) : null;
+
+  // A packet run's timeline: the packet's preamble and payload, the jammer's on-time, and the first packets' searches.
+  const runPackets =
+    curvePlan && 'kind' in curvePlan.request && curvePlan.request.kind === 'sync' ? (
+      <div className="level-instruments">
+        <PacketView link={curvePlan.request.link} jammer={curvePlan.request.jammer} records={lastRun?.records} />
       </div>
     ) : null;
 
@@ -393,6 +402,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           </div>
         )}
         {runWaterfall}
+        {runPackets}
         {runCurve}
         {instruments.length > 0 && (
           <div className="level-instruments">

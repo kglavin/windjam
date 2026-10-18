@@ -119,7 +119,7 @@ export function runDone(step: ApplyStep | PracticeStep, st: StepState, s: RunSum
     next.fields = { ...st.fields, [pf.id]: { value: st.prediction, ok: g.grade === 'inside', truth: s.ber, points: g.points, grade: g.grade } };
   }
   if (step.goal && !st.goal) {
-    const d = scoreDeny(s.ber, step.goal, runs.length);
+    const d = scoreDeny(step.goal.measure === 'per' ? (s.packets?.per ?? 0) : s.ber, step.goal, runs.length);
     if (d.passed) next.goal = { points: d.points, run: s, runNo: runs.length };
   }
   return { ...next, done: st.done || applyDone(step, next) };

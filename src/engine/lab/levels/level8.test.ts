@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { planAnyRun } from '../berRun';
+import { SYNC_EXAMPLE, cellMean, detectProb, jammerEnergy, packetErrorRate, thresholdFor } from '../sync';
 import { berlekampMassey, chipsToBits, extendRecurrence, goldCode, mSequence, periodicCrossCorrelation } from '../pn';
 import {
-  type LessonStep, type StepDef, LEVEL_8, LEVELS, a2Length, b2Degree, fillText, level8Truth, level8Values, periodOf, secondTap, tapsOf,
+  type ApplyStep, type LessonStep, type StepDef, DENY_TOLERANCE, EXAMPLE, F3_GOAL_PER, FIRST_PRACTICE, LEVEL_8, knownLinkInfo, packetLinkOf, ruleJsDb, LEVELS, a2Length, b2Degree, fillText, level8Truth, level8Values, periodOf, secondTap, tapsOf,
 } from '../levels';
 
 const steps = (): StepDef[] => LEVEL_8.units.flatMap((u) => u.steps);
@@ -11,7 +13,7 @@ const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
 describe('level 8 units A to C', () => {
   it('is in LEVELS', () => {
     expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(LEVEL_8.units.map((u) => u.id)).toEqual(['A', 'B', 'C']);
+    expect(LEVEL_8.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
   });
 
   it('A1: the 5-stage register repeats every 31 chips, 16 ones and 15 zeros', () => {
@@ -52,9 +54,50 @@ describe('level 8 units A to C', () => {
     expect(step<LessonStep>('C1').check!.answer).toBe(127 + 2);
   });
 
-  it('scores 30 points so far and every placeholder resolves', () => {
-    const pts = steps().flatMap((s) => (s.kind === 'apply' ? s.fields.map((f) => f.points) : []));
-    expect(pts.reduce((a, b) => a + b, 0)).toBe(30);
+  it('D1: the example search', () => {
+    const L = SYNC_EXAMPLE;
+    expect(thresholdFor(1e-3)).toBeCloseTo(3.09, 2);
+    expect(cellMean(L)).toBeCloseTo(4.97, 2);
+    expect(detectProb(L)).toBeCloseTo(0.97, 2);
+    expect(L.n * L.n).toBe(961);
+  });
+
+  it('D3: the enemy hears its preamble well, and the peak is worked from the printed SNR', () => {
+    for (const s of SEEDS) {
+      const t = level8Truth(s);
+      const pk = packetLinkOf(t);
+      expect(detectProb(pk)).toBeGreaterThan(0.85);
+      expect(Math.sqrt(2 * t.n * 10 ** (pk.chipSnrDb / 10))).toBeCloseTo(cellMean(pk), 9);
+    }
+  });
+
+  it('F1: preamble against payload at J/S 8 dB', () => {
+    const L = SYNC_EXAMPLE;
+    expect(ruleJsDb(31)).toBeCloseTo(8.1, 1);
+    expect(packetErrorRate(L, { on: 'preamble', jsDb: 8 })).toBeCloseTo(2 / 3, 1);
+    expect(packetErrorRate(L, { on: 'payload', jsDb: 8 })).toBeCloseTo(0.9, 1);
+    expect(jammerEnergy(L, { on: 'payload', jsDb: 8 }) / jammerEnergy(L, { on: 'preamble', jsDb: 8 })).toBeCloseTo(16.1, 1);
+    expect(L.payloadBits * L.n).toBe(15500);
+  });
+
+  it('F3: quiet the enemy loses few packets; the rule-of-thumb J/S on the preamble reaches the goal', () => {
+    for (const s of SEEDS) {
+      const t = level8Truth(s);
+      const pk = packetLinkOf(t);
+      expect(packetErrorRate(pk)).toBeLessThan(F3_GOAL_PER * DENY_TOLERANCE);
+      const plan = planAnyRun(step<ApplyStep>('F3').run!, {
+        truth: t, example: knownLinkInfo(EXAMPLE), practice: FIRST_PRACTICE, practiceJsDb: 0, scene: { jsDb: 0, ebN0Db: 30 }, seed: 1,
+        entered: { js: Number(ruleJsDb(t.n).toFixed(1)) },
+      });
+      expect(plan.theoryBer).toBeGreaterThan(F3_GOAL_PER * 1.2);
+      expect('kind' in plan.request && plan.request.kind).toBe('sync');
+    }
+  });
+
+  it('scores 100 points and every placeholder resolves', () => {
+    const pts = steps().flatMap((s) =>
+      s.kind === 'apply' ? [...s.fields.map((f) => f.points), s.goal?.points ?? 0] : s.kind === 'questions' ? s.questions.map((q) => q.points) : []);
+    expect(pts.reduce((a, b) => a + b, 0)).toBe(100);
     for (const s of SEEDS.slice(0, 8)) {
       for (const n of [0, 1, 4]) {
         const v = level8Values(level8Truth(s), n);
@@ -65,6 +108,7 @@ describe('level 8 units A to C', () => {
           ...('hint' in st && st.hint ? [st.hint] : []),
           ...('worked' in st ? st.worked : []),
           ...('reveal' in st ? st.reveal : []),
+          ...(st.kind === 'apply' && st.goal ? [st.goal.task] : []),
         ]);
         for (const x of [...texts, LEVEL_8.debrief]) expect(fillText(x, v), x).not.toMatch(/\{\w+\}/);
       }

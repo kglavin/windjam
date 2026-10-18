@@ -4,6 +4,7 @@ import { type CodeKind, type KnownLinkInfo, type RunSpec, type Truth } from './l
 import { mSequence } from './pn';
 import type { RunRequest } from './run';
 import { type FhLink, type FhRunRequest, FH_EXAMPLE, fhPracticeAt, fhTheoryBer, gpOf } from './fh';
+import { type SyncRunRequest, packetErrorRate } from './sync';
 import { berBlindedAt, overloadMissProb } from './blinding';
 import type { FrontEndConfig } from './frontend';
 import {
@@ -35,7 +36,12 @@ export interface FhRunPlan extends RunPlanBase {
   request: FhRunRequest;
 }
 
-export type AnyRunPlan = RunPlan | FhRunPlan;
+// Level 8: a run of packets; theoryBer and curve give the packet error rate.
+export interface SyncRunPlan extends RunPlanBase {
+  request: SyncRunRequest;
+}
+
+export type AnyRunPlan = RunPlan | FhRunPlan | SyncRunPlan;
 
 interface RunPlanBase {
   jsDb: number;
@@ -104,8 +110,26 @@ export function planFhRun(spec: RunSpec, fh: NonNullable<RunSpec['fh']>, o: Plan
   };
 }
 
-// A step's run of either kind.
-export const planAnyRun = (spec: RunSpec, o: PlanInputs): AnyRunPlan => (spec.fh ? planFhRun(spec, spec.fh, o) : planRun(spec, o));
+// Level 8: a run of packets. J/S from the jammer the step builds; theory is the packet error rate.
+export function planSyncRun(_spec: RunSpec, sync: NonNullable<RunSpec['sync']>, o: PlanInputs): SyncRunPlan {
+  const link = sync.linkFrom(o.truth);
+  const jammer = sync.jammerFrom(o.entered ?? {}, o.truth);
+  const gpDb = 10 * Math.log10(link.n);
+  const curve = (js: number) => packetErrorRate(link, { ...jammer, jsDb: js });
+  return {
+    request: { kind: 'sync', link, jammer, seed: o.seed, maxPackets: 4000, maxLost: 200, timeBoundMs: RUN_LIMITS.timeBoundMs },
+    jsDb: jammer.jsDb,
+    gpDb,
+    ebN0Db: link.chipSnrDb + gpDb,
+    ebJ0Db: gpDb - jammer.jsDb,
+    theoryBer: curve(jammer.jsDb),
+    curve,
+  };
+}
+
+// A step's run of any kind.
+export const planAnyRun = (spec: RunSpec, o: PlanInputs): AnyRunPlan =>
+  spec.sync ? planSyncRun(spec, spec.sync, o) : spec.fh ? planFhRun(spec, spec.fh, o) : planRun(spec, o);
 
 // A direct-sequence run (levels 1 to 5).
 export function planRun(spec: RunSpec, o: PlanInputs): RunPlan {

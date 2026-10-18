@@ -5,6 +5,7 @@
 import { createRng } from '../rng';
 import { gaussian } from '../detect';
 import { wilson } from './measure';
+import type { RunOptions, RunProgress, RunResult } from './run';
 import { berBpskJammed, qfunc, undb } from './theory';
 
 export interface PacketLink {
@@ -14,6 +15,9 @@ export interface PacketLink {
   chipSnrDb: number; // Ec/N0 at the receiver
   pfaCell: number; // false-alarm probability of one test on a wrong phase
 }
+
+// Level 8's example link: the 31-chip code, a preamble one search long, 500-bit payloads.
+export const SYNC_EXAMPLE: PacketLink = { n: 31, preamblePeriods: 31, payloadBits: 500, chipSnrDb: -4, pfaCell: 1e-3 };
 
 // A broadband jammer on during part of the packet; jsDb is J/S over the chip band, so Ec/J0 = 1 ÷ J/S.
 export interface SyncJammer {
@@ -111,42 +115,113 @@ export interface PacketRunResult {
   records: PacketRecord[]; // the first few, for the timeline
 }
 
-// Monte Carlo: packets until `maxLost` lost or `maxPackets` sent. A lost packet's bits are guessed: each wrong half
-// the time.
-export function runPackets(link: PacketLink, j: SyncJammer, seed: number, maxPackets = 4000, maxLost = 200, keep = 12): PacketRunResult {
-  const rng = createRng(seed ^ 0x2c1b3c6d);
+// One packet's search: the correlation of every test until a lock or the end of the preamble. k is how many tests
+// come before the right phase first comes round.
+export function searchPacket(link: PacketLink, j: SyncJammer, rng: () => number): { k: number; z: number[]; locked: boolean; falseLock: boolean } {
   const thr = thresholdFor(link.pfaCell);
   const mean = cellMean(link, jamsPreamble(j) ? j.jsDb : undefined);
-  const q = payloadBer(link, j);
+  const k = Math.floor(rng() * link.n);
+  const z: number[] = [];
+  for (let t = 0; t < link.preamblePeriods; t++) {
+    const right = t % link.n === k;
+    const v = (right ? mean : 0) + gaussian(rng);
+    z.push(v);
+    if (v > thr) return { k, z, locked: right, falseLock: !right };
+  }
+  return { k, z, locked: false, falseLock: false };
+}
+
+// The search of one example packet, for the acquisition instrument and the videos.
+export const searchTrace = (link: PacketLink, seed: number, j: SyncJammer = { on: 'none', jsDb: 0 }) => searchPacket(link, j, createRng(seed));
+
+export interface SyncRunRequest {
+  kind: 'sync';
+  link: PacketLink;
+  jammer: SyncJammer;
+  seed: number;
+  maxPackets?: number;
+  maxLost?: number;
+  timeBoundMs?: number;
+}
+
+export interface SyncRunResult extends RunResult {
+  packets: { sent: number; lost: number; per: number; lo: number; hi: number };
+  records: PacketRecord[];
+}
+
+const CHUNK_PACKETS = 200;
+const KEEP_RECORDS = 12;
+
+// Step API like createRun: each step sends a chunk of packets. A lost packet's bits are guessed: each wrong half the
+// time. Stops at maxLost packets lost or maxPackets sent.
+export function createSyncRun(req: SyncRunRequest, opts: RunOptions = {}): { step: () => RunProgress | SyncRunResult } {
+  const now = opts.now ?? (() => performance.now());
+  const maxPackets = req.maxPackets ?? 4000;
+  const maxLost = req.maxLost ?? 200;
+  const timeBoundMs = req.timeBoundMs ?? 8000;
+  const { link, jammer } = req;
+  const rng = createRng(req.seed ^ 0x2c1b3c6d);
+  const q = payloadBer(link, jammer);
+  const t0 = now();
   let packets = 0;
   let lost = 0;
   let bits = 0;
   let errors = 0;
   const records: PacketRecord[] = [];
-  while (packets < maxPackets && lost < maxLost) {
-    const k = Math.floor(rng() * link.n);
-    let locked = false;
-    let falseLock = false;
-    let t = 0;
-    for (; t < link.preamblePeriods; t++) {
-      const right = t % link.n === k;
-      const z = (right ? mean : 0) + gaussian(rng);
-      if (z > thr) {
-        locked = right;
-        falseLock = !right;
-        t++;
-        break;
+  const progress = (elapsedMs: number): RunProgress => {
+    const w = wilson(errors, bits);
+    return { bits, errors, copyErrors: 0, copies: 0, ber: w.ber, lo: w.lo, hi: w.hi, elapsedMs };
+  };
+  return {
+    step() {
+      for (let c = 0; c < CHUNK_PACKETS && packets < maxPackets && lost < maxLost; c++) {
+        const s = searchPacket(link, jammer, rng);
+        let e = 0;
+        for (let b = 0; b < link.payloadBits; b++) if (rng() < (s.locked ? q : 0.5)) e++;
+        packets++;
+        bits += link.payloadBits;
+        errors += e;
+        if (!s.locked || e > 0) lost++;
+        if (records.length < KEEP_RECORDS) records.push({ locked: s.locked, falseLock: s.falseLock, testsUsed: s.z.length, bitErrors: e });
       }
-    }
-    let e = 0;
-    for (let b = 0; b < link.payloadBits; b++) if (rng() < (locked ? q : 0.5)) e++;
-    packets++;
-    bits += link.payloadBits;
-    errors += e;
-    if (!locked || e > 0) lost++;
-    if (records.length < keep) records.push({ locked, falseLock, testsUsed: t, bitErrors: e });
+      const elapsedMs = now() - t0;
+      const p = progress(elapsedMs);
+      opts.onProgress?.(p);
+      const stoppedBy: RunResult['stoppedBy'] | undefined = opts.shouldStop?.()
+        ? 'cancel'
+        : lost >= maxLost
+          ? 'errors'
+          : packets >= maxPackets
+            ? 'bits'
+            : elapsedMs >= timeBoundMs
+              ? 'time'
+              : undefined;
+      if (!stoppedBy) return p;
+      const w = wilson(lost, packets);
+      return {
+        ...p, stoppedBy, clippedFraction: 0, compressedFraction: 0, blankedFraction: 0, corr: new Float32Array(0),
+        packets: { sent: packets, lost, per: w.ber, lo: w.lo, hi: w.hi }, records,
+      };
+    },
+  };
+}
+
+export async function runSyncAsync(req: SyncRunRequest, opts: RunOptions = {}): Promise<SyncRunResult> {
+  const run = createSyncRun(req, opts);
+  for (;;) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    const r = run.step();
+    if ('stoppedBy' in r) return r;
   }
-  const w = wilson(lost, packets);
-  const wb = wilson(errors, bits);
-  return { packets, lost, per: w.ber, perLo: w.lo, perHi: w.hi, bits, errors, ber: wb.ber, records };
+}
+
+// Synchronous: for tests.
+export function runPackets(link: PacketLink, j: SyncJammer, seed: number, maxPackets = 4000, maxLost = 200): PacketRunResult {
+  const run = createSyncRun({ kind: 'sync', link, jammer: j, seed, maxPackets, maxLost, timeBoundMs: 1e9 });
+  for (;;) {
+    const r = run.step();
+    if ('stoppedBy' in r) {
+      return { packets: r.packets.sent, lost: r.packets.lost, per: r.packets.per, perLo: r.packets.lo, perHi: r.packets.hi, bits: r.bits, errors: r.errors, ber: r.ber, records: r.records };
+    }
+  }
 }

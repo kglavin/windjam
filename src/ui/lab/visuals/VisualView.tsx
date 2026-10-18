@@ -9,6 +9,9 @@ import { XcorrView } from '../instruments/XcorrView';
 import { followerEllipse } from '../../../engine/lab/fh';
 import { WaterfallDemo } from './WaterfallDemo';
 import { GoldView } from '../instruments/GoldView';
+import { AcquireView } from '../instruments/AcquireView';
+import { SCurveView } from '../instruments/SCurveView';
+import { PacketDemo } from './PacketDemo';
 import { RebuildView } from '../instruments/RebuildView';
 import { RegisterView } from '../instruments/RegisterView';
 import { mSequence } from '../../../engine/lab/pn';
@@ -130,6 +133,12 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
       return <RebuildView code={mSequence(knownLinkInfo(links.example).degree)} title="Rebuild the example code" start={10} />;
     case 'gold':
       return <GoldView />;
+    case 'acquire':
+      return <AcquireView />;
+    case 'scurve':
+      return <SCurveView />;
+    case 'packets':
+      return <PacketDemo variants={visual.variants} jsDb={visual.jsDb} />;
     case 'follower': {
       const f = FOLLOW_EXAMPLE;
       return (

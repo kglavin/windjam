@@ -3,6 +3,7 @@
 import { createRng } from '../../rng';
 import type { FhJammer, FhLink, HopRecord } from '../fh';
 import type { FrontEndConfig } from '../frontend';
+import type { PacketLink, PacketRecord, SyncJammer } from '../sync';
 import type { JammerSpec } from '../jammers';
 
 export interface Truth {
@@ -172,6 +173,9 @@ export type Visual =
   | { kind: 'register'; degree: number } // level 8: a shift register stepping
   | { kind: 'rebuild'; link: 'example' } // level 8: Berlekamp–Massey on the example code
   | { kind: 'gold' } // level 8: Gold code correlations
+  | { kind: 'acquire' } // level 8: the sliding correlator searching the example packet
+  | { kind: 'scurve' } // level 8: the early − late S-curve
+  | { kind: 'packets'; variants: { label: string; on: SyncJammer['on'] }[]; jsDb: number } // level 8: packet runs on the example link
   | { kind: 'follower' } // level 7: E1's map, the follower's two places and the ellipse
   | { kind: 'xcorr'; source: 'example' | 'practice' } // level 6: a cross-correlation of two sites' captures
   // level 7: the hop waterfall of the example or practice hopping link; with variants, a Run button for each jammer
@@ -229,6 +233,8 @@ export interface RunSpec {
     hopsPerBit?: 1 | 3;
     linkFrom?: (truth: Truth) => FhLink;
   };
+  // Level 8: a run of packets that must be acquired (sync.ts) instead of a bit run; `jammer` is then ignored.
+  sync?: { linkFrom: (truth: Truth) => PacketLink; jammerFrom: (values: Record<string, number>, truth: Truth) => SyncJammer };
   // A line for the run box about the jammer that will be used, from the same inputs as jammerFrom.
   jammerNote?: (values: Record<string, number>, chipsPerBit: number) => string | undefined;
 }
@@ -244,6 +250,7 @@ export interface DenyGoal {
   points: number;
   task: string;
   notYet?: string; // the line shown after a run that did not reach the goal, when the default does not fit
+  measure?: 'ber' | 'per'; // level 8: the goal is on the share of packets lost (default: the BER)
 }
 
 // What a finished run measured, with the J/S it ran at.
@@ -258,6 +265,8 @@ export interface RunSummary {
   ebJ0Db: number;
   theoryBer: number;
   hops?: HopRecord[]; // level 7: the first hops of a hopping run, for the waterfall
+  packets?: { sent: number; lost: number; per: number; lo: number; hi: number }; // level 8: packets lost
+  records?: PacketRecord[]; // level 8: the first packets' searches, for the timeline
 }
 
 export const DENY_TOLERANCE = 0.8;

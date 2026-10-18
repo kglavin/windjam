@@ -1275,6 +1275,39 @@ select {
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
+.pk-pre {
+  fill: #f59e0b;
+  opacity: 0.85;
+}
+.pk-pay {
+  fill: #60a5fa;
+  opacity: 0.85;
+}
+.pk-jam {
+  fill: #f87171;
+  opacity: 0.35;
+}
+.pk-records {
+  font-size: 12px;
+  margin: 6px 0 0;
+  padding-left: 22px;
+  columns: 2;
+}
+.pk-records .ok {
+  color: #34d399;
+}
+.pk-records .bad {
+  color: #f87171;
+}
+.acq-test {
+  fill: #60a5fa;
+}
+.acq-lock {
+  fill: #34d399;
+}
+.acq-false {
+  fill: #f87171;
+}
 .reg-stage {
   fill: #111a2e;
   stroke: #94a3b8;

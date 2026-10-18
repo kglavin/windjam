@@ -4,7 +4,10 @@ import { type RunSummary, berText } from '../../engine/lab/levels';
 import type { RunProgress } from '../../engine/lab/run';
 import { startRun } from '../../engine/lab/runner';
 
-export const summaryOf = (r: RunProgress & { stoppedBy?: string; hops?: RunSummary['hops'] }, plan: RunPlan): RunSummary => ({
+export const summaryOf = (
+  r: RunProgress & { stoppedBy?: string; hops?: RunSummary['hops']; packets?: RunSummary['packets']; records?: RunSummary['records'] },
+  plan: RunPlan,
+): RunSummary => ({
   bits: r.bits,
   errors: r.errors,
   ber: r.ber,
@@ -15,10 +18,22 @@ export const summaryOf = (r: RunProgress & { stoppedBy?: string; hops?: RunSumma
   ebJ0Db: plan.ebJ0Db,
   theoryBer: plan.theoryBer,
   ...(r.hops ? { hops: r.hops } : {}),
+  ...(r.packets ? { packets: r.packets, records: r.records } : {}),
 });
 
 // Bits, errors, BER and the 95% interval of a run, finished or in progress.
-export function RunStats({ p }: { p?: Pick<RunSummary, 'bits' | 'errors' | 'ber' | 'lo' | 'hi'> }) {
+export function RunStats({ p }: { p?: Pick<RunSummary, 'bits' | 'errors' | 'ber' | 'lo' | 'hi' | 'packets'> }) {
+  if (p?.packets) {
+    const k = p.packets;
+    return (
+      <dl className="inst-meter run-stats">
+        <div><dt>Packets</dt><dd>{k.sent.toLocaleString()}</dd></div>
+        <div><dt>Lost</dt><dd>{k.lost.toLocaleString()}</dd></div>
+        <div><dt>Packet loss</dt><dd>{berText(k.per)}</dd></div>
+        <div><dt>95% range</dt><dd>{`${berText(k.lo)} to ${berText(k.hi)}`}</dd></div>
+      </dl>
+    );
+  }
   return (
     <dl className="inst-meter run-stats">
       <div><dt>Bits</dt><dd>{p ? p.bits.toLocaleString() : '-'}</dd></div>
