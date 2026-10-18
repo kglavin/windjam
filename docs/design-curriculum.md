@@ -22,11 +22,13 @@ is built.
 | 9 | Jammer tactics | Power as the scarce resource: what each platform can carry and generate (soldier, UAV, vehicle, aircraft), battery energy and amplifier efficiency, J/S per watt; distance beats power; look-through; power sharing and time sharing across targets; network layouts as targets; J/S planning with propagation models (free space, two-ray, Egli) and antenna pointing | Built | design-level-9.md |
 | 10 | Many users and antenna arrays | CDMA with Gold codes; blind code discovery and successive cancellation; delay-and-sum beamforming; Capon (MVDR) nulling; MUSIC direction finding; nulling as protection against jamming | In progress (step 1 of 4) | design-level-10.md |
 | 11 | Urban EW | Urban propagation: multipath, shadowing (log-normal), street canyons, building loss; urban path loss models (Hata, two-slope microcell, rooftop diffraction); what multipath does to DF and TDOA (level 6); fratricide against friendly and civilian links; counter-IED jamming; electronic isolation with directional jamming | Agreed | to write |
+| 12 | Mesh networks under attack | Multi-hop forwarding and self-healing; CSMA against TDMA, the hidden terminal and RTS/CTS, carrier-sense denial by a weak jammer; on-demand (AODV) against table-driven (OLSR) routing and jamming the route control traffic; clusters and virtual backbones as high-value targets, load-balanced backbones as the defence; GPS-denied ranging by time of arrival and round-trip time; what hopping, direct sequence and authenticated preambles each defeat; denial-of-sleep | Agreed | to write |
 
-Build order: level 6, level 0 unit K, level 7, level 8, level 9, level 10, level 11. Levels 7 to 11 each need engine
-work: a hop-level link and a time–frequency instrument (7), a receiver that can lose and regain code lock (8), jammer
-scheduling across targets (9), multi-element arrays (10), urban path models with shadowing and multipath, and friendly
-receivers in the scene to count fratricide (11).
+Build order: level 6, level 0 unit K, level 7, level 8, level 9, level 10, level 11, level 12. Levels 7 to 12 each need
+engine work: a hop-level link and a time–frequency instrument (7), a receiver that can lose and regain code lock (8),
+jammer scheduling across targets (9), multi-element arrays (10), urban path models with shadowing and multipath, and
+friendly receivers in the scene to count fratricide (11), a multi-node mesh with a MAC, routing and a jammer among the
+nodes (12).
 
 ## 2. Where source material goes
 
@@ -41,6 +43,7 @@ receivers in the scene to count fratricide (11).
 | Jamming strategies and J/S models | Levels 2–5 (noise, tone, multitone, pulsed, front end); level 7 (follower, swept); level 8 (smart jamming); level 9 (look-through, sharing, J/S models) |
 | Blind CDMA code discovery, beamforming | Level 10 |
 | Urban EW, propagation and operational challenges | Level 11; multipath bearing and timing errors back-referenced from level 6 |
+| From mesh networking to tactical military radio networks (two tutorials) | Level 12; wireless sensor node hardware, embedded operating systems and energy harvesting left out as not about jamming or locating |
 
 ## 3. Teaching points that connect levels
 
@@ -78,6 +81,10 @@ at the best duty (level 3) or a jammer on the sync (level 8) denies more per wat
 UAV or left near the target, can beat a large one far away (level 9). Intercept and DF receivers need little power but
 must move for geometry (level 6). Level 9 brings it together as a budget: platform, power, time on target.
 
+T9. **Attack the network's overhead, not its data.** The cheapest targets in a mesh are the short messages that keep it
+working: a preamble (level 8), a route request or HELLO beacon, a CSMA channel made to look busy, a cluster head or
+backbone node. Each carries little traffic but everything depends on it (level 12, building on levels 8 and 9).
+
 ## 4. Corrections to the source material
 
 Level 0's and level 6's sources are corrected in their own notes. The rest:
@@ -99,3 +106,9 @@ Level 0's and level 6's sources are corrected in their own notes. The rest:
 | Urban EW | The modified Hata model adds the a(h_m) correction for dense cores | a(h_m), the mobile antenna height correction, is part of the original Hata model (with a large-city form); COST-231 Hata is the extension, to 2 GHz |
 | Urban EW | Dense-urban Hata path loss exponents n ≥ 4 | Hata's distance slope is (44.9 − 6.55·log h_b)/10, about 3.5 for a 30 m base antenna |
 | Urban EW | Walfisch–Bertoni for antennas at or below rooftop height | Walfisch–Bertoni assumes the base antenna above the rooftops; below-rooftop cases are the street-canyon and COST-231 Walfisch–Ikegami domain |
+| Mesh tutorials | NAV = T_RTS + T_CTS + T_DATA + T_ACK + 3·SIFS | The RTS carries T_CTS + T_DATA + T_ACK + 3·SIFS; the CTS carries T_DATA + T_ACK + 2·SIFS |
+| Mesh tutorials | Control traffic grows exponentially with density | One flood costs a transmission per node; every node flooding costs about N², not exponential |
+| Mesh tutorials | FHSS renders narrow-band jamming ineffective | It defeats a fixed tone; partial-band noise is the strongest attack on hopping (level 7) |
+| Mesh tutorials | Authentication preambles drop bad frames at the RF front end before baseband processing | Checking a preamble needs the signal digitised and correlated; it saves waking the processor and the upper layers |
+| Mesh tutorials | Multi-hop cuts transmit power because path loss is non-linear | True for radiated power per hop; each hop adds receive and processing energy and delay |
+| Mesh tutorials | 802.15.4 uses DSSS (as protection) | 32 chips per 4 bits, about 9 dB of processing gain: no anti-jam margin to speak of |
