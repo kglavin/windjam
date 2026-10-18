@@ -10,7 +10,7 @@ is built.
 | Level | Title | Covers | Status | Design note |
 |---|---|---|---|---|
 | 0 | Radio basics | Link, waves, BPSK, spectrum, mixing, dB, distance, antennas, inside a radio, noise, bit errors, J/S, jamming plain BPSK, spread spectrum preview | Built | design-level-0.md |
-| 0 K | The bigger picture | K1 networks (many-to-many, hub, one-to-one, mesh) and what jamming or locating does to each; K2 what spread spectrum protects: LPD, LPI, LPE, AJ against the attacker's chain | Agreed | design-level-0.md (to add) |
+| 0 K | The bigger picture | K1 networks (many-to-many, hub, one-to-one, mesh) and what jamming or locating does to each; K2 what spread spectrum protects: LPD, LPI, LPE, AJ against the attacker's chain | Built | design-level-0.md |
 | 1 | A quiet signal | Finding a DSSS link; chip rate, code length, processing gain, the receiver's margin | Built | design-link-lab.md |
 | 2 | Processing gain | J/S, Eb/J0 = Gp − J/S, BER, breaking the link | Built | design-link-lab.md |
 | 3 | Where to put the power | Partial-band and pulsed noise against DSSS; whole-bit pulses; best duty | Built | design-link-lab.md |

@@ -5,7 +5,9 @@ plot, decibels, path loss, noise and SNR, bit error rate and J/S. Level 0 teache
 so a student can reach level 1 without stalling on terms. It is refresher material for anyone who already knows it.
 
 Source material: "Radio Communications Demystified" (a three-part study guide, mostly Part I, with Part II and III for
-the dB, link and jamming sections). It is used as a source, not copied: section 4 lists its errors.
+the dB, link and jamming sections) for units A to J; the tactical network architectures and the spread spectrum
+security taxonomy notes (pasted 2026-10-18) for unit K. They are used as sources, not copied: section 4 and
+design-curriculum.md section 4 list their errors.
 
 ## 1. Decisions
 
@@ -44,8 +46,10 @@ so the video is the figure.
 | J | J1 Jamming and J/S | J and S at the receiver; J/S as dB bookkeeping; distance | II 7.1, III 7 | −60 and −70 dBm → 10 dB |
 | J | J2 Jamming an ordinary link | Plain BPSK: Eb/J0 = S/J; J/S 0 dB breaks it (BER 0.079); the same jammer against Gp 20 dB leaves 10 dB | III 7 | J/S 0 dB → Eb/J0 0 dB |
 | J | J3 Spread spectrum, a preview | Hopping and direct sequence; this lab is direct sequence; processing gain = chip rate ÷ bit rate | I 8.3, III 6 | 1 Mcps, 10 kbps → 100 |
+| K | K1 Networks | One-to-one, hub and spoke, shared net, mesh; what a jammer near one radio does to each; the hub sends most and is easiest to find | Tactical network architectures | Hub with 8 outstations → 8 |
+| K | K2 What spread spectrum protects | The attacker's steps (detect, intercept, locate, read, jam) against LPD, LPI, LPE and AJ; where the lab practises each; averaging finds a signal below the noise | Spread spectrum security taxonomy | 10 kHz spread to 10 MHz → 1000 |
 
-Video ids follow the lesson ids (`level0-A1` to `level0-J3`), scenes `videos/level0_<lesson>.py`. Each runs 1 to 2
+Video ids follow the lesson ids (`level0-A1` to `level0-K2`), scenes `videos/level0_<lesson>.py`. Each runs 1 to 2
 minutes.
 
 ## 3. Wording

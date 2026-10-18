@@ -7,7 +7,7 @@ export const LEVEL_0: LevelDef = {
   id: 0,
   title: 'Radio basics',
   intro:
-    'The words and ideas the later levels use: frequency and microseconds, bits on a wave, the spectrum and mixing, decibels, distance and antennas, what is inside a radio, noise, bit errors and jamming. Each lesson is a short video and a few lines of text. Skip it if you know this already.',
+    'The words and ideas the later levels use: frequency and microseconds, bits on a wave, the spectrum and mixing, decibels, distance and antennas, what is inside a radio, noise, bit errors and jamming, then networks and what spread spectrum protects. Each lesson is a short video and a few lines of text. Skip it if you know this already.',
   passMark: 0,
   links: { example: EXAMPLE, practice: PRACTICE },
   units: [
@@ -336,7 +336,54 @@ export const LEVEL_0: LevelDef = {
         },
       ],
     },
+    {
+      id: 'K',
+      title: 'The bigger picture',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'K1',
+          title: 'Networks',
+          visual: none,
+          video: 'level0-K1',
+          paragraphs: [
+            'Radios work in networks, and the layout decides what jamming or finding one radio does.',
+            'One-to-one: two radios talk only to each other. Jam the receiver you want to deny, and only that direction of the link is lost.',
+            'Hub and spoke: one [[hub|hub]] talks to many outstations. Every message to the hub arrives at one receiver, so jamming near the hub cuts every spoke at once. The hub also sends the most, so it is the easiest radio to find (level 6). It is usually the headquarters.',
+            'A shared net: everyone on one channel, one speaker at a time. Every member has its own receiver, so jamming one member cuts off that member. To break the net, the jammer has to cover the channel near all the members.',
+            '[[Mesh|mesh]]: each radio relays for its neighbours. Jam one and the traffic finds another path. The jammer has to cover many radios, or the few links that join one group to another.',
+          ],
+          check: {
+            question: 'A hub serves 8 outstations. A jammer near the hub drowns its receiver. How many outstations can no longer reach it?',
+            answer: 8,
+            tol: { exact: true },
+            wrong: 'All their messages arrive at the one receiver the jammer drowns.',
+          },
+        },
+        {
+          kind: 'lesson',
+          id: 'K2',
+          title: 'What spread spectrum protects',
+          visual: none,
+          video: 'level0-K2',
+          paragraphs: [
+            'An attacker works in steps: detect that a signal is there, intercept it and measure it, locate the transmitter, read the message, and jam the link. Each step has its defence.',
+            '[[LPD|lpd]], low probability of detection: the signal sits so low, spread over a wide band, that it is hard to notice at all. Hard is not impossible: listening longer or getting closer still finds it (level 1, B1).',
+            '[[LPI|lpi]], low probability of intercept: even once noticed, the signal is hard to measure and to locate. Long codes and hopping keep its pattern hidden.',
+            '[[LPE|lpe]], low probability of exploitation: even once captured, the message cannot be read. That takes encryption. A spreading code is not a cipher: level 8 shows a simple code can be rebuilt from what it sends.',
+            '[[AJ|aj]], anti-jam: the [[processing gain|gp]] makes a jammer need that much more power. Levels 2 to 5 attack it, and level 6 finds the transmitter.',
+          ],
+          check: {
+            question: 'A signal 10 kHz wide is spread to 10 MHz with the same power. How many times lower is its power in each kHz?',
+            unit: 'times',
+            answer: 1000,
+            tol: { exact: true },
+            wrong: '10 MHz is 10,000 kHz, 1000 times as wide as 10 kHz. The same power is spread 1000 times thinner.',
+          },
+        },
+      ],
+    },
   ],
   debrief:
-    'You have the words the lab uses: frequency and period, bits as +1 and −1, the spectrum and mixing, decibels, distance and antennas, the blocks inside a radio, noise and SNR, bit errors, J/S and why spreading resists jamming. Level 1 puts them to work on an enemy spread-spectrum link.',
+    'You have the words the lab uses: frequency and period, bits as +1 and −1, the spectrum and mixing, decibels, distance and antennas, the blocks inside a radio, noise and SNR, bit errors, J/S, why spreading resists jamming, and how networks and the steps of an attack shape the fight. Level 1 puts them to work on an enemy spread-spectrum link.',
 };
