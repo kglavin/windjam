@@ -28,6 +28,8 @@ import {
   level9Values,
   level10Truth,
   level10Values,
+  level11Truth,
+  level11Values,
   maxPeriodUsOf,
   recoveryUsOf,
   textValues,
@@ -270,4 +272,7 @@ const setup10: LevelSetup = {
   card: () => null,
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7, 8: setup8, 9: setup9, 10: setup10 };
+// Level 11: no scene; its town map and plots hold the geometry.
+const setup11: LevelSetup = { ...setup10, truth: level11Truth, values: (a) => level11Values(a.truth, a.practiceN ?? 0) };
+
+export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7, 8: setup8, 9: setup9, 10: setup10, 11: setup11 };

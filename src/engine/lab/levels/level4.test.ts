@@ -53,7 +53,7 @@ const first = (n = 0) => {
 describe('LEVEL_4 structure', () => {
   it('has units A to E, the listed steps, and is registered', () => {
     expect(LEVEL_4.id).toBe(4);
-    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     expect(LEVEL_4.title).toBe('Tones');
     expect(LEVEL_4.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E']);
     const ids = steps().map((s) => s.id);

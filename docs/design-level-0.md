@@ -40,6 +40,7 @@ so the video is the figure.
 | E | E1 Decibels | ±3 dB, ±10 dB; building 13 dB and −7 dB; dBm as an amount, dB as a ratio | I 7, II 2 | +20 dB → 100 times |
 | F | F1 Distance | Spreading: −6 dB per doubling; near the ground −12 dB per doubling; why the lab's distances matter | I 5.2, II 4.1, III 2 | 4 times the distance → 12 dB |
 | F | F2 Antennas | Patterns, same for send and hear; dBi; the dipole all round, about 2 dBi; beams of 10 to 30 dBi; a beam is hard to intercept and to jam from the side | I 3.2, II 3, III 2 | +10 and −10 dBi → 20 dB |
+| F | F3 Radiated power and margin | EIRP = amplifier − cable + antenna gain (ERP 2.15 dB less); the link equation as dB bookkeeping; link margin; fade margin against reliability (Rayleigh: 10, 20, 30 dB for 90, 99, 99.9%) | Adamy-style link budget notes (pasted 2026-10-18) | +40 dBm, 2 dB, 6 dBi → +44 dBm |
 | G | G1 Inside a radio | Transmit chain DSP, DAC, mixer, filter, power amplifier; receive chain filter, LNA, mixer, filter, ADC, DSP; the power at each stage; front-end overload | I 3, II 2.3, III 3 | +40 dBm − 110 dB → −70 dBm |
 | H | H1 Noise and SNR | Thermal noise floor, about −114 dBm per MHz, growing with bandwidth; SNR in dB; a signal below the noise | I 6.1–6.2, II 5, III 5 | 10 MHz → −104 dBm |
 | I | I1 Bit errors | Decisions with noise; BER; Eb/N0 as SNR per bit; the steep curve ("cliff") | I 6.3, II 6.3 | BER 0.001 → 1 in 1000 |
@@ -49,7 +50,7 @@ so the video is the figure.
 | K | K1 Networks | One-to-one, hub and spoke, shared net, mesh; what a jammer near one radio does to each; the hub sends most and is easiest to find | Tactical network architectures | Hub with 8 outstations → 8 |
 | K | K2 What spread spectrum protects | The attacker's steps (detect, intercept, locate, read, jam) against LPD, LPI, LPE and AJ; where the lab practises each; averaging finds a signal below the noise | Spread spectrum security taxonomy | 10 kHz spread to 10 MHz → 1000 |
 
-Video ids follow the lesson ids (`level0-A1` to `level0-K2`), scenes `videos/level0_<lesson>.py`. Each runs 1 to 2
+Video ids follow the lesson ids (`level0-A1` to `level0-K2`, with `level0-F3`), scenes `videos/level0_<lesson>.py`. Each runs 1 to 2
 minutes.
 
 ## 3. Wording

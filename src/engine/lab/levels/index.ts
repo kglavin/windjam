@@ -9,6 +9,7 @@ import { LEVEL_7 } from './level7';
 import { LEVEL_8 } from './level8';
 import { LEVEL_9 } from './level9';
 import { LEVEL_10 } from './level10';
+import { LEVEL_11 } from './level11';
 import type { LevelDef } from './types';
 
-export const LEVELS: LevelDef[] = [LEVEL_0, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10];
+export const LEVELS: LevelDef[] = [LEVEL_0, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11];

@@ -171,6 +171,9 @@ export type Visual =
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
+  | { kind: 'town' } // level 11: a street grid with the enemy and friendly radios
+  | { kind: 'urbanLoss' } // level 11: loss against distance in town and in the open
+  | { kind: 'shadowing' } // level 11: J/S scattered over many spots
   | { kind: 'beam'; mode: 'das' | 'mvdr' } // level 10: an array's beam, with nulls for MVDR
   | { kind: 'music' } // level 10: MUSIC against the delay-and-sum scan
   | { kind: 'cdma'; example: 'many' | 'nearfar' } // level 10: users sharing a band

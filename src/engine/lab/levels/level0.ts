@@ -196,6 +196,32 @@ export const LEVEL_0: LevelDef = {
             wrong: '+10 − (−10) = 20 dB in favour of the link.',
           },
         },
+        {
+          kind: 'lesson',
+          id: 'F3',
+          title: 'Radiated power and margin',
+          visual: none,
+          video: 'level0-F3',
+          paragraphs: [
+            'What leaves a transmitter\'s antenna is its amplifier\'s power, less the cable\'s loss, plus the antenna\'s gain toward you. In dB that is just adding up: the [[EIRP|eirp]], effective isotropic radiated power. (ERP is the same against a dipole instead, 2.15 dB less.)',
+            'Follow the signal along the link the same way, adding gains and taking off losses, and you get what arrives. The receiver needs a certain level to work, its sensitivity (H1 shows where it comes from). What arrives above that is the [[link margin|link-margin]].',
+            'Margin is what the link spends when the signal fades. Among buildings and moving vehicles a signal fades deeper than M dB about 10^(−M ÷ 10) of the time: 10 dB of margin keeps the link up 90% of the time, 20 dB 99%, 30 dB 99.9%.',
+          ],
+          steps: [
+            'A 20 W amplifier is +43 dBm. 3 dB of cable and a 10 dBi antenna: EIRP = 43 − 3 + 10 = +50 dBm, 100 W toward the receiver.',
+            'At 300 MHz over 10 km, free space takes 102 dB: +50 − 102 = −52 dBm.',
+            'The receiving antenna adds 3 dBi and its cable takes 1 dB: −50 dBm arrives.',
+            'The receiver works down to −104 dBm, so the margin is −50 − (−104) = 54 dB.',
+          ],
+          rule: 'EIRP = amplifier − cable + antenna gain. Margin = what arrives − sensitivity. Each 10 dB of margin cuts the time lost to fades by 10 times.',
+          check: {
+            question: 'A +40 dBm amplifier, 2 dB of cable and a 6 dBi antenna. What is the EIRP, in dBm?',
+            unit: 'dBm',
+            answer: 44,
+            tol: { exact: true },
+            wrong: '40 − 2 + 6.',
+          },
+        },
       ],
     },
     {

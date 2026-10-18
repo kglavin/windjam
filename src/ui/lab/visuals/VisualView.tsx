@@ -14,6 +14,9 @@ import { SCurveView } from '../instruments/SCurveView';
 import { PacketDemo } from './PacketDemo';
 import { DistanceView } from '../instruments/DistanceView';
 import { CdmaDemo } from '../instruments/CdmaPanel';
+import { ShadowHist } from '../instruments/ShadowHist';
+import { TOWN_EXAMPLE, TownMap } from '../instruments/TownMap';
+import { UrbanLossPlot } from '../instruments/UrbanLossPlot';
 import { BeamDemo } from '../instruments/BeamView';
 import { MusicDemo } from '../instruments/MusicView';
 import { DiscoveryView } from '../instruments/DiscoveryView';
@@ -135,6 +138,12 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
         />
       );
     }
+    case 'town':
+      return <TownMap radios={TOWN_EXAMPLE} title="Example: a town" />;
+    case 'urbanLoss':
+      return <UrbanLossPlot />;
+    case 'shadowing':
+      return <ShadowHist />;
     case 'beam':
       return <BeamDemo mode={visual.mode} />;
     case 'music':

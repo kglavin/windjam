@@ -49,7 +49,7 @@ const SEEDS = Array.from({ length: 60 }, (_, i) => i + 1);
 
 describe('level 6 truth and scene', () => {
   it('is in LEVELS, units A to E', () => {
-    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     expect(LEVEL_6.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
   });
 
