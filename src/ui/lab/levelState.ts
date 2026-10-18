@@ -33,6 +33,8 @@ export interface StepState {
   prediction?: number; // a step with a run: the BER predicted, locked when Run was pressed
   runs?: RunSummary[]; // every run finished in this step, in order
   goal?: { points: number; run: RunSummary; runNo: number }; // apply with a deny goal: the run that reached it
+  df?: { sites: { xKm: number; yKm: number }[]; tries: number; last?: { cepKm?: number; crossingDeg?: number } }; // level 6 DF tasks
+  located?: { points: number; tryNo: number; cepKm?: number; crossingDeg?: number }; // apply with a locate goal: the try that met it
   retryRun?: { prediction?: number; result?: RunSummary }; // apply: the unscored retry of a run
   runInput?: number; // apply: the edited value of the run's runInput field (NaN while the entry is not a number)
   retries?: number; // apply: how many retries were started, for the run seed
@@ -40,7 +42,8 @@ export interface StepState {
 
 // An apply step is done when every field and the goal, if there is one, are settled.
 export function applyDone(step: ApplyStep, st: StepState | undefined): boolean {
-  return step.fields.every((f) => !!st?.fields?.[f.id]) && (!step.goal || !!st?.goal) && (!step.runUnscored || !!st?.runs?.length);
+  return step.fields.every((f) => !!st?.fields?.[f.id]) && (!step.goal || !!st?.goal) && (!step.locate || !!st?.located)
+    && (!step.runUnscored || !!st?.runs?.length);
 }
 
 export interface ScorePart {
@@ -75,6 +78,10 @@ export function scoreLevel(level: LevelDef, states: StepState[]): Score {
       if (step.goal) {
         part.max += step.goal.points;
         part.got += st?.goal?.points ?? 0;
+      }
+      if (step.locate) {
+        part.max += step.locate.points;
+        part.got += st?.located?.points ?? 0;
       }
     } else if (step.kind === 'questions') {
       for (const q of step.questions) {

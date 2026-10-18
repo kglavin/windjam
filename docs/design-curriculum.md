@@ -19,7 +19,7 @@ is built.
 | 6 | Finding the transmitter | Bearings, triangulation, least-squares fix, error ellipse and CEP, geometry (GDOP), a moving sensor, TDOA; playable after level 1 | In progress (step 1 of 4) | design-level-6.md |
 | 7 | Frequency hopping | Hop set, Gp = channels, dwell, slow and fast hopping; partial-band jamming against hopping; follower and swept jamming; time hopping; hybrid DS/FH | Agreed | to write |
 | 8 | Codes and synchronization | Shift registers and m-sequences; linear complexity and code reconstruction; Gold and Kasami codes; acquisition (sliding correlator) and tracking (DLL); preamble and sync jamming against payload jamming | Agreed | to write |
-| 9 | Jammer tactics | Look-through; power sharing and time sharing across targets; network layouts as targets; J/S planning with propagation models (free space, two-ray, Egli) and antenna pointing | Agreed | to write |
+| 9 | Jammer tactics | Power as the scarce resource: what each platform can carry and generate (soldier, UAV, vehicle, aircraft), battery energy and amplifier efficiency, J/S per watt; distance beats power; look-through; power sharing and time sharing across targets; network layouts as targets; J/S planning with propagation models (free space, two-ray, Egli) and antenna pointing | Agreed | to write |
 | 10 | Many users and antenna arrays | CDMA with Gold codes; blind code discovery and successive cancellation; delay-and-sum beamforming; Capon (MVDR) nulling; MUSIC direction finding; nulling as protection against jamming | Agreed | to write |
 | 11 | Urban EW | Urban propagation: multipath, shadowing (log-normal), street canyons, building loss; urban path loss models (Hata, two-slope microcell, rooftop diffraction); what multipath does to DF and TDOA (level 6); fratricide against friendly and civilian links; counter-IED jamming; electronic isolation with directional jamming | Agreed | to write |
 
@@ -68,6 +68,15 @@ T6. **Sync is the weak point.** The preamble that lets a receiver lock on (level
 T7. **The open-terrain models stop working in town.** Free space and two-ray (level 0 F1, the scene) give way to
 shadowing and multipath (level 11); the same multipath that fades a link bends bearings and smears TDOA peaks
 (level 6), and a jammer's J/S depends on which street it stands in.
+
+T8. **Power is the jammer's scarcest resource.** It has to be carried or generated where the jammer is: a soldier's
+batteries, a small UAV's payload budget, a vehicle's generator, an aircraft's engine-driven supply. A power amplifier
+turns a fraction of its supply into radio power, so watts out cost more watts of battery, and battery energy limits
+time on air. Every level's efficiency question is a power question: distance beats power (halving the distance gives
+6 dB in open space and 12 dB near the ground, the same as 4 or 16 times the power; level 0 F1, level 2); a pulsed jammer
+at the best duty (level 3) or a jammer on the sync (level 8) denies more per watt; a small jammer carried close, on a
+UAV or left near the target, can beat a large one far away (level 9). Intercept and DF receivers need little power but
+must move for geometry (level 6). Level 9 brings it together as a budget: platform, power, time on target.
 
 ## 4. Corrections to the source material
 

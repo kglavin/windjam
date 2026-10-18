@@ -13,6 +13,7 @@ export interface Truth {
   gp: number;
   gpDb: number;
   carrierCyclesPerChip: number;
+  txKm?: { xKm: number; yKm: number }; // level 6: where the enemy transmitter is (x east, y north)
 }
 
 const DEGREES = [5, 6, 7] as const;
@@ -165,9 +166,10 @@ export type Visual =
   | { kind: 'peaks' }
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
+  | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
   | { kind: 'none' };
 
-export type Instrument = 'spectrum' | 'autocorr';
+export type Instrument = 'spectrum' | 'autocorr' | 'df';
 
 // Scene fields the player may edit in a step. 'jammer' is the jammer's position only (drag and x/y).
 export type SceneField =
@@ -294,6 +296,25 @@ export interface PracticeStep {
   run?: RunSpec; // a BER run on the practice link; a predictBer field is checked against it
 }
 
+// Level 6: place DF sites and take bearings until the fix meets the goal. Scored like a deny goal: full points within
+// LOCATE_FULL_TRIES tries, half after.
+export interface LocateGoal {
+  maxSites: number;
+  cepKmAtMost?: number; // the fix's CEP must be at most this
+  crossingDegAtLeast?: number; // two sites' bearings must cross the transmitter at least this steeply
+  points: number;
+  task: string;
+}
+
+export const LOCATE_FULL_TRIES = 3;
+
+export function scoreLocate(goal: LocateGoal, result: { cepKm?: number; crossingDeg?: number }, tryNo: number): { passed: boolean; points: number } {
+  const cepOk = goal.cepKmAtMost === undefined || (result.cepKm !== undefined && result.cepKm <= goal.cepKmAtMost);
+  const crossOk = goal.crossingDegAtLeast === undefined || (result.crossingDeg !== undefined && result.crossingDeg >= goal.crossingDegAtLeast);
+  const passed = cepOk && crossOk;
+  return { passed, points: !passed ? 0 : tryNo <= LOCATE_FULL_TRIES ? goal.points : Math.round(goal.points / 2) };
+}
+
 export interface ApplyStep {
   kind: 'apply';
   id: string;
@@ -309,6 +330,7 @@ export interface ApplyStep {
   prediction?: boolean; // scored as prediction rather than characterisation
   run?: RunSpec; // a BER run; a predictBer field is scored against it
   goal?: DenyGoal; // appears once the fields are submitted; the run counts when it reaches the goal
+  locate?: LocateGoal; // level 6: appears once the fields are submitted; met by placing sites and taking bearings
   editable?: SceneField[]; // scene fields the player may change in this step (the level's default when absent)
   hiddenRows?: string[]; // budget rows hidden from the scene's ladder until the step is done
 }
