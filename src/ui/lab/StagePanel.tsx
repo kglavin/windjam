@@ -31,6 +31,7 @@ export interface StagePanelProps {
   current: number; // flat index of the step shown; flat.length means the debrief
   onView: (i: number) => void; // jump to any step, or flat.length for the debrief
   chipSnrDb: number; // live chip SNR at the intercept
+  findMeter?: { label: string; value: number; target: number }; // level 9: a find step that watches something else
   values: Record<string, string>; // placeholder values for the texts
   onCheckLesson: (stepIndex: number, value: number) => void;
   onCheckPractice: (stepIndex: number, entered: Record<string, number>) => void;
@@ -191,10 +192,18 @@ function StepBody(p: StagePanelProps & { step: StepDef; index: number; state: St
         <>
           <p className="stage-task"><Rich text={fillText(step.task, p.values)} /></p>
           <Hint text={step.hint} values={p.values} />
-          <div className={`stage-meter ${p.chipSnrDb >= step.atLeastDb || state.done ? 'ok' : ''}`}>
-            Chip SNR at the intercept: <strong>{Number.isFinite(p.chipSnrDb) ? signed(p.chipSnrDb) : '-'} dB</strong>, target +{step.atLeastDb} dB
-            {state.done && ' ✓'}
-          </div>
+          {p.findMeter ? (
+            <div className={`stage-meter ${p.findMeter.value >= p.findMeter.target || state.done ? 'ok' : ''}`}>
+              {p.findMeter.label}: <strong>{Number.isFinite(p.findMeter.value) ? signed(p.findMeter.value) : '-'} dB</strong>, target {signed(p.findMeter.target)} dB
+              {state.done && ' ✓'}
+              {step.points ? ` (${state.done ? step.points : 0}/${step.points} pts)` : ''}
+            </div>
+          ) : (
+            <div className={`stage-meter ${p.chipSnrDb >= step.atLeastDb || state.done ? 'ok' : ''}`}>
+              Chip SNR at the intercept: <strong>{Number.isFinite(p.chipSnrDb) ? signed(p.chipSnrDb) : '-'} dB</strong>, target +{step.atLeastDb} dB
+              {state.done && ' ✓'}
+            </div>
+          )}
           {state.done && <Numbered items={step.reveal} values={p.values} />}
         </>
       )}

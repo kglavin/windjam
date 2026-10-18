@@ -24,13 +24,15 @@ import {
   level7Values,
   level8Truth,
   level8Values,
+  level9Truth,
+  level9Values,
   maxPeriodUsOf,
   recoveryUsOf,
   textValues,
 } from '../../engine/lab/levels';
 import type { Scene, SceneBudget } from '../../engine/lab/scene';
 import { type FactsCard, factsOfTruth, knownFacts, level2Card, level3Card, level4Card, level5Card } from './knownFacts';
-import { level1Scene, level2Scene, level3Scene, level4Scene, level5Scene, moveInterceptToSignal } from './levelScene';
+import { level1Scene, level2Scene, level3Scene, level4Scene, level5Scene, level9Scene, moveInterceptToSignal } from './levelScene';
 import type { StepState } from './levelState';
 
 export interface SetupArgs {
@@ -243,4 +245,15 @@ const setup8: LevelSetup = {
   card: () => null,
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7, 8: setup8 };
+// Level 9: the enemy link with a soldier's 10 W jammer far out; B3 lets the player move it.
+const setup9: LevelSetup = {
+  truth: level9Truth,
+  scene: level9Scene,
+  hidden: ['intercept'],
+  editable: [],
+  values: (a) => level9Values(a.truth, a.practiceN ?? 0, a.base.jsDb),
+  hiddenRows: () => [],
+  card: () => null,
+};
+
+export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7, 8: setup8, 9: setup9 };

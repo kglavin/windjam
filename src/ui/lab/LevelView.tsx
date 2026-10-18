@@ -8,6 +8,7 @@ import {
   type LevelDef,
   checkField,
   dfStepTry,
+  findTarget,
   flatSteps,
   inZone,
   knownLinkInfo,
@@ -32,7 +33,7 @@ import { PacketView } from './instruments/PacketView';
 import { hopPreview } from '../../engine/lab/fh';
 import { LinkScene } from './LinkScene';
 import { SETUPS } from './levelSetup';
-import { moveInterceptToSignal } from './levelScene';
+import { moveInterceptToSignal, moveJammerToJs } from './levelScene';
 import { leaveStep, nextIndex } from './levelNav';
 import { type StepState, applyDone, runDone, scoreLevel } from './levelState';
 import { StagePanel } from './StagePanel';
@@ -84,12 +85,13 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
   const step = flat[current]?.step;
   useEffect(() => {
     if (!step || !states[current] || states[current].done || step.kind !== 'find') return;
-    if (budget.intercept.chipSnrDb >= step.atLeastDb) {
-      setInterceptSnrDb(budget.intercept.chipSnrDb);
+    const value = step.measure === 'js' ? budget.jsDb : budget.intercept.chipSnrDb;
+    if (value >= findTarget(step, truth)) {
+      if (step.measure !== 'js') setInterceptSnrDb(budget.intercept.chipSnrDb);
       patch(current, { done: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [budget.intercept.chipSnrDb, current]);
+  }, [budget.intercept.chipSnrDb, budget.jsDb, current]);
 
   // Captures come from the intercept; re-capture 300 ms after the intercept stops moving.
   const [icEbN0Db, setIcEbN0Db] = useState(budget.intercept.ebN0Db);
@@ -275,6 +277,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         current={current}
         onView={setCurrent}
         chipSnrDb={budget.intercept.chipSnrDb}
+        findMeter={shown?.kind === 'find' && shown.measure === 'js' ? { label: 'J/S at the enemy receiver', value: budget.jsDb, target: findTarget(shown, truth) } : undefined}
         values={values}
         onCheckLesson={(i, value) => {
           const st = flat[i].step;
@@ -357,7 +360,9 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           const st = flat[shownIdx].step;
           setStates((all) => leaveStep(flat, all, shownIdx));
           // Skipping a find step puts the intercept where the signal can be seen.
-          if (st.kind === 'find' && !states[shownIdx].done) {
+          if (st.kind === 'find' && !states[shownIdx].done && st.measure === 'js') {
+            setScene(moveJammerToJs(scene, findTarget(st, truth)));
+          } else if (st.kind === 'find' && !states[shownIdx].done) {
             const next = moveInterceptToSignal(scene, st.atLeastDb);
             setScene(next);
             setInterceptSnrDb(sceneBudget(next).intercept.chipSnrDb);
@@ -377,7 +382,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           <LinkScene
             scene={scene}
             onChange={setScene}
-            editable={shown?.kind === 'apply' && shown.editable ? shown.editable : setup.editable}
+            editable={(shown?.kind === 'apply' || shown?.kind === 'find') && shown.editable ? shown.editable : setup.editable}
             hidden={setup.hidden}
             hiddenRows={hiddenRows}
           />

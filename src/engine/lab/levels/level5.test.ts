@@ -74,7 +74,7 @@ const inside = (theory: number, r: { lo: number; hi: number }) => {
 describe('LEVEL_5 structure', () => {
   it('has units A to D, the listed steps, 100 points, pass mark 60, and is registered', () => {
     expect(LEVEL_5.id).toBe(5);
-    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(LEVEL_5.title).toBe('Saturation and timing');
     expect(LEVEL_5.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D']);
     expect(steps().map((s) => s.id)).toEqual(['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'D1']);

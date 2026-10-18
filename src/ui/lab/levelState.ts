@@ -84,6 +84,10 @@ export function scoreLevel(level: LevelDef, states: StepState[]): Score {
         part.max += step.locate.points;
         part.got += st?.located?.points ?? 0;
       }
+    } else if (step.kind === 'find' && step.points) {
+      // Level 9: a scene goal reached, not skipped.
+      parts.characterisation.max += step.points;
+      if (st?.done) parts.characterisation.got += step.points;
     } else if (step.kind === 'questions') {
       for (const q of step.questions) {
         parts.questions.max += q.points;

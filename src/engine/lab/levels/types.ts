@@ -170,6 +170,8 @@ export type Visual =
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
+  | { kind: 'platforms' } // level 9: the platform card
+  | { kind: 'distance' } // level 9: J/S against distance for two jammers
   | { kind: 'register'; degree: number } // level 8: a shift register stepping
   | { kind: 'rebuild'; link: 'example' } // level 8: Berlekamp–Massey on the example code
   | { kind: 'gold' } // level 8: Gold code correlations
@@ -377,7 +379,15 @@ export interface FindStep {
   atLeastDb: number;
   reveal: string[];
   instruments: Instrument[];
+  // Level 9: what the step watches (the intercept's chip SNR by default, or J/S at the enemy receiver), a target
+  // from the truth in place of atLeastDb, points when it is reached, and the scene fields the player may edit.
+  measure?: 'intercept' | 'js';
+  atLeastFrom?: (t: Truth) => number;
+  points?: number;
+  editable?: SceneField[];
 }
+
+export const findTarget = (step: FindStep, t: Truth): number => (step.atLeastFrom ? step.atLeastFrom(t) : step.atLeastDb);
 
 export interface QuestionsStep {
   kind: 'questions';

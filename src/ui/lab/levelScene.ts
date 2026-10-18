@@ -50,12 +50,13 @@ function jammerScene(t: Truth, salt: number, ebJ0LoDb: number, ebJ0SpanDb: numbe
 }
 
 // The scene with the receiver's Eb/N0 and the broadband Eb/J0 (Gp less J/S) at the targets.
-function sceneAt(t: Truth, targetEbN0Db: number, targetEbJ0Db: number): Scene {
+function sceneAt(t: Truth, targetEbN0Db: number, targetEbJ0Db: number, jammer: Partial<Scene['jammer']> = {}): Scene {
   let scene: Scene = {
     ...DEFAULT_SCENE,
     chipRateMcps: t.chipRateMcps,
     dataRateKbps: t.bitRateKbps,
     tx: { ...DEFAULT_SCENE.tx, powerW: 1 },
+    jammer: { ...DEFAULT_SCENE.jammer, ...jammer },
   };
   const one = sceneBudget(scene).ebN0Db;
   const powerW = Math.round(10 ** ((targetEbN0Db - one) / 10) * 100) / 100;
@@ -102,6 +103,23 @@ export function level4Scene(t: Truth): Scene {
     if (m.carrier <= LEVEL4_BER.carrierMax && ok(m.line) && ok(m.bbn)) return scene;
   }
   return last!;
+}
+
+// The scene with the jammer moved along its bearing from the receiver to where J/S reaches minDb (a skipped J/S goal).
+export function moveJammerToJs(scene: Scene, minDb: number): Scene {
+  const km = jammerDistanceForJs(scene, minDb);
+  const dx = scene.jammer.xKm - scene.rx.xKm;
+  const dy = scene.jammer.yKm - scene.rx.yKm;
+  const len = Math.hypot(dx, dy) || 1;
+  const d = Math.floor(km * 10) / 10;
+  return { ...scene, jammer: { ...scene.jammer, xKm: scene.rx.xKm + (dx / len) * d, yKm: scene.rx.yKm + (dy / len) * d } };
+}
+
+// Level 9's scene: the enemy link with Eb/N0 near 25 dB, and a soldier's 10 W jammer 2 m up, placed on the default
+// bearing where broadband Eb/J0 is 15 dB: far too weak, until the player moves it in.
+export function level9Scene(t: Truth): Scene {
+  const rng = createRng(t.seed ^ 0x4e9b);
+  return sceneAt(t, Math.round((24.5 + rng()) * 10) / 10, 15, { powerW: 10, heightM: 2 });
 }
 
 // The scene with the intercept moved out along the starting bearing to the farthest spot whose chip SNR is still

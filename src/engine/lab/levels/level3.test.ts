@@ -42,7 +42,7 @@ const N30 = undb(30);
 describe('LEVEL_3 structure', () => {
   it('has units A to F, the listed steps, and is registered', () => {
     expect(LEVEL_3.id).toBe(3);
-    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(LEVEL_3.title).toBe('Where to put the power');
     expect(LEVEL_3.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
     const ids = steps().map((s) => s.id);

@@ -1275,6 +1275,22 @@ select {
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
+.plat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.plat-table th,
+.plat-table td {
+  text-align: right;
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.plat-table th:first-child,
+.plat-table td:first-child {
+  text-align: left;
+}
 .pk-pre {
   fill: #f59e0b;
   opacity: 0.85;

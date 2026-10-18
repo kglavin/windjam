@@ -12,7 +12,7 @@ const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
 
 describe('level 8 units A to C', () => {
   it('is in LEVELS', () => {
-    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(LEVEL_8.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
   });
 
