@@ -17,6 +17,9 @@ import {
   level4Values,
   level5Truth,
   level5Values,
+  level6Scene,
+  level6Truth,
+  level6Values,
   maxPeriodUsOf,
   recoveryUsOf,
   textValues,
@@ -49,6 +52,7 @@ export interface LevelSetup {
   values: (a: SetupArgs) => Record<string, string>;
   hiddenRows: (a: SetupArgs) => string[];
   card: (a: SetupArgs) => FactsCard | null;
+  noScene?: boolean; // the link scene is never shown (level 6: the DF view takes its place)
 }
 
 const JAMMER_ROWS = [
@@ -199,4 +203,16 @@ const setup5: LevelSetup = {
   },
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5 };
+// Level 6 works on the DF view, not the link scene.
+const setup6: LevelSetup = {
+  truth: level6Truth,
+  scene: (t) => level6Scene(t),
+  hidden: ['jammer', 'intercept'],
+  editable: [],
+  noScene: true,
+  values: (a) => level6Values(a.truth, a.practiceN ?? 0),
+  hiddenRows: () => [],
+  card: () => null,
+};
+
+export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6 };

@@ -12,9 +12,11 @@ import {
   type StepDef,
   DENY_FULL_RUNS,
   DENY_TOLERANCE,
+  LOCATE_FULL_TRIES,
   berText,
   fillText,
   flatSteps,
+  minSites,
   scorePrediction,
 } from '../../engine/lab/levels';
 import type { FactsCard } from './knownFacts';
@@ -36,6 +38,7 @@ export interface StagePanelProps {
   onTryAnother: (stepIndex: number) => void;
   onSubmitFields: (stepIndex: number, entered: Record<string, number>) => void; // one group of an apply step
   onRetryStart: (stepIndex: number) => void;
+  onTakeBearings?: (stepIndex: number) => void; // level 6: a try with the sites in place
   onCheckRetry: (stepIndex: number, entered: Record<string, number>) => void;
   onBack: () => void;
   runPlan: (stepIndex: number, mode?: 'main' | 'retry') => RunPlan | undefined; // the BER run a step offers, from the scene now
@@ -325,11 +328,12 @@ function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: Ste
       {step.run && settled && predictField(step.fields) && <ApplyPredict {...p} field={predictField(step.fields)!} />}
       {step.run && settled && step.runUnscored && <UnscoredRun {...p} />}
       {step.run && settled && step.goal && <DenyRun {...p} goal={step.goal} />}
+      {step.locate && settled && <LocateBox {...p} goal={step.locate} />}
       {state.done && (
         <>
           <p className="stage-subhead">Worked answer</p>
           <Numbered items={step.reveal} values={p.values} className="stage-worked stage-example" />
-          {!state.retrying ? (
+          {numeric(step.fields).length === 0 && !step.run ? null : !state.retrying ? (
             <button type="button" onClick={() => p.onRetryStart(p.index)}>Retry (not scored)</button>
           ) : (
             <div className="stage-retry">
@@ -501,6 +505,48 @@ function DenyRun(p: StagePanelProps & { step: ApplyStep; index: number; state: S
             ✗ Run {runs.length}: J/S {last.jsDb.toFixed(1)} dB gave BER {berText(last.ber)}. {goal.notYet ?? 'Not there yet: more J/S, then run again.'}
           </p>
         )
+      )}
+    </div>
+  );
+}
+
+// Level 6: place DF sites on the DF view and take bearings until the fix meets the goal.
+function LocateBox(p: StagePanelProps & { step: ApplyStep; index: number; state: StepState; goal: NonNullable<ApplyStep['locate']> }) {
+  const { state, goal } = p;
+  const placed = state.df?.sites.length ?? 0;
+  const tries = state.df?.tries ?? 0;
+  const last = state.df?.last;
+  const method = p.step.dfMethod ?? 'bearings';
+  const ready = (p.step.dfSites?.length ?? 0) + placed >= minSites(method);
+  const take = method === 'tdoa' ? 'timings' : 'bearings';
+  const what = method === 'leg' ? 'Leg ends placed' : method === 'tdoa' ? 'Receivers placed' : 'Sites placed';
+  const want = [
+    goal.cepKmAtMost !== undefined ? `a CEP of ${goal.cepKmAtMost} km or less` : '',
+    goal.crossingDegAtLeast !== undefined ? `a crossing of ${goal.crossingDegAtLeast}° or more` : '',
+  ].filter(Boolean).join(' and ');
+  const measured = (r: { cepKm?: number; crossingDeg?: number }) =>
+    [
+      goal.crossingDegAtLeast !== undefined && r.crossingDeg !== undefined ? `crossing ${r.crossingDeg.toFixed(0)}°` : '',
+      r.cepKm !== undefined ? `CEP ${r.cepKm.toFixed(2)} km` : '',
+    ].filter(Boolean).join(', ') || 'no fix';
+  return (
+    <div className="stage-fields">
+      <p className="stage-task"><Rich text={fillText(goal.task, p.values)} /></p>
+      <p className="stage-note">
+        Goal: {want}. Full points if you get there within {LOCATE_FULL_TRIES} tries, half after. {what}: {placed} of {goal.maxSites}.
+      </p>
+      <button type="button" disabled={!ready} onClick={() => p.onTakeBearings?.(p.index)}>
+        {tries > 0 ? `Take ${take} again` : `Take ${take}`}
+      </button>
+      {state.located && (
+        <p className="stage-result ok">
+          ✓ Try {state.located.tryNo}: {measured(state.located)}, {state.located.points}/{goal.points} pts
+        </p>
+      )}
+      {last && (!state.located || tries > state.located.tryNo) && (
+        <p className={`stage-result ${state.located ? '' : 'bad'}`}>
+          {state.located ? '' : '✗ '}Try {tries}: {measured(last)}.{!state.located && ` Not there yet: move the ${method === 'leg' ? 'leg' : 'sites'} and take ${take} again.`}
+        </p>
       )}
     </div>
   );

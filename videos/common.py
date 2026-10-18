@@ -246,3 +246,112 @@ class Scratchpad:
 
     def note_below(self, text):
         return label(text, GREY, 24).next_to(self.panel, DOWN, buff=0.3).set_x(0)
+
+
+VIOLET = "#a78bfa"     # TDOA hyperbolas (.df-hyperbola)
+
+
+class MapView:
+    """Level 6's DF map (src/ui/lab/instruments/DfView.tsx): km with x east and y north, drawn `height` units tall with
+    its centre at `center`. Lines and curves are clipped to the map."""
+
+    def __init__(self, center=(-3.2, 0.35, 0), height=6.2, xr=(-10, 10), yr=(-4, 16)):
+        self.xr, self.yr = xr, yr
+        self.s = height / (yr[1] - yr[0])
+        self.c = np.array(center, dtype=float)
+
+    def p(self, x, y):
+        return self.c + np.array([(x - (self.xr[0] + self.xr[1]) / 2) * self.s, (y - (self.yr[0] + self.yr[1]) / 2) * self.s, 0])
+
+    def inside(self, x, y):
+        return self.xr[0] <= x <= self.xr[1] and self.yr[0] <= y <= self.yr[1]
+
+    def grid(self, step=2):
+        g = VGroup()
+        for v in range(int(np.ceil(self.xr[0] / step) * step), int(self.xr[1]) + 1, step):
+            g.add(Line(self.p(v, self.yr[0]), self.p(v, self.yr[1]), stroke_width=0.6, stroke_color=GREY, stroke_opacity=0.35))
+        for v in range(int(np.ceil(self.yr[0] / step) * step), int(self.yr[1]) + 1, step):
+            g.add(Line(self.p(self.xr[0], v), self.p(self.xr[1], v), stroke_width=0.6, stroke_color=GREY, stroke_opacity=0.35))
+        g.add(Rectangle(width=(self.xr[1] - self.xr[0]) * self.s, height=(self.yr[1] - self.yr[0]) * self.s,
+                        stroke_color=GREY, stroke_width=1.2).move_to(self.p((self.xr[0] + self.xr[1]) / 2, (self.yr[0] + self.yr[1]) / 2)))
+        if self.yr[0] <= 0 <= self.yr[1]:
+            g.add(DashedLine(self.p(self.xr[0], 0), self.p(self.xr[1], 0), dash_length=0.12, stroke_color=GREY, stroke_width=2))
+            g.add(label("front line", GREY, 16).next_to(self.p(self.xr[1], 0), UP, buff=0.05).shift(LEFT * 0.75))
+        g.add(label("N ↑", GREY, 18).next_to(self.p(self.xr[0], self.yr[1]), DR, buff=0.1))
+        g.add(label(f"{step} km grid", GREY, 16).next_to(self.p(self.xr[0], self.yr[0]), DOWN, buff=0.1, aligned_edge=LEFT))
+        return g
+
+    def site(self, x, y, name, color=AMBER_C2, side=DR):
+        dot = Dot(self.p(x, y), radius=0.08, color=color)
+        return VGroup(dot, label(name, color, 20).next_to(dot, side, buff=0.06))
+
+    def target(self, x, y, color=RED):
+        return Circle(radius=0.14, stroke_color=color, stroke_width=3).move_to(self.p(x, y))
+
+    def _clip(self, x, y, deg):
+        """How far (km) a ray from (x, y) on bearing deg runs before it leaves the map."""
+        r = np.radians(deg)
+        dx, dy = np.sin(r), np.cos(r)
+        t = 60.0
+        for lo, hi, o, d in ((self.xr[0], self.xr[1], x, dx), (self.yr[0], self.yr[1], y, dy)):
+            if abs(d) > 1e-12:
+                t = min(t, max((lo - o) / d, (hi - o) / d))
+        return max(t, 0.0)
+
+    def ray_end(self, x, y, deg, km=None):
+        r = np.radians(deg)
+        t = self._clip(x, y, deg) if km is None else km
+        return x + t * np.sin(r), y + t * np.cos(r)
+
+    def ray(self, x, y, deg, color=BLUE_C1, width=2.5, km=None):
+        """The bearing line from (x, y), only the part on the map (the site may be off it, as in a close-up)."""
+        r = np.radians(deg)
+        dx, dy = np.sin(r), np.cos(r)
+        t0, t1 = 0.0, 80.0 if km is None else km
+        for lo, hi, o, d in ((self.xr[0], self.xr[1], x, dx), (self.yr[0], self.yr[1], y, dy)):
+            if abs(d) < 1e-12:
+                if not lo <= o <= hi:
+                    return VMobject()
+                continue
+            ta, tb = (lo - o) / d, (hi - o) / d
+            t0, t1 = max(t0, min(ta, tb)), min(t1, max(ta, tb))
+        if t0 >= t1:
+            return VMobject()
+        return Line(self.p(x + t0 * dx, y + t0 * dy), self.p(x + t1 * dx, y + t1 * dy), stroke_color=color, stroke_width=width)
+
+    def wedge(self, x, y, deg, sigma, color=BLUE_C1, opacity=0.18):
+        """The ± 2σ wedge, as a fan of points along the map's edge."""
+        pts = [self.p(x, y)]
+        for d in np.linspace(deg - 2 * sigma, deg + 2 * sigma, 24):
+            pts.append(self.p(*self.ray_end(x, y, d)))
+        return Polygon(*pts, stroke_width=0, fill_color=color, fill_opacity=opacity)
+
+    def ellipse(self, x, y, a, b, angle, color=GREEN_C3, width=3):
+        return (Ellipse(width=max(2 * a * self.s, 0.02), height=max(2 * b * self.s, 0.02), stroke_color=color, stroke_width=width)
+                .rotate(angle).move_to(self.p(x, y)))
+
+    def circle(self, x, y, r, color=GREEN_C3):
+        return DashedVMobject(Circle(radius=r * self.s, stroke_color=color, stroke_width=2).move_to(self.p(x, y)), num_dashes=30)
+
+    def cross(self, x, y, color=GREEN_C3, size=0.12):
+        c = self.p(x, y)
+        return VGroup(Line(c + [-size, -size, 0], c + [size, size, 0]), Line(c + [-size, size, 0], c + [size, -size, 0])).set_stroke(color, 3)
+
+    def ring(self, x, y, r, color=WHITE, width=2, opacity=0.6):
+        """A circle of radius r km round (x, y), only the parts inside the map."""
+        runs, cur = [], []
+        for t in np.linspace(0, 2 * np.pi, 241):
+            px, py = x + r * np.cos(t), y + r * np.sin(t)
+            if self.inside(px, py):
+                cur.append(self.p(px, py))
+            elif cur:
+                runs.append(cur)
+                cur = []
+        if cur:
+            runs.append(cur)
+        return VGroup(*[VMobject(stroke_color=color, stroke_width=width, stroke_opacity=opacity).set_points_as_corners(run)
+                        for run in runs if len(run) > 1])
+
+    def curve(self, pts, color=VIOLET, width=3):
+        inside = [self.p(x, y) for x, y in pts if self.inside(x, y)]
+        return VMobject(stroke_color=color, stroke_width=width).set_points_as_corners(inside)

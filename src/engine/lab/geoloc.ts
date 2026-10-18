@@ -67,6 +67,29 @@ export function fixFromBearings(lines: BearingLine[]): Fix | undefined {
   return { xKm: f.x, yKm: -f.y, cepKm: f.cepKm, ellipse: { ...f.ellipse, angleRad: -f.ellipse.angleRad } };
 }
 
+// The error a layout of DF sites gives at a target, before any noise: the weighted least-squares covariance with each
+// line's weight from its true range and σ. Unlike the CEP of one noisy fix, it does not depend on luck, so it scores a
+// layout fairly. Undefined when the lines are (nearly) parallel.
+export function expectedBearingFix(sites: (Pt & { sigmaDeg: number })[], target: Pt): Omit<Fix, 'xKm' | 'yKm'> | undefined {
+  let a11 = 0;
+  let a12 = 0;
+  let a22 = 0;
+  for (const s of sites) {
+    const t = (bearingDeg(s, target) * Math.PI) / 180;
+    // Normal to the bearing line in the north-up frame: perpendicular to (sin t, cos t).
+    const nx = Math.cos(t);
+    const ny = -Math.sin(t);
+    const w = 1 / (((s.sigmaDeg * Math.PI) / 180) * Math.max(0.5, distanceKm(s, target))) ** 2;
+    a11 += w * nx * nx;
+    a12 += w * nx * ny;
+    a22 += w * ny * ny;
+  }
+  const det = a11 * a22 - a12 * a12;
+  if (det < 1e-12 * Math.max(1, a11 * a22)) return undefined;
+  const ellipse = ellipseFromCovariance(a22 / det, -a12 / det, a11 / det);
+  return { cepKm: cepFromSigmas(ellipse.aKm, ellipse.bKm), ellipse };
+}
+
 // --- Time difference of arrival -------------------------------------------------------------------------------
 
 // Range difference from a time difference: r1 − r2 = c · (t1 − t2).
@@ -169,8 +192,9 @@ export interface TdoaMeasurement {
 
 // TDOA fix from sites (the first is the reference) and time differences t_i − t_0, each site with its own timing
 // error (µs, 1σ). The differences share the reference's error, so they are weighted with their full covariance.
-// A coarse grid search over `areaKm` around the sites' centre gives the start; Gauss-Newton refines it.
-export function tdoaFix(sites: Pt[], dtUs: number[], siteSigmaUs: number[], areaKm = 30): Fix | undefined {
+// A coarse grid search over `areaKm` around the sites' centre gives the start; Gauss-Newton refines it. `keep` limits
+// the search to where the target can be: sites in a line give two mirror-image answers, one on each side.
+export function tdoaFix(sites: Pt[], dtUs: number[], siteSigmaUs: number[], areaKm = 30, keep?: (p: Pt) => boolean): Fix | undefined {
   const m = sites.length - 1;
   if (m < 2 || dtUs.length !== m) return undefined;
   const ref = sites[0];
@@ -191,10 +215,11 @@ export function tdoaFix(sites: Pt[], dtUs: number[], siteSigmaUs: number[], area
   const cx = sites.reduce((s, p) => s + p.xKm, 0) / sites.length;
   const cy = sites.reduce((s, p) => s + p.yKm, 0) / sites.length;
   let best = { xKm: cx, yKm: cy };
-  let bestCost = cost(best);
+  let bestCost = keep && !keep(best) ? Infinity : cost(best);
   const step = areaKm / 60;
   for (let x = cx - areaKm; x <= cx + areaKm; x += step) {
     for (let y = cy - areaKm; y <= cy + areaKm; y += step) {
+      if (keep && !keep({ xKm: x, yKm: y })) continue;
       const c = cost({ xKm: x, yKm: y });
       if (c < bestCost) {
         bestCost = c;

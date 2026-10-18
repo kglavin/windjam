@@ -167,9 +167,13 @@ export type Visual =
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
+  | { kind: 'xcorr'; source: 'example' | 'practice' } // level 6: a cross-correlation of two sites' captures
   | { kind: 'none' };
 
-export type Instrument = 'spectrum' | 'autocorr' | 'df';
+export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr';
+
+// How a level 6 step locates: bearings from ground sites, bearings from a UAV flying a leg, or arrival times.
+export type DfMethod = 'bearings' | 'leg' | 'tdoa';
 
 // Scene fields the player may edit in a step. 'jammer' is the jammer's position only (drag and x/y).
 export type SceneField =
@@ -331,6 +335,8 @@ export interface ApplyStep {
   run?: RunSpec; // a BER run; a predictBer field is scored against it
   goal?: DenyGoal; // appears once the fields are submitted; the run counts when it reaches the goal
   locate?: LocateGoal; // level 6: appears once the fields are submitted; met by placing sites and taking bearings
+  dfSites?: { xKm: number; yKm: number; label: string }[]; // level 6: DF sites already in place, with their bearings shown
+  dfMethod?: DfMethod; // level 6: 'bearings' when absent
   editable?: SceneField[]; // scene fields the player may change in this step (the level's default when absent)
   hiddenRows?: string[]; // budget rows hidden from the scene's ladder until the step is done
 }

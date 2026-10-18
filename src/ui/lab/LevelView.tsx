@@ -7,10 +7,14 @@ import {
   type FieldDef,
   type LevelDef,
   checkField,
+  dfStepTry,
   flatSteps,
+  inZone,
   knownLinkInfo,
   practiceJsAt,
   practiceLinkAt,
+  scoreLocate,
+  xcorrEnemy,
   withinTol,
 } from '../../engine/lab/levels';
 import { mSequence } from '../../engine/lab/pn';
@@ -20,6 +24,8 @@ import { CurvePlot } from './instruments/CurvePlot';
 import { Autocorr } from './instruments/Autocorr';
 import { Spectrum } from './instruments/Spectrum';
 import { Calculator } from './Calculator';
+import { DfTask } from './DfTask';
+import { XcorrView } from './instruments/XcorrView';
 import { LinkScene } from './LinkScene';
 import { SETUPS } from './levelSetup';
 import { moveInterceptToSignal } from './levelScene';
@@ -198,7 +204,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
     Object.fromEntries(def.filter((f) => f.id in entered).map((f) => [f.id, { value: entered[f.id], ...checkField(f, entered[f.id], truth, ctx) }]));
 
   // Lessons and practice show their figure alone; the scene appears with the steps on the real link.
-  const showScene = !shown || shown.kind === 'find' || shown.kind === 'apply' || shown.kind === 'questions';
+  const showScene = !setup.noScene && (!shown || shown.kind === 'find' || shown.kind === 'apply' || shown.kind === 'questions');
   const showCalc = !!shown && (shown.kind === 'lesson' || shown.kind === 'practice' || shown.kind === 'apply');
   const instruments = shown && (shown.kind === 'find' || shown.kind === 'apply') ? shown.instruments : [];
   const visual = shown && (shown.kind === 'lesson' || shown.kind === 'practice' || shown.kind === 'apply') ? shown.visual : undefined;
@@ -274,6 +280,20 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
           const fields = { ...states[i].fields, ...entries(st.fields, fresh) };
           patch(i, { fields, done: applyDone(st, { ...states[i], fields }) });
         }}
+        onTakeBearings={(i) => {
+          const st = flat[i].step;
+          if (st.kind !== 'apply' || !st.locate) return;
+          const goal = st.locate;
+          update(i, (s) => {
+            const placed = s.df?.sites ?? [];
+            const tries = (s.df?.tries ?? 0) + 1;
+            const last = dfStepTry(truth, st.id, [...(st.dfSites ?? []), ...placed], tries, st.dfMethod);
+            const next: StepState = { ...s, df: { sites: placed, tries, last } };
+            const r = scoreLocate(goal, last, tries);
+            if (!s.located && r.passed) next.located = { points: r.points, tryNo: tries, cepKm: last.cepKm, crossingDeg: last.crossingDeg };
+            return { ...next, done: s.done || applyDone(st, next) };
+          });
+        }}
         onRetryStart={(i) => update(i, (s) => ({ ...s, retrying: true, retry: undefined, retryRun: undefined, retries: (s.retries ?? 0) + 1 }))}
         runPlan={runPlan}
         runNote={runNote}
@@ -336,6 +356,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
               visual={visual}
               links={{ example: level.links.example, practice: practiceLink }}
               practiceJsDb={practiceJsDb}
+              practiceN={practiceN}
               hidden={{
                 x: shot.rx,
                 sampleRateHz,
@@ -350,6 +371,28 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         {runCurve}
         {instruments.length > 0 && (
           <div className="level-instruments">
+            {instruments.includes('xcorr') && (
+              <XcorrView data={xcorrEnemy(truth)} names={['T1', 'T2']} markPeak={!!states[shownIdx]?.done} />
+            )}
+            {instruments.includes('df') && shown?.kind === 'apply' && (
+              <DfTask
+                step={shown}
+                state={states[shownIdx]}
+                truth={truth}
+                onPlace={(pt) => {
+                  const max = shown.locate?.maxSites ?? 0;
+                  if (!inZone(pt) || max === 0) return;
+                  update(shownIdx, (s) => {
+                    const sites = s.df?.sites ?? [];
+                    if (sites.length < max) return { ...s, df: { tries: 0, ...s.df, sites: [...sites, pt] } };
+                    // Full: the nearest placed site moves to the click.
+                    const near = sites.reduce((b, q, k) => (Math.hypot(q.xKm - pt.xKm, q.yKm - pt.yKm) < Math.hypot(sites[b].xKm - pt.xKm, sites[b].yKm - pt.yKm) ? k : b), 0);
+                    return { ...s, df: { tries: 0, ...s.df, sites: sites.map((q, k) => (k === near ? pt : q)) } };
+                  });
+                }}
+                onRemove={(k) => update(shownIdx, (s) => ({ ...s, df: { tries: 0, ...s.df, sites: (s.df?.sites ?? []).filter((_, j) => j !== k) } }))}
+              />
+            )}
             {instruments.includes('spectrum') && <Spectrum x={shot.rx} sampleRateHz={sampleRateHz} annotations={specNotes} envelope={specNotes ? { chipRateMHz: truth.chipRateMcps } : undefined} />}
             {instruments.includes('autocorr') && (
               <Autocorr

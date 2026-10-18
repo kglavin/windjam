@@ -1242,6 +1242,68 @@ select {
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
+.df-svg {
+  max-width: 520px;
+  margin: 0 auto;
+}
+.df-zone {
+  fill: #f59e0b;
+  opacity: 0.07;
+}
+.df-front {
+  stroke: #94a3b8;
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+}
+.df-wedge {
+  fill: #60a5fa;
+  opacity: 0.16;
+}
+.df-bearing {
+  stroke: #60a5fa;
+  stroke-width: 1.4;
+}
+.df-ellipse,
+.df-fix {
+  fill: none;
+  stroke: #34d399;
+  stroke-width: 1.6;
+}
+.df-cep {
+  fill: none;
+  stroke: #34d399;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.df-hyperbola {
+  fill: none;
+  stroke: #a78bfa;
+  stroke-width: 1.4;
+}
+.df-path {
+  fill: none;
+  stroke: #f59e0b;
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+}
+.df-target {
+  fill: none;
+  stroke: #f87171;
+  stroke-width: 2;
+}
+.df-click {
+  cursor: crosshair;
+}
+.df-site circle {
+  fill: #f59e0b;
+}
+.df-site text {
+  fill: #f59e0b;
+  font-size: 11px;
+}
+.df-removable {
+  cursor: pointer;
+}
 .inst-error {
   color: #f87171;
   font-size: 12px;

@@ -16,7 +16,7 @@ is built.
 | 3 | Where to put the power | Partial-band and pulsed noise against DSSS; whole-bit pulses; best duty | Built | design-link-lab.md |
 | 4 | Tones | Tone against long and short codes; multitone peaks (PAPR) | Built | design-link-lab.md |
 | 5 | Saturation and timing | Repetition and the vote; pulses on whole bits; blinding the front end | Built | design-link-lab.md |
-| 6 | Finding the transmitter | Bearings, triangulation, least-squares fix, error ellipse and CEP, geometry (GDOP), a moving sensor, TDOA; playable after level 1 | In progress (step 1 of 4) | design-level-6.md |
+| 6 | Finding the transmitter | Bearings, triangulation, least-squares fix, error ellipse and CEP, geometry (GDOP), a moving sensor, TDOA; playable after level 1 | Built | design-level-6.md |
 | 7 | Frequency hopping | Hop set, Gp = channels, dwell, slow and fast hopping; partial-band jamming against hopping; follower and swept jamming; time hopping; hybrid DS/FH | Agreed | to write |
 | 8 | Codes and synchronization | Shift registers and m-sequences; linear complexity and code reconstruction; Gold and Kasami codes; acquisition (sliding correlator) and tracking (DLL); preamble and sync jamming against payload jamming | Agreed | to write |
 | 9 | Jammer tactics | Power as the scarce resource: what each platform can carry and generate (soldier, UAV, vehicle, aircraft), battery energy and amplifier efficiency, J/S per watt; distance beats power; look-through; power sharing and time sharing across targets; network layouts as targets; J/S planning with propagation models (free space, two-ray, Egli) and antenna pointing | Agreed | to write |

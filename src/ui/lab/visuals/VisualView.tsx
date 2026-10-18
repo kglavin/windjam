@@ -1,6 +1,11 @@
 import type { IQ } from '../../../engine/lab/signal';
-import { type KnownLink, type Visual, knownLinkInfo } from '../../../engine/lab/levels';
+import {
+  type KnownLink, type Visual, DF_EXAMPLES, exampleBearings, exampleHyperbolas, knownLinkInfo, legPoints, xcorrExample, xcorrPractice,
+} from '../../../engine/lab/levels';
+import { fixFromBearings } from '../../../engine/lab/geoloc';
 import { Autocorr } from '../instruments/Autocorr';
+import { DfView } from '../instruments/DfView';
+import { XcorrView } from '../instruments/XcorrView';
 import { Spectrum } from '../instruments/Spectrum';
 import { knownCapture } from '../knownCapture';
 import { BerCurve } from './BerCurve';
@@ -43,11 +48,12 @@ export const periodNotes = (periodUs: number) =>
   [1, 2, 3].map((k) => ({ lagUs: k * periodUs, label: `${trim(k * periodUs)} µs` }));
 
 // The figure or instrument for a lesson or practice step.
-export function VisualView({ visual, links, hidden, practiceJsDb = 12 }: {
+export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN = 0 }: {
   visual: Visual;
   links: { example: KnownLink; practice: KnownLink };
   hidden?: HiddenShot;
   practiceJsDb?: number; // level 2: J/S on the practice link
+  practiceN?: number; // the "Try another" counter
 }) {
   switch (visual.kind) {
     case 'spreading':
@@ -96,6 +102,32 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12 }: {
       return <ToneSweep />;
     case 'peaks':
       return <Peaks />;
+    case 'df': {
+      const ex = DF_EXAMPLES[visual.example];
+      const bearings = exampleBearings(ex);
+      return (
+        <DfView
+          title="Example"
+          sites={ex.sites}
+          bearings={bearings}
+          wedges={!ex.leg}
+          fix={ex.showFix ? fixFromBearings(bearings) : undefined}
+          target={ex.target}
+          path={ex.leg ? legPoints(ex.sites[0], ex.sites[1]) : undefined}
+          hyperbolas={exampleHyperbolas(ex)}
+        />
+      );
+    }
+    case 'xcorr': {
+      if (visual.source === 'practice') return <XcorrView data={xcorrPractice(practiceN)} />;
+      const ex = DF_EXAMPLES.G2;
+      return (
+        <>
+          <XcorrView data={xcorrExample()} markPeak />
+          <DfView title="Example" sites={ex.sites} target={ex.target} hyperbolas={exampleHyperbolas(ex)} />
+        </>
+      );
+    }
     case 'spectrum':
     case 'autocorr': {
       if (visual.link === 'hidden') {

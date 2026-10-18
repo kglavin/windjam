@@ -7,4 +7,5 @@ export * from './levels/level2';
 export * from './levels/level3';
 export * from './levels/level4';
 export * from './levels/level5';
+export * from './levels/level6';
 export { LEVELS } from './levels/index';
