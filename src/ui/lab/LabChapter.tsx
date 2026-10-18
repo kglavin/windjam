@@ -2,11 +2,12 @@ import { useCallback, useState } from 'react';
 import { LEVELS } from '../../engine/lab/levels';
 import { Bench } from './Bench';
 import { LevelView } from './LevelView';
+import { GlossaryPage } from './Rich';
 import { type Progress, loadProgress, recordScore } from './progress';
 
 const newSeed = () => 1 + Math.floor(Math.random() * 0x7ffffffe);
 
-type View = { kind: 'list' } | { kind: 'bench' } | { kind: 'level'; id: number; seed: number };
+type View = { kind: 'list' } | { kind: 'bench' } | { kind: 'glossary' } | { kind: 'level'; id: number; seed: number };
 
 export function LabChapter({ level }: { level?: number }) {
   const [view, setView] = useState<View>(() =>
@@ -16,6 +17,7 @@ export function LabChapter({ level }: { level?: number }) {
   const onFinish = useCallback((id: number, score: number, passed: boolean) => setProgress(recordScore(id, score, passed)), []);
 
   if (view.kind === 'bench') return <Bench onBack={() => setView({ kind: 'list' })} />;
+  if (view.kind === 'glossary') return <GlossaryPage onBack={() => setView({ kind: 'list' })} />;
   if (view.kind === 'level') {
     const def = LEVELS.find((l) => l.id === view.id)!;
     return (
@@ -50,7 +52,8 @@ export function LabChapter({ level }: { level?: number }) {
         })}
       </div>
       <p>
-        <button type="button" onClick={() => setView({ kind: 'bench' })}>Instrument bench</button>
+        <button type="button" onClick={() => setView({ kind: 'bench' })}>Instrument bench</button>{' '}
+        <button type="button" onClick={() => setView({ kind: 'glossary' })}>Glossary</button>
       </p>
     </main>
   );

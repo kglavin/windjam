@@ -220,8 +220,8 @@ export const LEVEL_4: LevelDef = {
           title: 'All the power on one frequency',
           visual: { kind: 'toneSpectrum' },
           paragraphs: [
-            'A tone jammer transmits a single steady frequency. On the spectrum it is one tall spike: all its power in one place, where noise spreads its power over the band.',
-            "J/S works the same way: the tone's power over the signal's power at the enemy receiver. Here J/S = 10 dB, so the spike carries 10 times the signal's power.",
+            'A [[tone jammer|tone]] transmits a single steady frequency. On the [[spectrum|spectrum]] it is one tall spike: all its power in one place, where noise spreads its power over the band.',
+            "[[J/S|js]] works the same way: the tone's power over the signal's power at the enemy receiver. Here J/S = 10 dB, so the spike carries 10 times the signal's power.",
           ],
           check: {
             question: "A tone arrives at J/S = 13 dB. How many times the signal's power is that, roughly?",
@@ -250,7 +250,7 @@ export const LEVEL_4: LevelDef = {
             ],
           },
           paragraphs: [
-            'Some links use a long code: a code much longer than a bit, so every bit is spread by a different stretch of it.',
+            'Some links use a [[long code|long-code]]: a [[code|code]] much longer than a bit, so every bit is spread by a different stretch of it.',
             'The receiver multiplies everything by the code. A steady tone multiplied by an ever-changing code comes out as noise, spread over the band like broadband noise.',
             'Run both. Theory: broadband noise 0.0065, the tone 0.0063.',
           ],
@@ -315,8 +315,8 @@ export const LEVEL_4: LevelDef = {
           visual: { kind: 'toneSweep' },
           video: 'level4-C1',
           paragraphs: [
-            'A short code repeats every bit, so its spectrum is made of thin lines one bit rate apart: the fine bumps you saw in level 1. For the example link that is 1000 kHz ÷ 31 = 32.3 kHz.',
-            'The code has almost as many +1 chips as −1 chips, so on the carrier itself it has almost nothing. A tone there is wiped out by despreading: {exCarrierBer}, against {exNoJamBer} with no jammer at all.',
+            'A [[short code|short-code]] repeats every bit, so its [[spectrum|spectrum]] is made of thin lines one bit rate apart: the fine bumps you saw in level 1. For the example link that is 1000 kHz ÷ 31 = 32.3 kHz.',
+            'The [[code|code]] has almost as many +1 [[chips|chip]] as −1 chips, so on the [[carrier|carrier]] itself it has almost nothing. A tone there is wiped out by [[despreading|despreading]]: {exCarrierBer}, against {exNoJamBer} with no [[jammer|jammer]] at all.',
             'On one of the lines the tone does about what broadband noise of the same power does: {exLineBer} on the first line, against {exBbnBer} for noise. Between the lines it does less, because the code has less there.',
             "One difference: the tone meets the code the same way in every bit, so a single run's result depends on the tone's phase. Run the first-line tone a few times and watch it swing around the average.",
           ],
@@ -356,9 +356,9 @@ export const LEVEL_4: LevelDef = {
           visual: { kind: 'peaks' },
           video: 'level4-D1',
           paragraphs: [
-            'A jammer can send many tones at once. Their powers add up on average, but when the tones line up in phase their peaks add up too: 8 tones in phase give peaks 8 times the average power.',
-            'Peak-to-average ratio, PAPR, measures that: 8 times is 9.0 dB. With random phases it is lower (about {paprRandom} dB here), and with carefully chosen phases lower still ({paprNewman} dB).',
-            "Peaks matter because the receiver's first amplifier, its front end, has a limit. Peaks above it get squashed, and the wanted signal is squashed with them. Level 5 uses that.",
+            'A [[jammer|jammer]] can send many tones at once. Their powers add up on average, but when the tones line up in phase their peaks add up too: 8 tones in phase give peaks 8 times the average power.',
+            '[[Peak-to-average ratio|papr]], PAPR, measures that: 8 times is 9.0 dB. With random phases it is lower (about {paprRandom} dB here), and with carefully chosen phases lower still ({paprNewman} dB).',
+            "Peaks matter because the receiver's first amplifier, its [[front end|front-end]], has a limit. Peaks above it get squashed, and the wanted signal is squashed with them. Level 5 uses that.",
           ],
           check: {
             question: '8 tones in phase: how many times the average power is the peak?',

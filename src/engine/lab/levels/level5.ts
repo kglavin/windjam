@@ -440,7 +440,7 @@ export const LEVEL_5: LevelDef = {
             },
           },
           paragraphs: [
-            "A receiver's front end can be overloaded. After a pulse that strong it stays blind for a while, its recovery time, even after the pulse has ended.",
+            "A receiver's [[front end|front-end]] can be overloaded. After a pulse that strong it stays blind for a while, its recovery time, even after the pulse has ended.",
             'While blind it hears nothing, so each copy it decides is a coin toss.',
             'Run both. They have the same average power. Theory: broadband noise {exBbnLow}; overloading pulses {exBlind}.',
           ],

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { plainText } from '../glossary';
 import { planRun } from '../berRun';
 import { createRng } from '../../rng';
 import { mSequence } from '../pn';
@@ -38,7 +39,7 @@ const steps = (): StepDef[] => LEVEL_4.units.flatMap((u) => u.steps);
 const step = <T extends StepDef>(id: string) => steps().find((s) => s.id === id) as T;
 const lesson = (id: string) => {
   const s = step<LessonStep>(id);
-  return [...(s.paragraphs ?? []), ...(s.steps ?? []), s.rule ?? ''].join(' ');
+  return plainText([...(s.paragraphs ?? []), ...(s.steps ?? []), s.rule ?? ''].join(' '));
 };
 const ex = knownLinkInfo(EXAMPLE);
 const t = level4Truth(3);

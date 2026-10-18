@@ -119,8 +119,8 @@ export const LEVEL_2: LevelDef = {
           title: 'Jamming to signal ratio',
           visual: { kind: 'jammedSpectra' },
           paragraphs: [
-            "A noise jammer transmits random noise across the whole band the link uses.",
-            "J/S, the jamming to signal ratio, compares the jammer's power with the link's signal power at the enemy receiver, in dB. J/S = 0 dB means they are equal; J/S = +10 dB means the jammer is 10 times stronger.",
+            "A [[noise jammer|jammer]] transmits random noise across the whole band the link uses.",
+            "[[J/S|js]], the jamming to signal ratio, compares the jammer's power with the link's signal power at the enemy receiver, in dB. J/S = 0 dB means they are equal; J/S = +10 dB means the jammer is 10 times stronger.",
             "Left: J/S = 0 dB. The jammer's noise is about as strong as the signal's hump. Right: J/S = +10 dB. The hump is buried.",
           ],
           check: {
@@ -144,8 +144,8 @@ export const LEVEL_2: LevelDef = {
           visual: { kind: 'despreadBars', gpDb: 14.9, jsDb: 10 },
           video: 'level2-B1',
           paragraphs: [
-            "The enemy receiver multiplies everything it hears by its code and adds up the chips of each bit. The signal follows the code and gains Gp. The jammer's noise does not follow the code, so it gains nothing.",
-            'The example link has Gp = 14.9 dB (31 chips per bit) and the jammer arrives at J/S = 10 dB.',
+            "The enemy receiver multiplies everything it hears by its [[code|code]] and adds up the [[chips|chip]] of each bit. The signal follows the code and gains [[Gp|gp]]. The [[jammer|jammer]]'s noise does not follow the code, so it gains nothing.",
+            'The example link has Gp = 14.9 dB (31 chips per bit) and the jammer arrives at [[J/S|js]] = 10 dB.',
           ],
           steps: [
             'Before despreading the jammer is 10 dB above the signal.',
@@ -206,8 +206,8 @@ export const LEVEL_2: LevelDef = {
           title: 'Example: reading the error rate',
           visual: { kind: 'berCurve', mark: 'example' },
           paragraphs: [
-            'The bit error rate, BER, is the fraction of bits the receiver gets wrong. 0.1 means 1 bit in 10; 0.001 means 1 in 1000.',
-            'The curve shows the BER of this kind of link against Eb/J0. More Eb/J0 means fewer errors, and the curve falls fast: every 2 dB cuts the errors by a large factor.',
+            'The [[bit error rate|ber]], BER, is the fraction of bits the receiver gets wrong. 0.1 means 1 bit in 10; 0.001 means 1 in 1000.',
+            'The curve shows the BER of this kind of link against [[Eb/J0|ebj0]]. More Eb/J0 means fewer errors, and the curve falls fast: every 2 dB cuts the errors by a large factor.',
           ],
           steps: [
             "The example's Eb/J0 is 4.9 dB.",
@@ -266,7 +266,7 @@ export const LEVEL_2: LevelDef = {
           title: 'Example: the BER meter',
           visual: { kind: 'berRunDemo' },
           paragraphs: [
-            'The BER meter sends random bits through the jammed link and counts the errors. It stops after 100 errors, or after 300,000 bits.',
+            'The [[BER|ber]] meter sends random bits through the jammed link and counts the errors. It stops after 100 errors, or after 300,000 bits.',
             'Press Run. The theory says 0.0065.',
             'The bar around the measured point is its 95% range. With 100 errors counted, the true BER lies within about ±20% of the measurement.',
           ],
@@ -328,9 +328,9 @@ export const LEVEL_2: LevelDef = {
           id: 'E1',
           title: 'Example: the J/S that breaks the link',
           visual: { kind: 'none' },
-          paragraphs: ['To break the link the jammer must push the BER up to 0.1. That happens at Eb/J0 = −0.9 dB.'],
+          paragraphs: ['To break the link the [[jammer|jammer]] must push the [[BER|ber]] up to 0.1. That happens at [[Eb/J0|ebj0]] = −0.9 dB.'],
           steps: [
-            'Eb/J0 = Gp − J/S, so J/S = Gp − Eb/J0.',
+            'Eb/J0 = [[Gp|gp]] − [[J/S|js]], so J/S = Gp − Eb/J0.',
             'For the example link: J/S = 14.9 − (−0.9) = 15.8 dB.',
             'The jammer must arrive about 38 times stronger than the signal.',
           ],

@@ -19,6 +19,7 @@ import {
 } from '../../engine/lab/levels';
 import type { FactsCard } from './knownFacts';
 import type { FieldResult, Score, StepState } from './levelState';
+import { Rich } from './Rich';
 import { RunBox } from './RunBox';
 import { canContinue, isSkipped, notDone } from './levelNav';
 
@@ -67,7 +68,7 @@ export function StagePanel(p: StagePanelProps) {
       <h2>Level {level.id}: {level.title}</h2>
       <details key={current > 0 ? 'closed' : 'open'} className="stage-intro" open={current === 0}>
         <summary>Briefing</summary>
-        <p>{level.intro}</p>
+        <p><Rich text={level.intro} /></p>
       </details>
 
       <ol className="stage-units">
@@ -126,11 +127,11 @@ export function StagePanel(p: StagePanelProps) {
 }
 
 function Numbered({ items, values, className = 'stage-worked' }: { items: string[]; values: Record<string, string>; className?: string }) {
-  if (items.length === 1) return <p className="stage-reveal">{fillText(items[0], values)}</p>;
+  if (items.length === 1) return <p className="stage-reveal"><Rich text={fillText(items[0], values)} /></p>;
   return (
     <ol className={className}>
       {items.map((t) => (
-        <li key={t}>{fillText(t, values)}</li>
+        <li key={t}><Rich text={fillText(t, values)} /></li>
       ))}
     </ol>
   );
@@ -144,7 +145,7 @@ function Hint({ text, values }: { text?: string; values: Record<string, string> 
       <button type="button" className="link-button" onClick={() => setOpen((o) => !o)}>
         {open ? 'Hide hint' : 'Show hint'}
       </button>
-      {open && <p className="stage-hint">{fillText(text, values)}</p>}
+      {open && <p className="stage-hint"><Rich text={fillText(text, values)} /></p>}
     </div>
   );
 }
@@ -185,7 +186,7 @@ function StepBody(p: StagePanelProps & { step: StepDef; index: number; state: St
       {step.kind === 'apply' && <Apply {...p} step={step} />}
       {step.kind === 'find' && (
         <>
-          <p className="stage-task">{fillText(step.task, p.values)}</p>
+          <p className="stage-task"><Rich text={fillText(step.task, p.values)} /></p>
           <Hint text={step.hint} values={p.values} />
           <div className={`stage-meter ${p.chipSnrDb >= step.atLeastDb || state.done ? 'ok' : ''}`}>
             Chip SNR at the intercept: <strong>{Number.isFinite(p.chipSnrDb) ? signed(p.chipSnrDb) : '-'} dB</strong>, target +{step.atLeastDb} dB
@@ -196,7 +197,7 @@ function StepBody(p: StagePanelProps & { step: StepDef; index: number; state: St
       )}
       {step.kind === 'questions' && (
         <>
-          <p className="stage-task">{fillText(step.task, p.values)}</p>
+          <p className="stage-task"><Rich text={fillText(step.task, p.values)} /></p>
           <QuestionsGoal questions={step.questions} state={state} onAnswer={(qid, c) => p.onAnswer(index, qid, c)} />
         </>
       )}
@@ -220,10 +221,10 @@ function Lesson(p: StagePanelProps & { step: LessonStep; index: number; state: S
   return (
     <>
       {step.paragraphs?.map((t) => (
-        <p key={t} className="stage-para">{fillText(t, p.values)}</p>
+        <p key={t} className="stage-para"><Rich text={fillText(t, p.values)} /></p>
       ))}
       {step.steps && <Numbered items={step.steps} values={p.values} className="stage-worked stage-example" />}
-      {step.rule && <p className="stage-rule">{fillText(step.rule, p.values)}</p>}
+      {step.rule && <p className="stage-rule"><Rich text={fillText(step.rule, p.values)} /></p>}
       {step.check && <CheckBox check={step.check} state={state} onCheck={(v) => p.onCheckLesson(p.index, v)} />}
     </>
   );
@@ -246,7 +247,7 @@ function CheckBox({ check, state, onCheck }: {
         onCheck(value);
       }}
     >
-      <p className="stage-task"><strong>{check.question}</strong></p>
+      <p className="stage-task"><strong><Rich text={check.question} /></strong></p>
       <span className="stage-input">
         <input
           type="number"
@@ -269,7 +270,7 @@ function Practice(p: StagePanelProps & { step: PracticeStep; index: number; stat
   const { step, state } = p;
   return (
     <>
-      <p className="stage-task">{fillText(step.task, p.values)}</p>
+      <p className="stage-task"><Rich text={fillText(step.task, p.values)} /></p>
       <Hint text={step.hint} values={p.values} />
       {numeric(step.fields).length > 0 && (
         <FieldsForm
@@ -309,7 +310,7 @@ function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: Ste
   const settled = numeric(step.fields).every((f) => !!state.fields?.[f.id]);
   return (
     <>
-      <p className="stage-task">{fillText(step.task, p.values)}</p>
+      <p className="stage-task"><Rich text={fillText(step.task, p.values)} /></p>
       <Hint text={step.hint} values={p.values} />
       {numeric(step.fields).length > 0 && (
         <FieldsForm
@@ -469,7 +470,7 @@ function DenyRun(p: StagePanelProps & { step: ApplyStep; index: number; state: S
   const need = goal.berAtLeast * DENY_TOLERANCE;
   return (
     <div className="stage-fields">
-      <p className="stage-task">{fillText(goal.task, p.values)}</p>
+      <p className="stage-task"><Rich text={fillText(goal.task, p.values)} /></p>
       <p className="stage-note">
         Goal: a measured BER of at least {berText(need)} ({berText(goal.berAtLeast)} less 20% for counting noise). Full points if you get there
         within {DENY_FULL_RUNS} runs, half after.
@@ -577,7 +578,7 @@ function FieldsForm({ fields, results, mode, done, worked = false, values, onSub
               const fieldLocked = locked || (mode === 'practice' && !!r?.ok);
               return (
                 <div className="stage-field" key={f.id}>
-                  {f.prompt && <p className="stage-prompt">{fillText(f.prompt, values)}</p>}
+                  {f.prompt && <p className="stage-prompt"><Rich text={fillText(f.prompt, values)} /></p>}
                   <label>
                     <span>{f.label}</span>
                     <span className="stage-input">
@@ -672,7 +673,7 @@ function Debrief(p: StagePanelProps) {
   return (
     <section className="stage-step stage-debrief">
       <h3>Debrief</h3>
-      <p className="stage-reveal">{fillText(p.level.debrief, p.values)}</p>
+      <p className="stage-reveal"><Rich text={fillText(p.level.debrief, p.values)} /></p>
       <table className="stage-score">
         <tbody>
           {row('Characterisation', score.characterisation)}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { plainText } from './glossary';
 import {
   LEVEL_1,
   LEVEL_2,
@@ -174,7 +175,7 @@ describe('numbers written in the texts agree with the known links', () => {
   const pr = knownLinkInfo(LEVEL_1.links.practice);
   const text = (id: string) => {
     const s = allSteps().find((x) => x.id === id) as LessonStep;
-    return [...(s.paragraphs ?? []), ...(s.steps ?? []), s.rule ?? ''].join(' ');
+    return plainText([...(s.paragraphs ?? []), ...(s.steps ?? []), s.rule ?? ''].join(' '));
   };
   it('example link', () => {
     expect(ex.n).toBe(31);

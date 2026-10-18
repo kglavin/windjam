@@ -1063,6 +1063,62 @@ select {
   font-size: 13px;
   color: var(--text);
 }
+.gloss {
+  position: relative;
+  display: inline;
+}
+.gloss-term {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}
+.gloss-term[aria-expanded='true'] {
+  color: #facc15;
+}
+.gloss-pop {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  top: 1.6em;
+  width: min(320px, 80vw);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.45);
+  font-size: 13px;
+  font-weight: normal;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--text);
+}
+.gloss-name {
+  font-size: 14px;
+}
+.gloss-taught {
+  color: var(--muted);
+}
+.gloss-link {
+  color: #60a5fa;
+}
+.glossary-list {
+  display: grid;
+  gap: 10px;
+  max-width: 760px;
+}
+.glossary-item dt {
+  font-weight: 600;
+}
+.glossary-item dd {
+  margin: 2px 0 0 0;
+}
 .video-toggle {
   margin-left: auto;
 }

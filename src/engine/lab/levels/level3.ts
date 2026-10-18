@@ -179,7 +179,7 @@ export const LEVEL_3: LevelDef = {
           visual: { kind: 'threeJammers' },
           paragraphs: [
             'All three jammers have the same average power.',
-            'Broadband noise spreads it over the whole band, all the time. Partial-band noise squeezes it into a quarter of the band, so it is 4 times stronger there. Pulsed noise squeezes it into short bursts, on 10% of the time, so it is 10 times stronger while it is on.',
+            'Broadband noise spreads it over the whole band, all the time. [[Partial-band noise|partial-band]] squeezes it into a quarter of the band, so it is 4 times stronger there. [[Pulsed noise|pulsed]] squeezes it into short bursts, on 10% of the time, so it is 10 times stronger while it is on.',
           ],
           check: {
             question: 'A pulsed jammer is on 20% of the time with the same average power as a steady one. How many times stronger is it while it is on?',
@@ -207,11 +207,11 @@ export const LEVEL_3: LevelDef = {
               { label: 'a quarter of the band', jammer: PARTIAL },
             ],
           },
-          paragraphs: ['Run both. Theory says broadband noise gives 0.0065 and the quarter-band jammer about 0.0061.'],
+          paragraphs: ['Run both. Theory says broadband noise gives 0.0065 and the quarter-band [[jammer|jammer]] about 0.0061.'],
           steps: [
             'The quarter-band jammer is 4 times stronger inside its quarter of the band.',
-            "But the receiver multiplies everything by the code. That spreads the jammer's narrow noise back over the whole band, just as it would spread broadband noise.",
-            'So at the same J/S the two do about the same damage.',
+            "But the receiver multiplies everything by the [[code|code]]. That spreads the jammer's narrow noise back over the whole band, just as it would spread broadband noise.",
+            'So at the same [[J/S|js]] the two do about the same damage.',
           ],
           rule: 'Squeezing noise into part of the band does not help against spread spectrum.',
         },
@@ -261,7 +261,7 @@ export const LEVEL_3: LevelDef = {
             ],
           },
           paragraphs: [
-            'The example link (Gp 14.9 dB) faces J/S = 5 dB. Broadband noise gives Eb/J0 = 14.9 − 5 = 9.9 dB: BER 0.0000049, about 5 wrong bits in a million. The link shrugs it off.',
+            'The example link ([[Gp|gp]] 14.9 dB) faces [[J/S|js]] = 5 dB. Broadband noise gives [[Eb/J0|ebj0]] = 14.9 − 5 = 9.9 dB: [[BER|ber]] 0.0000049, about 5 wrong bits in a million. The link shrugs it off.',
             'Now the same average power in pulses, on 10% of the time, each pulse covering whole bits.',
           ],
           steps: [
@@ -328,8 +328,8 @@ export const LEVEL_3: LevelDef = {
           },
           paragraphs: ['Both jammers are on 10% of the time at the same power. Run both.'],
           steps: [
-            'Pulses one bit long (31 µs every 310 µs) break the bits they hit: BER about 0.022.',
-            'Pulses one chip long (1 µs every 10 µs) land three times inside every bit. The receiver adds up all 31 chips of a bit, so each bit sees the average of the pulses and the quiet chips: just like broadband noise, BER about 0.0065.',
+            'Pulses one bit long (31 µs every 310 µs) break the bits they hit: [[BER|ber]] about 0.022.',
+            'Pulses one [[chip|chip]] long (1 µs every 10 µs) land three times inside every bit. The receiver adds up all 31 chips of a bit, so each bit sees the average of the pulses and the quiet chips: just like broadband noise, BER about 0.0065.',
           ],
           rule: 'A pulse must last at least one whole bit, or the receiver averages it away.',
           check: {
@@ -371,7 +371,7 @@ export const LEVEL_3: LevelDef = {
           video: 'level3-E1',
           visual: { kind: 'berCurve', marks: [{ db: -1.5, label: 'in-pulse −1.5 dB' }] },
           paragraphs: [
-            'Shorter pulses are stronger but hit fewer bits. The best pulse is just strong enough to break the bits it hits, which happens when Eb/J0 during the pulse is about −1.5 dB. Any stronger is wasted on bits that were already broken.',
+            'Shorter pulses are stronger but hit fewer bits. The best pulse is just strong enough to break the bits it hits, which happens when [[Eb/J0|ebj0]] during the pulse is about −1.5 dB. Any stronger is wasted on bits that were already broken.',
           ],
           steps: [
             "The example's broadband Eb/J0 is 9.9 dB, a ratio of 9.8.",

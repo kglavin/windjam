@@ -33,7 +33,7 @@ export const LEVEL_1: LevelDef = {
           video: 'level1-A1',
           paragraphs: [
             'A radio link sends bits. The top row shows 4 bits: +1, −1, −1, +1. Each bit lasts 7 µs.',
-            'Spread spectrum multiplies every bit by a fast pattern called the code. The middle row is the code: 7 short pulses called chips, each 1 µs long, repeated for every bit.',
+            '[[Spread spectrum|spread-spectrum]] multiplies every bit by a fast pattern called the [[code|code]]. The middle row is the code: 7 short pulses called [[chips|chip]], each 1 µs long, repeated for every bit.',
             'The bottom row is what the transmitter sends: bit × code. A +1 bit sends the code as it is. A −1 bit sends it upside down.',
             'So each bit becomes 7 chips, and chips go by 7 times faster than bits.',
           ],
@@ -52,9 +52,9 @@ export const LEVEL_1: LevelDef = {
           visual: { kind: 'spreadVsUnspread' },
           video: 'level1-A2',
           paragraphs: [
-            'This plot is a spectrum: how much power the signal has at each frequency. The orange line is the bits sent without the code. The blue line is the same bits sent with the code.',
-            'Short pulses take up more frequencies than long ones. The chips are 7 times shorter than the bits, so the blue signal is 7 times wider: its hump runs from −1 MHz to +1 MHz, the orange one only from about −0.14 to +0.14 MHz.',
-            'Both carry the same power. Spread over 7 times the width, the blue signal is about 7 times lower at each frequency. That is why spread spectrum is hard to see: it can sit below the noise.',
+            'This plot is a [[spectrum|spectrum]]: how much power the signal has at each frequency. The orange line is the bits sent without the [[code|code]]. The blue line is the same bits sent with the code.',
+            'Short pulses take up more frequencies than long ones. The [[chips|chip]] are 7 times shorter than the bits, so the blue signal is 7 times wider: its hump runs from −1 MHz to +1 MHz, the orange one only from about −0.14 to +0.14 MHz.',
+            'Both carry the same power. Spread over 7 times the width, the blue signal is about 7 times lower at each frequency. That is why [[spread spectrum|spread-spectrum]] is hard to see: it can sit below the noise.',
           ],
           check: {
             question: 'If each bit became 70 chips instead of 7, how many times wider would the spread signal be than the unspread one?',
@@ -71,11 +71,11 @@ export const LEVEL_1: LevelDef = {
           visual: { kind: 'despread' },
           video: 'level1-A3',
           paragraphs: [
-            'The friendly receiver knows the code. It multiplies what it receives by the same code again. A chip times itself is always +1, so the code cancels out and the bits come back (third row).',
+            'The friendly receiver knows the [[code|code]]. It multiplies what it receives by the same code again. A [[chip|chip]] times itself is always +1, so the code cancels out and the bits come back (third row).',
             "Then it adds up the 7 chips of each bit (bottom row). The signal's 7 chips all point the same way, so they add up to 7. Noise does not follow the code: its chips point up and down at random and mostly cancel.",
-            'So after adding, the signal has gained 7 times on the noise. This gain is called the processing gain, Gp. It equals the number of chips per bit.',
-            'A receiver without the code cannot do this. That is the advantage the link has over you, and over any jammer.',
-            'These lessons use a short code: the same 7 chips for every bit, so the pattern is easy to see. Most links in this lab do the same, because it keeps the measurements simple. Real links often send the preamble with a short code, which helps a receiver lock on, but spread the data with a long code: a pseudo-random sequence far longer than a bit, known to both ends. Every bit is then multiplied by a different stretch of it, with no repeating pattern to find, so guessing the code is hopeless. Gp is still the number of chips per bit. Level 4 meets a long code.',
+            'So after adding, the signal has gained 7 times on the noise. This gain is called the [[processing gain|gp]], Gp. It equals the number of chips per bit.',
+            'A receiver without the code cannot do this. That is the advantage the link has over you, and over any [[jammer|jammer]].',
+            'These lessons use a [[short code|short-code]]: the same 7 chips for every bit, so the pattern is easy to see. Most links in this lab do the same, because it keeps the measurements simple. Real links often send the [[preamble|preamble]] with a short code, which helps a receiver lock on, but spread the data with a [[long code|long-code]]: a pseudo-random sequence far longer than a bit, known to both ends. Every bit is then multiplied by a different stretch of it, with no repeating pattern to find, so guessing the code is hopeless. Gp is still the number of chips per bit. Level 4 meets a long code.',
           ],
           check: {
             question: 'A code has 63 chips per bit. What is its processing gain, in times?',
@@ -97,9 +97,9 @@ export const LEVEL_1: LevelDef = {
           title: 'Why you have to get close',
           visual: { kind: 'interceptCompare' },
           paragraphs: [
-            'Your intercept receiver does not know the code, so it gets no processing gain. It sees the signal only where the signal is stronger than the noise.',
-            "Chip SNR is the signal's power divided by the noise power in the signal's band, in dB. 0 dB means equal; −10 dB means the signal is 10 times weaker than the noise.",
-            'Left: the intercept is far away. Chip SNR is −15 dB and the spectrum is flat noise. Right: the intercept is close. Chip SNR is +20 dB and the hump stands out.',
+            'Your [[intercept receiver|intercept]] does not know the [[code|code]], so it gets no [[processing gain|gp]]. It sees the signal only where the signal is stronger than the noise.',
+            "[[Chip|chip]] [[SNR|snr]] is the signal's power divided by the noise power in the signal's band, in dB. 0 dB means equal; −10 dB means the signal is 10 times weaker than the noise.",
+            'Left: the intercept is far away. Chip SNR is −15 dB and the [[spectrum|spectrum]] is flat noise. Right: the intercept is close. Chip SNR is +20 dB and the hump stands out.',
           ],
         },
         {
@@ -128,8 +128,8 @@ export const LEVEL_1: LevelDef = {
           visual: { kind: 'spectrum', link: 'example', annotate: true },
           video: 'level1-C1',
           paragraphs: [
-            'This is the spectrum of the 31-chip example link, which sends 1 million chips per second.',
-            'The fine bumps come from the pattern of the code. What matters is the overall shape, the dashed envelope: one wide hump that falls to zero at ± the chip rate.',
+            'This is the [[spectrum|spectrum]] of the 31-[[chip|chip]] example link, which sends 1 million chips per second.',
+            'The fine bumps come from the pattern of the [[code|code]]. What matters is the overall shape, the dashed envelope: one wide hump that falls to zero at ± the [[chip rate|chip-rate]].',
           ],
           steps: [
             'Find the deepest dip on each side of the central hump. These dips are called nulls. Here they are at −1.0 MHz and +1.0 MHz.',
@@ -200,8 +200,8 @@ export const LEVEL_1: LevelDef = {
           visual: { kind: 'autocorr', link: 'example', annotate: true },
           video: 'level1-D1',
           paragraphs: [
-            'Every transmission starts with a preamble: the code sent over and over with no data on it. Because the code repeats, the signal looks like itself again after one code length.',
-            'The autocorrelation plot measures that: how alike the signal is to itself delayed by a given time. 1 means identical, 0 means unrelated.',
+            'Every transmission starts with a [[preamble|preamble]]: the [[code|code]] sent over and over with no data on it. Because the code repeats, the signal looks like itself again after one code length.',
+            'The [[autocorrelation|autocorrelation]] plot measures that: how alike the signal is to itself delayed by a given time. 1 means identical, 0 means unrelated.',
           ],
           steps: [
             'The first peak is always at 0: no delay.',
@@ -288,7 +288,7 @@ export const LEVEL_1: LevelDef = {
           title: 'Example: processing gain in dB',
           visual: { kind: 'dbTable' },
           paragraphs: [
-            'The example link sends one code period per bit, so each bit is 31 chips and Gp = 31.',
+            'The example link sends one [[code|code]] period per bit, so each bit is 31 [[chips|chip]] and [[Gp|gp]] = 31.',
             'Gains are usually given in decibels (dB): dB = 10 × log10(ratio). A few to remember: 2 times is 3 dB, 10 times is 10 dB, 100 times is 20 dB. The table has more.',
           ],
           steps: [
@@ -363,7 +363,7 @@ export const LEVEL_1: LevelDef = {
           title: "Example: what the receiver's decoder sees",
           visual: { kind: 'none' },
           paragraphs: [
-            "The friendly receiver's budget shows its SNR before despreading. Despreading adds Gp. What its decoder then sees is Eb/N0, the energy of one bit over the noise: Eb/N0 = SNR + Gp, in dB.",
+            "The friendly receiver's budget shows its [[SNR|snr]] before [[despreading|despreading]]. Despreading adds [[Gp|gp]]. What its decoder then sees is [[Eb/N0|ebn0]], the energy of one bit over the noise: Eb/N0 = SNR + Gp, in dB.",
           ],
           steps: ['Example: SNR −8.0 dB and Gp 14.9 dB.', 'Eb/N0 = −8.0 + 14.9 = 6.9 dB.'],
           rule:
