@@ -298,6 +298,27 @@ export const rttKm = (roundUs: number, turnUs: number): number => (C_KM_PER_US *
 export const rttDelayErrorKm = (delayUs: number): number => (C_KM_PER_US * delayUs) / 2;
 // One chip of timing at chipRateMcps, as RTT range (metres).
 export const chipRangeM = (chipRateMcps: number): number => (C_KM_PER_US * 1000) / chipRateMcps / 2;
+// A UWB pulse pulseNs wide, as RTT range (metres): the same sum with the pulse as the chip.
+export const pulseRangeM = (pulseNs: number): number => chipRangeM(1000 / pulseNs);
+
+// --- Movement ----------------------------------------------------------------------------------------------------
+
+// The longest two radios on crossing tracks stay linked: they meet head on and part, closing at relMs, with link range
+// rangeKm, so the link spans 2 × range of relative travel.
+export const linkLifetimeS = (rangeKm: number, relMs: number): number => (2000 * rangeKm) / relMs;
+
+// --- Checking a position claim -----------------------------------------------------------------------------------
+
+// The speed (km/h) two position reports dtS apart imply.
+export const claimedSpeedKmh = (a: Pt, b: Pt, dtS: number): number => (Math.hypot(b.xKm - a.xKm, b.yKm - a.yKm) / dtS) * 3600;
+// The most a platform with top speed topMs can move in dtS (km).
+export const maxMoveKm = (topMs: number, dtS: number): number => (topMs * dtS) / 1000;
+// The radios that hear a node directly must all be within link range of the spot it claims.
+export const neighboursFit = (claim: Pt, hearers: Pt[], rangeKm: number): boolean =>
+  hearers.every((h) => Math.hypot(h.xKm - claim.xKm, h.yKm - claim.yKm) <= rangeKm);
+// A round-trip range can only come out long, so it bounds the true distance from above: a claim farther than it is
+// false.
+export const claimFitsRange = (claimedKm: number, rangedKm: number): boolean => claimedKm <= rangedKm;
 
 // --- Denial of sleep ---------------------------------------------------------------------------------------------
 

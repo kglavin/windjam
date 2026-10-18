@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MESH_RADIO, cutNodes, denialRadii, dutySavingDb, floodSends, helloDuty, isDominatingConnected, lifeDays, mprFlood, navCtsUs, radiusKm, route, rttKm } from '../mesh';
+import {
+  MESH_RADIO, claimedSpeedKmh, linkLifetimeS, cutNodes, denialRadii, dutySavingDb, floodSends, helloDuty, isDominatingConnected, lifeDays, maxMoveKm, mprFlood, navCtsUs,
+  radiusKm, route, rttKm,
+} from '../mesh';
 import {
   type ApplyStep, type LessonStep, type QuestionsStep, type StepDef, EXAMPLE_BACKBONE, EXAMPLE_FRAMES, EXAMPLE_MESH, GUARD_KM, H1_JAMMER, I1_EXAMPLE, LEVEL_12, LEVELS, ROUTE_TO,
-  RTT_EXAMPLE, SLEEP, TURN_US, fillText, guarded, h2Mesh, i2Range, i2Setup, level12Truth, level12Values, meshTry, quietMw,
+  RTT_EXAMPLE, SLEEP, TURN_US, fillText, guarded, h2Mesh, i2Range, i2Setup, i4Excess, i4Setup, i4Speed, level12Truth, level12Values, meshTry, quietMw,
 } from '../levels';
 
 const steps = (): StepDef[] => LEVEL_12.units.flatMap((u) => u.steps);
@@ -40,7 +43,10 @@ describe('level 12 part 1', () => {
     expect(navCtsUs(EXAMPLE_FRAMES)).toBe(2060);
     expect(step('B2').check!.answer).toBe(2060);
     expect(step('C1').check!.answer).toBe(30);
-    expect(step('C2').check!.answer).toBe(400);
+    expect(step('C2').check!.answer).toBe(180);
+    expect(text('C2')).toContain('= 270 s');
+    expect(linkLifetimeS(2.7, 20)).toBe(270);
+    expect(text('A1')).toContain('MANET');
     expect(step('D1').check!.answer).toBe(7);
     expect(rttKm(RTT_EXAMPLE.roundUs, RTT_EXAMPLE.turnUs) * 1000).toBeCloseTo(749.5, 1);
     expect(step('E1').check!.answer).toBe(749);
@@ -95,6 +101,29 @@ describe('level 12 part 2', () => {
       const t = level12Truth(s);
       expect(i2Range(t) - i2Setup(t).km).toBeCloseTo((0.299792458 * i2Setup(t).delayUs) / 2, 2);
     }
+  });
+
+  it('E1: UWB pulses range to 15 cm', () => {
+    expect(text('E1')).toContain('15 cm');
+  });
+
+  it('I3 and I4: checking a claimed position', () => {
+    expect(claimedSpeedKmh({ xKm: 0, yKm: 0 }, { xKm: 0.5, yKm: 0 }, 60).toFixed(1)).toBe('30.0');
+    expect(maxMoveKm(2, 60).toFixed(3)).toBe('0.120');
+    for (const n of ['30.0 km/h', '0.120 km', '0.380 km']) expect(text('I3')).toContain(n);
+    expect(step('I3').check!.answer).toBeCloseTo(claimedSpeedKmh({ xKm: 0, yKm: 0 }, { xKm: 1.5, yKm: 0 }, 30), 9);
+    let impossible = 0;
+    let possible = 0;
+    for (let s = 1; s <= 30; s++) {
+      const t = level12Truth(s);
+      const c = i4Setup(t);
+      expect(i4Speed(t)).toBeCloseTo(claimedSpeedKmh(c.a, c.b, c.dtS), 9);
+      expect(Math.abs(i4Excess(t))).toBeGreaterThan(0.01); // never on the line
+      if (i4Excess(t) > 0) impossible++;
+      else possible++;
+    }
+    expect(impossible).toBeGreaterThan(5);
+    expect(possible).toBeGreaterThan(3);
   });
 
   it('J1: denial of sleep', () => {

@@ -5,8 +5,8 @@ traffic finds another path when one breaks (level 0 K1). It is held together by 
 channel, and those are its weak points (teaching point T9). The level comes in two parts. Part 1 teaches how a mesh
 works, as level 0 teaches radio: short lessons with videos and unscored checks. Part 2 attacks it, scored.
 
-Source: "From mesh networking to tactical military radio networks" (two tutorials, pasted 2026-10-18; the second cut
-off at 50,000 characters). Used as a source, not copied; section 6 lists its errors. Sensor node hardware, embedded
+Source: "From mesh networking to tactical military radio networks" (two tutorials, pasted 2026-10-18; the second
+pasted again in full to its quiz, which gave UWB ranging and location-claim checking). Used as a source, not copied; section 6 lists its errors. Sensor node hardware, embedded
 operating systems and energy harvesting are left out (design-curriculum.md section 2).
 
 ## 1. Decisions
@@ -39,8 +39,10 @@ D6. **The attacks, each with its sum.**
 - The overhead: HELLOs and route requests are short. A jammer that hits only them at a duty d pays 10·log10(1 ÷ d) dB
   less average power, and the links drop after the missed-HELLO count.
 - The backbone: jam a cut node, or the backbone node between two groups, and the mesh splits.
-- Ranging: TOA and RTT. A repeater can only add delay: each microsecond adds 150 m to an RTT range. Jamming the direct
-  path makes the receiver lock on a later copy (level 11).
+- Ranging: TOA and RTT, and UWB pulses for sub-metre range. A repeater can only add delay: each microsecond adds 150 m
+  to an RTT range. Jamming the direct path makes the receiver lock on a later copy (level 11).
+- Position claims: the radios that hear a node must be in range of where it says it is; successive reports must not
+  imply more than the platform's top speed; a round-trip range bounds the true distance from above.
 - Denial of sleep: fake frames wake a radio and drain its battery. An authenticated preamble lets it check a frame
   cheaply and drop it before waking the processor.
 
@@ -53,22 +55,22 @@ Part 1, getting to know mesh networks (unscored):
 
 | Unit | Lesson | What it teaches | Check |
 |---|---|---|---|
-| A | A1 Every radio a router | Multi-hop forwarding; no hub; self-healing: HELLOs, route error, a new path | A message crosses 4 links: 3 relays |
+| A | A1 Every radio a router | Multi-hop forwarding; no hub; self-healing: HELLOs, route error, a new path; a mesh that moves is a MANET | A message crosses 4 links: 3 relays |
 | B | B1 Sharing the channel | CSMA: listen, back off; TDMA: slots, a clock, sleep | 10 slots of 2 ms: a radio sends every 20 ms |
 | B | B2 The hidden terminal | Two radios that cannot hear each other collide at a third; RTS/CTS and the NAV | CTS NAV from DATA, ACK, SIFS |
 | C | C1 Routes on demand | AODV: request flood, reply, route error, expanding ring | 30 radios: one flood, 30 sends |
-| C | C2 Routes kept ready | OLSR: HELLOs, topology floods, multipoint relays; N² without them | 20 radios, every one floods: 400 |
+| C | C2 Routes kept ready | OLSR: HELLOs, topology floods, multipoint relays; N² without them; movement and the choice between on-demand and kept routes; link lifetime | 2.7 km range, closing at 30 m/s: 180 s linked |
 | D | D1 Clusters and backbones | Cluster heads and gateways; a connected dominating set; rotating the role | A backbone of 6: a flood costs 7 sends |
-| E | E1 Ranging without GPS | TOA needs a common clock; RTT does not; c = 300 m per µs; DSSS chips set the resolution | RTT and turnaround to metres |
+| E | E1 Ranging without GPS | TOA needs a common clock; RTT does not; c = 300 m per µs; DSSS chips and UWB pulses set the resolution | RTT and turnaround to metres |
 
 Part 2, mesh networks under attack (scored):
 
 | Unit | Steps | Teaches | Scored | Video |
 |---|---|---|---|---|
 | F Carrier-sense denial | F1 example, F2 practice, F3 enemy | A jammer above the clear-channel threshold silences CSMA radios, needing no J/S; the radius against the radius for data jamming | 15: the silenced radius, and how many times the power data jamming would need at that radius | The quiet zone round a weak jammer |
-| G The overhead as target | G1 example, G2 enemy | HELLO and route request jamming; the duty and the power it saves; when links drop | 15: the duty, the dB saved, the time until the links drop | – |
+| G The overhead as target | G1 example, G2 enemy | HELLO and route request jamming; the duty and the power it saves; when links drop | 10: the duty, the dB saved, the time until the links drop | – |
 | H The backbone as target | H1 example, H2 enemy | Cut nodes and backbone nodes; splitting the mesh; the load-balanced defence | 20: place the jammer to cut the most radios off the gateway; full points within 3 tries, half after | One jammer on a backbone node |
-| I Ranging under attack | I1 example, I2 enemy | A repeater's delay adds range; it cannot subtract; jamming the direct path | 15: the range the victim measures, and its error | – |
+| I Ranging under attack | I1 example, I2 enemy, I3 lesson, I4 enemy | A repeater's delay adds range; it cannot subtract; jamming the direct path. Checking a claimed position: neighbours in range, speed, a ranged distance as an upper bound | 20: the range the victim measures and its error (10); a claim's speed and how far beyond its reach it moved (10) | – |
 | J What each defence defeats | J1 lesson, J2 enemy | Hopping, direct sequence, authenticated preambles against each attack; denial of sleep and battery life | 15: battery life under fake frames, without and with an authenticated preamble | Fake frames draining a battery |
 | K Check | K1 questions | Three questions | 20 | – |
 
@@ -90,9 +92,9 @@ engine as before.
 
 | Change | Where |
 |---|---|
-| Mesh links from the two-ray budget, shortest paths, parts and cut nodes, a backbone from a spanning tree, multipoint relays and flood costs, the NAV sums, hidden terminals, the silenced radius and the data-jamming radius, links broken by a jammer, HELLO timing, TOA and RTT, battery life under fake frames | `src/engine/lab/mesh.ts` with tests |
+| Mesh links from the two-ray budget, shortest paths, parts and cut nodes, a backbone from a spanning tree, multipoint relays and flood costs, the NAV sums, hidden terminals, the silenced radius and the data-jamming radius, links broken by a jammer, HELLO timing, link lifetime, TOA and RTT, UWB pulse range, position-claim checks (neighbours, speed, range bound), battery life under fake frames | `src/engine/lab/mesh.ts` with tests |
 | `LEVEL_12`, truth, values, setup; instruments | `levels/level12.ts`, `src/ui/lab/` |
-| Glossary: multi-hop, self-healing, CSMA, TDMA, hidden terminal, RTS/CTS, NAV, AODV, OLSR, HELLO, multipoint relay, cluster head, connected dominating set, TOA, RTT, denial of sleep, authenticated preamble | `glossary.ts` |
+| Glossary: MANET, multi-hop, self-healing, CSMA, TDMA, hidden terminal, RTS/CTS, NAV, AODV, OLSR, HELLO, multipoint relay, cluster head, connected dominating set, TOA, RTT, UWB, distance bounding, carrier-sense denial, denial of sleep, authenticated preamble | `glossary.ts` |
 
 ## 6. Corrections to the source notes
 
@@ -104,6 +106,8 @@ engine as before.
 | Authentication preambles drop bad frames at the RF front end before baseband processing | Checking a preamble needs the signal digitised and correlated; it saves waking the processor and the upper layers |
 | Multi-hop cuts transmit power because path loss is non-linear | True for radiated power per hop; each hop adds receive and processing energy and delay |
 | 802.15.4 uses DSSS (as protection) | 32 chips per 4 bits, about 9 dB of processing gain: no anti-jam margin to speak of |
+| UWB under 802.15.4a employs CSS and sub-nanosecond pulses | 802.15.4a defines two separate radios: UWB impulse radio, and chirp spread spectrum, which is not UWB |
+| Bluetooth and BLE: a master with up to seven active slaves in a piconet | That is classic Bluetooth; BLE connects differently |
 
 ## 7. Left out
 

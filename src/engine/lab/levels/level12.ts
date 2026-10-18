@@ -5,7 +5,7 @@ import { createRng } from '../../rng';
 import type { Pt } from '../geoloc';
 import {
   type Adj, type FrameTimes, type MeshJammer, type SleepBudget, MESH_RADIO, backbone, brokenLinks, cutNodes, cutOff, denialRadii, dutySavingDb, helloDuty,
-  jammedAdj, lifeDays, linkDropS, meshLinks, navCtsUs, parts, rttKm, silenced,
+  claimedSpeedKmh, jammedAdj, linkLifetimeS, lifeDays, linkDropS, maxMoveKm, meshLinks, navCtsUs, parts, rttKm, silenced,
 } from '../mesh';
 import { type LevelDef, type Truth, EXAMPLE, PRACTICE, shortCodeTruth } from './types';
 
@@ -145,6 +145,26 @@ export const i2Setup = (t: Truth) => {
 };
 export const i2Range = (t: Truth): number => rttKm(i2Setup(t).roundUs, TURN_US);
 
+// I4: two position reports from one node; is the move possible for what it claims to be?
+export const PLATFORM_TOP_MS = { 'soldier on foot': 2, vehicle: 20 } as const;
+export type ClaimPlatform = keyof typeof PLATFORM_TOP_MS;
+export function i4Setup(t: Truth) {
+  const r = createRng((t.seed ^ 0x124) >>> 0);
+  const platform = pick(t, 0x125, ['soldier on foot', 'vehicle'] as ClaimPlatform[]);
+  const dtS = pick(t, 0x126, [30, 60, 120]);
+  const top = maxMoveKm(PLATFORM_TOP_MS[platform], dtS);
+  const km = top * pick(t, 0x127, [0.5, 1.6, 3, 6]); // within reach, or some way beyond it
+  const a = { xKm: Math.round((2 + 6 * r()) * 100) / 100, yKm: Math.round((2 + 4 * r()) * 100) / 100 };
+  const ang = 2 * Math.PI * r();
+  const b = { xKm: Math.round((a.xKm + km * Math.cos(ang)) * 100) / 100, yKm: Math.round((a.yKm + km * Math.sin(ang)) * 100) / 100 };
+  return { platform, dtS, a, b, topMs: PLATFORM_TOP_MS[platform] };
+}
+export const i4Speed = (t: Truth): number => { const c = i4Setup(t); return claimedSpeedKmh(c.a, c.b, c.dtS); };
+export const i4Excess = (t: Truth): number => {
+  const c = i4Setup(t);
+  return Math.hypot(c.b.xKm - c.a.xKm, c.b.yKm - c.a.yKm) - maxMoveKm(c.topMs, c.dtS);
+};
+
 // Unit J: denial of sleep.
 export const SLEEP: SleepBudget = { batteryWh: 20, sleepMw: 0.02, listenMw: 50, listenDuty: 0.01, wakeMj: 3, checkMj: 0.05 };
 export const quietMw = (b: SleepBudget): number => b.sleepMw * (1 - b.listenDuty) + b.listenMw * b.listenDuty;
@@ -193,6 +213,17 @@ export function level12Values(t: Truth, practiceN: number): Record<string, strin
     iRange: (range).toFixed(3),
     iErr: (range - i.km).toFixed(3),
     iDelay: String(i.delayUs),
+    cPlat: i4Setup(t).platform,
+    cDt: String(i4Setup(t).dtS),
+    cA: `(${i4Setup(t).a.xKm.toFixed(2)}, ${i4Setup(t).a.yKm.toFixed(2)})`,
+    cB: `(${i4Setup(t).b.xKm.toFixed(2)}, ${i4Setup(t).b.yKm.toFixed(2)})`,
+    cKm: (Math.hypot(i4Setup(t).b.xKm - i4Setup(t).a.xKm, i4Setup(t).b.yKm - i4Setup(t).a.yKm)).toFixed(3),
+    cKmh: f1(i4Speed(t)),
+    cTop: String(i4Setup(t).topMs),
+    cTopKmh: f1(i4Setup(t).topMs * 3.6),
+    cMax: maxMoveKm(i4Setup(t).topMs, i4Setup(t).dtS).toFixed(3),
+    cExcess: i4Excess(t).toFixed(3),
+    cVerdict: i4Excess(t) > 0 ? 'impossible and the claim is false' : 'possible, and this check cannot reject it',
     jHz: String(hz),
     jQuiet: quietMw(SLEEP).toFixed(2),
     jNoMw: (quietMw(SLEEP) + hz * SLEEP.wakeMj).toFixed(2),
@@ -224,6 +255,7 @@ export const LEVEL_12: LevelDef = {
             'In a [[mesh|mesh]] there is no base station and no hub. Every radio sends its own messages and relays other radios\' messages. A message to a radio out of range goes from neighbour to neighbour: [[multi-hop|multi-hop]] forwarding.',
             'Each hop is short, so each radio needs little power. Each hop also adds delay, and every relay spends battery receiving and sending again.',
             'Neighbours send short HELLO messages every second or so. When a neighbour stops answering, the radio drops the link, warns the others with a route error, and a new path is found round the gap: the mesh is [[self-healing|self-healing]]. On the map, click a radio to knock it out and watch the route move.',
+            'A mesh whose radios move is a [[MANET|manet]], a mobile ad hoc network: links appear and break as radios come into and out of range. Tactical radio networks are MANETs.',
           ],
           check: {
             question: 'A message crosses 4 links to reach its destination. How many radios relayed it on the way?',
@@ -310,12 +342,14 @@ export const LEVEL_12: LevelDef = {
             'The other way keeps routes ready all the time. In [[OLSR|olsr]] each radio sends [[HELLO|hello]] messages to learn its neighbours, and floods the links it has to everyone, so every radio can work out every route before it is needed.',
             'That costs sends whether or not anyone talks. If every one of N radios floods, the cost is N × N, not more: 20 radios, 400 sends a round.',
             'OLSR cuts it with [[multipoint relays|mpr]]: each radio picks the fewest neighbours that between them reach all its neighbours\' neighbours, and only those relay its floods. Click a radio on the map to see its relays.',
+            'Movement sets the choice. The faster radios move, the sooner links break, so HELLOs must come more often and kept routes go stale sooner. Routes on demand (AODV) suit light traffic and much movement; kept tables (OLSR) suit heavy traffic and little movement. Two radios passing head on at a combined 20 m/s, with 2.7 km of range, stay linked at most 2 × 2.7 km ÷ 20 m/s = 270 s.',
           ],
           check: {
-            question: 'A mesh has 20 radios and each floods its links once. How many sends is that, without relays?',
-            answer: 400,
+            question: 'Two radios with 2.7 km of range pass head on, closing at a combined 30 m/s. At most how many seconds do they stay linked?',
+            unit: 's',
+            answer: linkLifetimeS(2.7, 30),
             tol: { exact: true },
-            wrong: '20 floods of 20 sends each.',
+            wrong: 'They link 2.7 km before they meet and part 2.7 km after: 5.4 km ÷ 30 m/s.',
           },
         },
       ],
@@ -358,6 +392,7 @@ export const LEVEL_12: LevelDef = {
             'Radio travels at 300 m each microsecond. Time a signal\'s flight and you have the distance: [[time of arrival|toa]]. That needs both radios\' clocks in step to a few nanoseconds.',
             'The [[round trip|rtt]] needs no common clock. A sends; B answers after a known turnaround; A times the whole exchange on its own clock. Distance = (round trip − turnaround) ÷ 2 × 300 m per µs.',
             'Direct sequence helps: a correlation peak is about one chip wide, so at 10 Mcps one chip is 30 m of round trip, 15 m of range, and the peak can be read finer than that. Several ranges to known radios give a position, as level 6\'s TDOA does with time differences.',
+            '[[Ultra-wideband|uwb]] radios go further: they send pulses about 1 ns long instead of a carrier. A 1 ns pulse is 0.3 m of round trip, 15 cm of range, so they range to well under a metre. (802.15.4a defines two separate radios: UWB pulses, and chirp spread spectrum, which is not UWB.)',
           ],
           check: {
             question: 'A round trip takes 10.2 µs, and B\'s turnaround is 5.2 µs. How far away is B, in metres?',
@@ -469,9 +504,9 @@ export const LEVEL_12: LevelDef = {
           task: 'The enemy\'s HELLOs last {gMs} ms and come every {gS} s. Its radios drop a link after {gLoss} missed HELLOs. What share of the time (%) does a jammer on the HELLOs work, how many dB of average power does that save, and how many seconds after the last HELLO got through do the links drop?',
           hint: 'Duty = HELLO length ÷ interval. Saving = 10 × log10(1 ÷ duty). Links drop the missed-HELLO count × the interval after the last HELLO heard.',
           fields: [
-            { id: 'duty', label: 'Share of the time', unit: '%', truth: (t) => 100 * helloDuty(g2Setup(t).helloMs, g2Setup(t).intervalS), check: { rel: 0.02 }, points: 5 },
-            { id: 'db', label: 'Power saved', unit: 'dB', truth: (t) => dutySavingDb(helloDuty(g2Setup(t).helloMs, g2Setup(t).intervalS)), check: { abs: 0.2 }, points: 5 },
-            { id: 'drop', label: 'Links drop, after the last HELLO', unit: 's', truth: (t) => linkDropS(g2Setup(t).intervalS, g2Setup(t).allowedLoss), check: { exact: true }, points: 5 },
+            { id: 'duty', label: 'Share of the time', unit: '%', truth: (t) => 100 * helloDuty(g2Setup(t).helloMs, g2Setup(t).intervalS), check: { rel: 0.02 }, points: 3 },
+            { id: 'db', label: 'Power saved', unit: 'dB', truth: (t) => dutySavingDb(helloDuty(g2Setup(t).helloMs, g2Setup(t).intervalS)), check: { abs: 0.2 }, points: 4 },
+            { id: 'drop', label: 'Links drop, after the last HELLO', unit: 's', truth: (t) => linkDropS(g2Setup(t).intervalS, g2Setup(t).allowedLoss), check: { exact: true }, points: 3 },
           ],
           reveal: ['{gMs} ms ÷ {gS} s = {gDuty}% of the time: {gDb} dB less average power.', 'Links drop after {gLoss} × {gS} s = {gDrop} s.'],
         },
@@ -530,7 +565,7 @@ export const LEVEL_12: LevelDef = {
           visual: { kind: 'mac', example: 'repeater' },
           paragraphs: [
             'Round-trip ranging (unit E) trusts the timing. An attacker who catches the ranging frame and sends it on late, a repeater, makes the exchange take longer, and the range comes out long.',
-            'It cannot make the range shorter: it cannot answer before the frame reaches it, and a reply sent early fails the turnaround check. Protocols that bound distance this way are called distance bounding.',
+            'It cannot make the range shorter: it cannot answer before the frame reaches it, and a reply sent early fails the turnaround check. Protocols that bound distance this way are called [[distance bounding|distance-bounding]].',
             'Jamming the direct path does the same as a repeater: the receiver locks on a later copy off a wall (level 11), and the range comes out long.',
           ],
           steps: [
@@ -555,10 +590,48 @@ export const LEVEL_12: LevelDef = {
           task: 'An enemy radio ranges to a beacon {iKm} km away, through your repeater. It measures a round trip of {iRound} µs; the beacon\'s turnaround is {iTurn} µs. What range (km) does it compute, and how far wrong (km) is it?',
           hint: 'Range = (round trip − turnaround) ÷ 2 × 0.2998 km per µs. Error = that − the true distance.',
           fields: [
-            { id: 'range', label: 'Range it computes', unit: 'km', truth: (t) => i2Range(t), check: { abs: 0.01 }, points: 8 },
-            { id: 'err', label: 'Error', unit: 'km', truth: (t) => i2Range(t) - i2Setup(t).km, check: { abs: 0.01 }, points: 7 },
+            { id: 'range', label: 'Range it computes', unit: 'km', truth: (t) => i2Range(t), check: { abs: 0.01 }, points: 5 },
+            { id: 'err', label: 'Error', unit: 'km', truth: (t) => i2Range(t) - i2Setup(t).km, check: { abs: 0.01 }, points: 5 },
           ],
           reveal: ['({iRound} − {iTurn}) ÷ 2 = {iFlight} µs each way: {iRange} km.', 'Error: {iRange} − {iKm} = {iErr} km, from your {iDelay} µs delay.'],
+        },
+        {
+          kind: 'lesson',
+          id: 'I3',
+          title: 'Checking a claimed position',
+          visual: { kind: 'none' },
+          paragraphs: [
+            'Without GPS, a radio\'s position is what it reports, and a spoofed or captured radio can report anything: a false position draws fire or support to the wrong place. The mesh can check claims without trusted hardware in every radio.',
+            'Neighbours: the radios that hear it directly must all be within radio range (here about 2.7 km) of where it says it is. A radio heard by three radios in the west cannot be 8 km east.',
+            'Speed: successive reports cannot imply moving faster than the platform can. A soldier on foot manages about 2 m/s (7.2 km/h), a vehicle off road about 20 m/s (72 km/h).',
+            'Range: a round-trip range only comes out long (unit I), so it is an upper bound. A claim farther away than a ranged distance is false. A claim closer than it may be a delay attack.',
+          ],
+          steps: [
+            'A radio says it is a soldier on foot. Two reports, 60 s apart, are 0.50 km apart.',
+            'That is 0.50 km ÷ 60 s × 3600 = 30.0 km/h.',
+            'On foot it could move at most 2 m/s × 60 s = 0.120 km. It jumped 0.380 km further: the claim is false.',
+          ],
+          rule: 'Check a claimed position three ways: the radios that hear it must be in range of it, the moves must be possible at the platform\'s speed, and a ranged distance bounds it from above.',
+          check: {
+            question: 'Two reports 30 s apart are 1.5 km apart. What speed in km/h does that claim?',
+            unit: 'km/h',
+            answer: 180,
+            tol: { abs: 0.5 },
+            wrong: '1.5 km ÷ 30 s × 3600 s per hour.',
+          },
+        },
+        {
+          kind: 'apply',
+          id: 'I4',
+          title: 'The enemy: test a claim',
+          instruments: [],
+          task: 'A radio claims to be a {cPlat} (top speed {cTop} m/s). It reports {cA} and, {cDt} s later, {cB} (km, x east, y north). What speed does that claim, in km/h, and how many km farther did it move than it could have? Give a negative number if it stayed within reach.',
+          hint: 'Distance = √(Δx² + Δy²). Speed = distance ÷ seconds × 3600. Most it could move = top speed × seconds ÷ 1000 km.',
+          fields: [
+            { id: 'speed', label: 'Claimed speed', unit: 'km/h', truth: (t) => i4Speed(t), check: { rel: 0.02 }, points: 5 },
+            { id: 'excess', label: 'Beyond its reach', unit: 'km', truth: (t) => i4Excess(t), check: { abs: 0.01 }, points: 5 },
+          ],
+          reveal: ['Distance {cKm} km in {cDt} s: {cKmh} km/h, against a top speed of {cTopKmh} km/h.', 'At most {cTop} × {cDt} ÷ 1000 = {cMax} km. Beyond its reach: {cExcess} km, so the move is {cVerdict}.'],
         },
       ],
     },

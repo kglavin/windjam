@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   MESH_RADIO, allFloodSends, backbone, brokenLinks, chipRangeM, cutNodes, cutOff, denialRadii, dutySavingDb, floodSends, helloDuty,
   hiddenPairs, isDominatingConnected, jammedAdj, lifeDays, linkDropS, meshLinks, meshLossDb, mpr, mprFlood, navCtsUs, navRtsUs, parts,
-  radiusKm, route, rttDelayErrorKm, rttKm, rxDbm, silenced, tdmaFrameMs, toaKm, toleratedJsDb,
+  radiusKm, route, rttDelayErrorKm, rttKm, rxDbm, silenced, tdmaFrameMs, toaKm, toleratedJsDb, pulseRangeM, claimedSpeedKmh, maxMoveKm,
+  neighboursFit, claimFitsRange,
 } from './mesh';
 
 const r = MESH_RADIO;
@@ -126,6 +127,16 @@ describe('the overhead, ranging and sleep', () => {
     expect(rttKm(10.2, 5.2)).toBeCloseTo(0.75, 2);
     expect(rttDelayErrorKm(1)).toBeCloseTo(0.15, 2);
     expect(chipRangeM(10)).toBeCloseTo(15, 0);
+    expect(pulseRangeM(1)).toBeCloseTo(0.15, 2);
+  });
+
+  it('position claims: speed, reach, neighbours, the range bound', () => {
+    expect(claimedSpeedKmh(p(0, 0), p(0.3, 0.4), 60)).toBeCloseTo(30, 9);
+    expect(maxMoveKm(2, 60)).toBeCloseTo(0.12, 12);
+    expect(neighboursFit(p(1, 1), [p(2, 1), p(1, 3)], 2.7)).toBe(true);
+    expect(neighboursFit(p(9, 1), [p(2, 1), p(1, 3)], 2.7)).toBe(false);
+    expect(claimFitsRange(1.2, 1.5)).toBe(true);
+    expect(claimFitsRange(2.0, 1.5)).toBe(false);
   });
 
   it('fake frames drain the battery; an authenticated preamble saves most of it', () => {
