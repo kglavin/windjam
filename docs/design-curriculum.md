@@ -21,10 +21,12 @@ is built.
 | 8 | Codes and synchronization | Shift registers and m-sequences; linear complexity and code reconstruction; Gold and Kasami codes; acquisition (sliding correlator) and tracking (DLL); preamble and sync jamming against payload jamming | Agreed | to write |
 | 9 | Jammer tactics | Look-through; power sharing and time sharing across targets; network layouts as targets; J/S planning with propagation models (free space, two-ray, Egli) and antenna pointing | Agreed | to write |
 | 10 | Many users and antenna arrays | CDMA with Gold codes; blind code discovery and successive cancellation; delay-and-sum beamforming; Capon (MVDR) nulling; MUSIC direction finding; nulling as protection against jamming | Agreed | to write |
+| 11 | Urban EW | Urban propagation: multipath, shadowing (log-normal), street canyons, building loss; urban path loss models (Hata, two-slope microcell, rooftop diffraction); what multipath does to DF and TDOA (level 6); fratricide against friendly and civilian links; counter-IED jamming; electronic isolation with directional jamming | Agreed | to write |
 
-Build order: level 6, level 0 unit K, level 7, level 8, level 9, level 10. Levels 7 to 10 each need engine work: a
-hop-level link and a time–frequency instrument (7), a receiver that can lose and regain code lock (8), jammer
-scheduling across targets (9), multi-element arrays (10).
+Build order: level 6, level 0 unit K, level 7, level 8, level 9, level 10, level 11. Levels 7 to 11 each need engine
+work: a hop-level link and a time–frequency instrument (7), a receiver that can lose and regain code lock (8), jammer
+scheduling across targets (9), multi-element arrays (10), urban path models with shadowing and multipath, and friendly
+receivers in the scene to count fratricide (11).
 
 ## 2. Where source material goes
 
@@ -38,6 +40,7 @@ scheduling across targets (9), multi-element arrays (10).
 | Shift registers, PN codes, synchronization | Level 8 |
 | Jamming strategies and J/S models | Levels 2–5 (noise, tone, multitone, pulsed, front end); level 7 (follower, swept); level 8 (smart jamming); level 9 (look-through, sharing, J/S models) |
 | Blind CDMA code discovery, beamforming | Level 10 |
+| Urban EW, propagation and operational challenges | Level 11; multipath bearing and timing errors back-referenced from level 6 |
 
 ## 3. Teaching points that connect levels
 
@@ -58,6 +61,10 @@ and jamming it (levels 2–5, 9) is worth more than any spoke.
 
 T5. **Nulling is protection.** An adaptive array that puts a null on the jammer lowers J/S by the null's depth: level 0
 F2's antenna pattern taken to its end (level 10), and the defence to level 9's tactics.
+
+T7. **The open-terrain models stop working in town.** Free space and two-ray (level 0 F1, the scene) give way to
+shadowing and multipath (level 11); the same multipath that fades a link bends bearings and smears TDOA peaks
+(level 6), and a jammer's J/S depends on which street it stands in.
 
 T6. **Sync is the weak point.** The preamble that lets a receiver lock on (level 1 D1) is the cheapest thing to jam
 (level 8): without lock nothing despreads.
@@ -80,3 +87,6 @@ Level 0's and level 6's sources are corrected in their own notes. The rest:
 | CDMA and arrays | Delay-and-multiply beamformer | Delay-and-sum |
 | CDMA and arrays | Single-code discovery from repetition periods | Only for a short code, which repeats within the observation; a long code does not |
 | CDMA and arrays | MUSIC reveals the directions of CDMA users | An M-element array separates at most M − 1 emitters by direction; more users than that need code-subspace separation as well |
+| Urban EW | The modified Hata model adds the a(h_m) correction for dense cores | a(h_m), the mobile antenna height correction, is part of the original Hata model (with a large-city form); COST-231 Hata is the extension, to 2 GHz |
+| Urban EW | Dense-urban Hata path loss exponents n ≥ 4 | Hata's distance slope is (44.9 − 6.55·log h_b)/10, about 3.5 for a 30 m base antenna |
+| Urban EW | Walfisch–Bertoni for antennas at or below rooftop height | Walfisch–Bertoni assumes the base antenna above the rooftops; below-rooftop cases are the street-canyon and COST-231 Walfisch–Ikegami domain |
