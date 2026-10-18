@@ -128,3 +128,7 @@ docs/                design notes, one per level, and the curriculum
 | [design-level-0.md](docs/design-level-0.md), [design-level-6.md](docs/design-level-6.md) to [design-level-12.md](docs/design-level-12.md) | One note per level from 6 on, and level 0: decisions, units, scoring, videos, corrections |
 | [design-lesson-videos.md](docs/design-lesson-videos.md) | How the explainer videos are made |
 | [design-hierarchical-agents.md](docs/design-hierarchical-agents.md) | Planned: a commander and unit agents per side |
+
+## License
+
+MIT. See [LICENSE](LICENSE).
