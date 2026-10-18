@@ -102,7 +102,9 @@ describe('level 7 lessons', () => {
   });
 
   it('C1: one channel at J/S −3 dB, against broadband noise', () => {
-    expect(fhTheoryBer(FH_EXAMPLE, { kind: 'bbn' }, -3)).toBeLessThan(1e-7);
+    const bbn = fhTheoryBer(FH_EXAMPLE, { kind: 'bbn' }, -3);
+    expect(bbn).toBeGreaterThan(0.5e-7); // about 1 in 10 million
+    expect(bbn).toBeLessThan(1.5e-7);
     expect(bestChannels(16, -3)).toBe(1);
     const one = partialBer(FH_EXAMPLE, 1, -3);
     expect(one).toBeCloseTo(0.012, 3);

@@ -353,5 +353,52 @@ class MapView:
                         for run in runs if len(run) > 1])
 
     def curve(self, pts, color=VIOLET, width=3):
-        inside = [self.p(x, y) for x, y in pts if self.inside(x, y)]
-        return VMobject(stroke_color=color, stroke_width=width).set_points_as_corners(inside)
+        """A curve through pts, only the parts on the map: each stretch inside it drawn on its own."""
+        runs, cur = [], []
+        for x, y in pts:
+            if self.inside(x, y):
+                cur.append(self.p(x, y))
+            elif cur:
+                runs.append(cur)
+                cur = []
+        if cur:
+            runs.append(cur)
+        return VGroup(*[VMobject(stroke_color=color, stroke_width=width).set_points_as_corners(r) for r in runs if len(r) > 1])
+
+
+class HopWaterfall:
+    """Level 7's hop waterfall (src/ui/lab/instruments/Waterfall.tsx): time across, channel up, one tile per hop."""
+
+    def __init__(self, x0, width, y0, height, channels, t_end):
+        self.x0, self.width, self.y0, self.height = x0, width, y0, height
+        self.n, self.t_end = channels, t_end
+
+    def tx(self, t):
+        return self.x0 + t / self.t_end * self.width
+
+    def ty(self, c):
+        """Bottom edge of channel c."""
+        return self.y0 + c / self.n * self.height
+
+    def frame(self, f0_mhz=30.0, step_mhz=0.025, time_label="time (ms)", ticks=(0, 40, 80, 120, 160)):
+        g = VGroup(Rectangle(width=self.width, height=self.height, stroke_color=GREY, stroke_width=1.5)
+                   .move_to([self.x0 + self.width / 2, self.y0 + self.height / 2, 0]))
+        for c in range(self.n + 1):
+            g.add(Line([self.x0, self.ty(c), 0], [self.x0 + self.width, self.ty(c), 0], stroke_width=0.5, stroke_color=GREY, stroke_opacity=0.3))
+        g.add(label(f"{f0_mhz:.3f}", GREY, 18).next_to([self.x0, self.y0, 0], LEFT, buff=0.1))
+        g.add(label(f"{f0_mhz + self.n * step_mhz:.3f} MHz", GREY, 18).next_to([self.x0, self.y0 + self.height, 0], LEFT, buff=0.1))
+        for t in ticks:
+            if t <= self.t_end:
+                g.add(label(str(t), GREY, 18).move_to([self.tx(t), self.y0 - 0.25, 0]))
+        g.add(label(time_label, GREY, 18).next_to([self.x0 + self.width, self.y0, 0], DOWN, buff=0.45).shift(LEFT * 0.6))
+        return g
+
+    def tile(self, c, t, dur, color=BLUE_C1, opacity=0.95):
+        return Rectangle(width=max(dur / self.t_end * self.width - 0.03, 0.02), height=self.height / self.n * 0.86,
+                         stroke_width=0, fill_color=color, fill_opacity=opacity).move_to(
+            [self.tx(t + dur / 2), self.ty(c + 0.5), 0])
+
+    def rows(self, c0, c1, color=RED, opacity=0.25):
+        """A band over channels c0 to c1 (exclusive) for the whole time."""
+        return Rectangle(width=self.width, height=(c1 - c0) / self.n * self.height, stroke_width=0, fill_color=color,
+                         fill_opacity=opacity).move_to([self.x0 + self.width / 2, (self.ty(c0) + self.ty(c1)) / 2, 0])

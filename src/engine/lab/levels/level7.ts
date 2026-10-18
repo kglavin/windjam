@@ -191,8 +191,9 @@ export const LEVEL_7: LevelDef = {
           id: 'A1',
           title: 'Example: reading the hop set',
           visual: { kind: 'waterfall', link: 'example' },
+          video: 'level7-A1',
           paragraphs: [
-            'A hopping link sends on one narrow channel, stays there for a short time, the dwell, then jumps to another. The channels it uses are its hop set. The order looks random and only its receiver knows it.',
+            'A hopping link sends on one narrow channel, stays there for a short time, the [[dwell|dwell]], then jumps to another. The channels it uses are its [[hop set|hop-set]]. The order looks random and only its receiver knows it.',
             'The plot is a waterfall: time across, frequency up. Each tile is one hop: one channel tall and one dwell wide.',
           ],
           steps: [
@@ -257,7 +258,7 @@ export const LEVEL_7: LevelDef = {
           paragraphs: [
             'A [[jammer|jammer]] that does not know the next channel can spread its power over all of them. Each channel then gets only 1/16 of it, and the hop on that channel meets only that much.',
             'So the arithmetic is level 2\'s: Eb/J0 = Gp − J/S, in dB.',
-            'A hopping radio rarely keeps the carrier phase from one hop to the next, so it sends each bit as one of two tones, frequency-shift keying, and listens for which is stronger. That needs about 4 dB more than [[BPSK|bpsk]] for the same bit errors: BER = ½ × e^(−Eb/J0 ÷ 2), with Eb/J0 as a ratio.',
+            'A hopping radio rarely keeps the carrier phase from one hop to the next, so it sends each bit as one of two tones, [[frequency-shift keying|fsk]], and listens for which is stronger. That needs about 4 dB more than [[BPSK|bpsk]] for the same bit errors: BER = ½ × e^(−Eb/J0 ÷ 2), with Eb/J0 as a ratio.',
           ],
           steps: [
             'The example link: 16 channels, Gp 12.0 dB. The jammer gives J/S 3 dB.',
@@ -331,6 +332,7 @@ export const LEVEL_7: LevelDef = {
             ],
             jsDb: -3,
           },
+          video: 'level7-C1',
           paragraphs: [
             'Against [[direct sequence|dsss]], squeezing noise into part of the band gained nothing: despreading spread it back out (level 3). Against hopping it is the opposite.',
             'Put the same power into a few channels. Most hops miss them and come through clean. The hops that land there meet noise many times stronger and are badly broken.',
@@ -338,7 +340,7 @@ export const LEVEL_7: LevelDef = {
           ],
           steps: [
             'The example link at J/S −3 dB: Eb/J0 = 12.0 + 3 = 15.0 dB, a ratio of 32.',
-            'Broadband: BER = ½ × e^(−16) ≈ 0.00000006. Almost nothing.',
+            'Broadband: Eb/J0 of 32 gives about 1 wrong bit in 10 million. Almost nothing.',
             'The best partial band is 2 × J/S as a ratio: 2 × 0.5 = 1 channel, at 16 times the power.',
             '1 hop in 16 lands there and meets Eb/J0 of 2: 18% of its bits are wrong. BER = 0.18 ÷ 16 = 0.012, about 0.37 ÷ 32.',
             'Press Run on both and compare.',
@@ -441,8 +443,9 @@ export const LEVEL_7: LevelDef = {
             ],
             jsDb: -3,
           },
+          video: 'level7-D1',
           paragraphs: [
-            'Slow hopping sends many bits on each hop: the example sends 125 bits in each 5 ms dwell. One jammed hop breaks a burst of them.',
+            '[[Slow hopping|fast-hopping]] sends many bits on each hop: the example sends 125 bits in each 5 ms dwell. One jammed hop breaks a burst of them.',
             'Fast hopping sends each bit on several hops, here 3, on 3 different channels, and the receiver takes a [[majority vote|vote]], as in level 5. One jammed hop is outvoted by the two clean ones.',
           ],
           steps: [
@@ -494,8 +497,9 @@ export const LEVEL_7: LevelDef = {
           id: 'E1',
           title: 'Example: racing the hop',
           visual: { kind: 'follower' },
+          video: 'level7-E1',
           paragraphs: [
-            'A follower jammer does not guess. It listens for each hop, finds its channel, tunes there and jams it with all its power. Against a slow hopper that is deadly.',
+            'A [[follower jammer|follower]] does not guess. It listens for each hop, finds its channel, tunes there and jams it with all its power. Against a slow hopper that is deadly.',
             'But it is always late. It needs time to hear and tune, here 60 µs. Then its signal takes a longer path to the receiver: transmitter to jammer to receiver, against transmitter to receiver. At 0.3 km per µs, every extra km costs 3.3 µs.',
             'Whatever is left of the dwell is all it gets. The places where it gets enough form an ellipse round the transmitter and the receiver (the dashed line: 20% of each dwell).',
           ],
@@ -575,8 +579,9 @@ export const LEVEL_7: LevelDef = {
             ],
             jsDb: 0,
           },
+          video: 'level7-F1',
           paragraphs: [
-            'A swept jammer is a partial band that moves: a narrow block of noise sliding across the band and starting over.',
+            'A [[swept jammer|sweep]] is a [[partial band|partial-band]] that moves: a narrow block of noise sliding across the band and starting over.',
             'For the same width it hits the same share of hops as a fixed partial band, so its BER is about the same. Its advantage is that it reaches every channel. A link that notices a few jammed channels and stops using them, adaptive hopping, escapes a fixed partial band but not a sweep.',
           ],
           rule: 'A sweep w channels wide covers each channel w ÷ N of the time: the same share as a fixed partial band, spread over the whole band.',
@@ -592,9 +597,10 @@ export const LEVEL_7: LevelDef = {
           id: 'F2',
           title: 'Time hopping and hybrid links',
           visual: { kind: 'none' },
+          video: 'level7-F2',
           paragraphs: [
-            'Time hopping sends short bursts in random time slots instead of hopping in frequency. A jammer has to cover all the time or guess the slots. The bursts are easy to see with a detector that looks for peaks, so time hopping hides only from detectors that average over a long time.',
-            'A hybrid link does both: direct sequence inside each hop. The gains multiply. 31 chips per bit (Gp 31) hopping over 16 channels gives 31 × 16 = 496, or 27.0 dB, against broadband noise.',
+            '[[Time hopping|time-hopping]] sends short bursts in random time slots instead of hopping in frequency. A jammer has to cover all the time or guess the slots. The bursts are easy to see with a detector that looks for peaks, so time hopping hides only from detectors that average over a long time.',
+            'A [[hybrid|hybrid]] link does both: direct sequence inside each hop. The gains multiply. 31 chips per bit (Gp 31) hopping over 16 channels gives 31 × 16 = 496, or 27.0 dB, against broadband noise.',
           ],
           check: {
             question: 'A link spreads each bit over 63 chips and hops over 32 channels. What is its Gp against broadband noise, in dB?',
