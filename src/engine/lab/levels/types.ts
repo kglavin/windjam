@@ -171,6 +171,8 @@ export type Visual =
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
+  | { kind: 'cdma'; example: 'many' | 'nearfar' } // level 10: users sharing a band
+  | { kind: 'discover'; link: 'example' } // level 10: finding the example code blind
   | { kind: 'platforms' } // level 9: the platform card
   | { kind: 'sharing' } // level 9: one jammer over three example links
   | { kind: 'network'; example: 'hub' | 'spoke' } // level 9: the example network with the jammer near the hub or a spoke
@@ -187,7 +189,7 @@ export type Visual =
   | { kind: 'waterfall'; link: 'example' | 'practice'; variants?: { label: string; jammer: FhJammer; hopsPerBit?: 1 | 3 }[]; jsDb?: number }
   | { kind: 'none' };
 
-export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr' | 'waterfall' | 'rebuild';
+export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr' | 'waterfall' | 'rebuild' | 'discover';
 
 // How a level 6 step locates: bearings from ground sites, bearings from a UAV flying a leg, or arrival times.
 export type DfMethod = 'bearings' | 'leg' | 'tdoa' | 'follower' | 'network'; // follower: level 7; network: level 9, a jammer placed among a network

@@ -1,6 +1,6 @@
 import type { IQ } from '../../../engine/lab/signal';
 import {
-  type KnownLink, type Visual, DF_EXAMPLES, EXAMPLE_NET, EXAMPLE_TARGETS, SHARE_GOAL_BER, FOLLOW_EXAMPLE, FOLLOW_PROC_US, followerNumbers, exampleBearings, exampleHyperbolas, knownLinkInfo, legPoints, xcorrExample, xcorrPractice,
+  type KnownLink, type Visual, DF_EXAMPLES, DISCOVER_EXAMPLE, NEAR_FAR, exampleUsers, EXAMPLE_NET, EXAMPLE_TARGETS, SHARE_GOAL_BER, FOLLOW_EXAMPLE, FOLLOW_PROC_US, followerNumbers, exampleBearings, exampleHyperbolas, knownLinkInfo, legPoints, xcorrExample, xcorrPractice,
 } from '../../../engine/lab/levels';
 import { fixFromBearings } from '../../../engine/lab/geoloc';
 import { Autocorr } from '../instruments/Autocorr';
@@ -13,6 +13,8 @@ import { AcquireView } from '../instruments/AcquireView';
 import { SCurveView } from '../instruments/SCurveView';
 import { PacketDemo } from './PacketDemo';
 import { DistanceView } from '../instruments/DistanceView';
+import { CdmaDemo } from '../instruments/CdmaPanel';
+import { DiscoveryView } from '../instruments/DiscoveryView';
 import { SharingDemo } from '../instruments/SharingPanel';
 import { NetworkMap } from '../DfTask';
 import { PlatformCard } from '../instruments/PlatformCard';
@@ -131,6 +133,10 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
         />
       );
     }
+    case 'cdma':
+      return <CdmaDemo example={visual.example} many={exampleUsers} nearFar={NEAR_FAR} />;
+    case 'discover':
+      return <DiscoveryView code={DISCOVER_EXAMPLE.code} snrDb={DISCOVER_EXAMPLE.snrDb} title="Find the example code" />;
     case 'sharing':
       return <SharingDemo targets={EXAMPLE_TARGETS} goalBer={SHARE_GOAL_BER} />;
     case 'network': {

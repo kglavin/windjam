@@ -11,12 +11,13 @@ lists its errors.
 
 ## 1. Decisions
 
-D1. **CDMA on the lab's Gold codes.** K users, each spreading with a 31-chip Gold code (`pn.ts`), chip-synchronous for
-simplicity, each at its own power. Despreading one user leaves the others as interference, cut by the code's
+D1. **CDMA on the lab's Gold codes.** K users, each spreading with a 31-chip Gold code (`pn.ts`), each at its own power
+and its own chip offset, as on a real uplink: aligned, two codes of one Gold family cross-correlate at only −1/31, so
+offsets are what make users interfere. Despreading one user leaves the others as interference, cut by the code's
 cross-correlation: equal powers give SINR ≈ Gp ÷ (K − 1) when noise is small, the rule for codes that look random to
-each other. With the chips aligned, each other user adds a fixed ±A·ρ (ρ of −1/31, −9/31 or +7/31 for Gold codes), so
-the exact BER averages over the others' bits and differs from the rule pair by pair; the panel shows it. A new module
-`cdma.ts` simulates the chips and gives both.
+each other. Each other user adds its previous and current bit times two partial correlations, so the exact BER averages
+over those bits (up to 10 users) and differs from the rule user by user, often worse; the panel shows it. A new module
+`cdma.ts` simulates the chip streams and gives both.
 
 D2. **Near-far and successive cancellation.** A strong user 20 dB above a weak one buries it. Successive interference
 cancellation decodes the strongest, rebuilds its chips, subtracts them and decodes the next. The engine runs both and

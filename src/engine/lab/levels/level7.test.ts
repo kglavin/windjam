@@ -43,7 +43,7 @@ const SEEDS = Array.from({ length: 60 }, (_, i) => i + 1);
 
 describe('level 7 truth', () => {
   it('is in LEVELS with units A to G', () => {
-    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(LEVEL_7.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
   });
 

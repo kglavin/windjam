@@ -26,6 +26,8 @@ import {
   level8Values,
   level9Truth,
   level9Values,
+  level10Truth,
+  level10Values,
   maxPeriodUsOf,
   recoveryUsOf,
   textValues,
@@ -256,4 +258,16 @@ const setup9: LevelSetup = {
   card: () => null,
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7, 8: setup8, 9: setup9 };
+// Level 10: no scene; its panels hold the users, codes and arrays.
+const setup10: LevelSetup = {
+  truth: level10Truth,
+  scene: level2Scene,
+  hidden: ['intercept'],
+  editable: [],
+  noScene: true,
+  values: (a) => level10Values(a.truth, a.practiceN ?? 0),
+  hiddenRows: () => [],
+  card: () => null,
+};
+
+export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7, 8: setup8, 9: setup9, 10: setup10 };

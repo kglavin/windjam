@@ -16,6 +16,7 @@ import {
   practiceLinkAt,
   scoreLocate,
   LOCATE_FULL_TRIES,
+  c2Setup,
   level9Network,
   networkTry,
   xcorrEnemy,
@@ -34,6 +35,7 @@ import { Waterfall } from './instruments/Waterfall';
 import { RebuildView } from './instruments/RebuildView';
 import { PacketView } from './instruments/PacketView';
 import { SharingPanel } from './instruments/SharingPanel';
+import { DiscoveryView } from './instruments/DiscoveryView';
 import { bestShare, shareOutcome } from '../../engine/lab/tactics';
 import { hopPreview } from '../../engine/lab/fh';
 import { LinkScene } from './LinkScene';
@@ -437,6 +439,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
                 }}
               />
             )}
+            {instruments.includes('discover') && <DiscoveryView code={c2Setup(truth).code} snrDb={c2Setup(truth).snrDb} title="Find the enemy code" />}
             {instruments.includes('rebuild') && <RebuildView code={code} title="Rebuild the enemy code" />}
             {instruments.includes('waterfall') && truth.fh && <Waterfall link={truth.fh} hops={hopPreview(truth.fh, truth.seed, 40)} title="Hop waterfall: enemy link" />}
             {instruments.includes('xcorr') && (

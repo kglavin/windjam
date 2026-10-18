@@ -12,12 +12,14 @@ export const CDMA_DEGREE = 5;
 export const CHIPS = 31;
 
 export interface User {
-  code: number; // Gold code index (pn.goldCode)
+  code: number; // Gold code index (pn.goldCode), 0 to 32
   powerDb: number; // chip power over the noise per chip (Ec/N0, dB)
+  offset?: number; // chips the user's bits start after the reference user's (asynchronous users), 0 to 30
 }
 
 const codes = new Map<number, Int8Array>();
 export const codeOf = (k: number): Int8Array => {
+  if (!Number.isInteger(k) || k < 0 || k > CHIPS + 1) throw new Error(`Gold code index ${k} is outside 0 to ${CHIPS + 1}`);
   let c = codes.get(k);
   if (!c) {
     c = goldCode(CDMA_DEGREE, k);
@@ -26,7 +28,7 @@ export const codeOf = (k: number): Int8Array => {
   return c;
 };
 
-// Normalised zero-lag cross-correlation of two users' codes.
+// Normalised zero-lag cross-correlation of two users' codes (chips aligned).
 export function rho(a: number, b: number): number {
   const x = codeOf(a);
   const y = codeOf(b);
@@ -35,36 +37,61 @@ export function rho(a: number, b: number): number {
   return s / CHIPS;
 }
 
-// Gaussian-approximation SINR (linear) of user k after despreading: Gp·Ec,k ÷ (N0 + Gp·Σ Ec,j·ρ²).
+// What user j adds to user k's despread bit when j's bits start `tau` chips later: its previous bit times R1 and its
+// current bit times R2, the two partial correlations (each ÷ N).
+export function partials(k: number, j: number, tau: number): [number, number] {
+  const ck = codeOf(k);
+  const cj = codeOf(j);
+  const t = ((tau % CHIPS) + CHIPS) % CHIPS;
+  let r1 = 0;
+  let r2 = 0;
+  for (let i = 0; i < t; i++) r1 += cj[CHIPS - t + i] * ck[i];
+  for (let i = t; i < CHIPS; i++) r2 += cj[i - t] * ck[i];
+  return [r1 / CHIPS, r2 / CHIPS];
+}
+
+// SINR (linear) of user k after despreading, interference as noise (Gaussian approximation): each other user adds
+// variance P·(R1² + R2²) with random bits; the noise adds 1/N. Users in `removed` are cancelled perfectly.
 export function sinr(users: User[], k: number, removed: number[] = []): number {
   const pk = undb(users[k].powerDb);
-  let interference = 0;
+  let interference = 1 / CHIPS;
   users.forEach((u, j) => {
     if (j === k || removed.includes(j)) return;
-    interference += undb(u.powerDb) * rho(users[k].code, u.code) ** 2;
+    const [r1, r2] = partials(users[k].code, u.code, (u.offset ?? 0) - (users[k].offset ?? 0));
+    interference += undb(u.powerDb) * (r1 * r1 + r2 * r2);
   });
-  return (CHIPS * pk) / (1 + CHIPS * interference);
+  return pk / interference;
 }
 export const berOfSinr = (s: number): number => qfunc(Math.sqrt(2 * s));
+export const berGauss = (users: User[], k: number, removed: number[] = []): number => berOfSinr(sinr(users, k, removed));
 
-// The exact BER of user k with the chips aligned: each other user adds ±A·ρ, a fixed amount for its bit, so the
-// average runs over every combination of the others' bits (users in `removed` are cancelled perfectly).
-export function berExact(users: User[], k: number, removed: number[] = []): number {
+// User k's BER averaged over every other user's two overlapping bits (4 cases each), exact for chip-aligned offsets.
+// Up to 10 users; beyond that the Gaussian approximation, which more users make better.
+export function berCdma(users: User[], k: number, removed: number[] = []): number {
+  const terms: [number, number][] = [];
+  users.forEach((u, j) => {
+    if (j === k || removed.includes(j)) return;
+    const a = Math.sqrt(undb(u.powerDb));
+    const [r1, r2] = partials(users[k].code, u.code, (u.offset ?? 0) - (users[k].offset ?? 0));
+    terms.push([a * r1, a * r2]);
+  });
+  if (terms.length > 9) return berGauss(users, k, removed);
   const ak = Math.sqrt(undb(users[k].powerDb));
-  const others = users.flatMap((u, j) => (j === k || removed.includes(j) ? [] : [Math.sqrt(undb(u.powerDb)) * rho(users[k].code, u.code)]));
-  const sd = Math.sqrt(1 / CHIPS); // noise after despreading, unit noise per chip
+  const sd = Math.sqrt(1 / CHIPS);
   let total = 0;
-  const combos = 1 << others.length;
+  const combos = 1 << (2 * terms.length);
   for (let m = 0; m < combos; m++) {
     let mean = ak;
-    others.forEach((x, i) => (mean += m & (1 << i) ? x : -x));
+    terms.forEach(([x, y], i) => {
+      mean += (m & (1 << (2 * i)) ? x : -x) + (m & (1 << (2 * i + 1)) ? y : -y);
+    });
     total += qfunc(mean / sd);
   }
   return total / combos;
 }
 
-// The usual rule for K equal users and random-like codes: SINR ≈ Gp ÷ (K − 1) when noise is small.
-export const ruleSinr = (k: number): number => CHIPS / (k - 1);
+// The rule for K equal users and codes that look random to each other: SINR ≈ Gp ÷ (K − 1) when noise is small.
+export const ruleSinr = (k: number, gp = CHIPS): number => gp / (k - 1);
 
 export interface CdmaResult {
   bits: number;
@@ -74,29 +101,32 @@ export interface CdmaResult {
   hi: number[];
 }
 
-// Bits for every user, summed chips plus noise of unit power per chip; each user despread, either directly or by
-// successive cancellation (strongest first: decode, rebuild, subtract).
+// Every user's whole chip stream, offset by its chips, summed with noise of unit power per chip. Each user is despread
+// over its own bit windows; with sic, strongest first, each user's decided bits are rebuilt and subtracted before the
+// next is decoded.
 export function runCdma(users: User[], bits: number, seed: number, sic = false): CdmaResult {
   const rng = createRng(seed);
   const amp = users.map((u) => Math.sqrt(undb(u.powerDb)));
-  const order = [...users.keys()].sort((a, b) => users[b].powerDb - users[a].powerDb);
+  const len = (bits + 1) * CHIPS;
+  const data = users.map(() => Int8Array.from({ length: bits + 1 }, () => (rng() < 0.5 ? -1 : 1)));
+  const r = new Float64Array(len);
+  for (let i = 0; i < len; i++) r[i] = gaussian(rng);
+  users.forEach((u, j) => {
+    const c = codeOf(u.code);
+    const off = u.offset ?? 0;
+    for (let i = off; i < len; i++) r[i] += amp[j] * data[j][Math.floor((i - off) / CHIPS)] * c[(i - off) % CHIPS];
+  });
+  const order = sic ? [...users.keys()].sort((a, b) => users[b].powerDb - users[a].powerDb) : [...users.keys()];
   const errors = users.map(() => 0);
-  const r = new Float64Array(CHIPS);
-  for (let n = 0; n < bits; n++) {
-    const b = users.map(() => (rng() < 0.5 ? -1 : 1));
-    for (let i = 0; i < CHIPS; i++) {
-      let v = gaussian(rng);
-      users.forEach((u, j) => (v += amp[j] * b[j] * codeOf(u.code)[i]));
-      r[i] = v;
-    }
-    const list = sic ? order : [...users.keys()];
-    for (const j of list) {
-      const c = codeOf(users[j].code);
+  for (const j of order) {
+    const c = codeOf(users[j].code);
+    const off = users[j].offset ?? 0;
+    for (let n = 0; n < bits; n++) {
       let z = 0;
-      for (let i = 0; i < CHIPS; i++) z += r[i] * c[i];
+      for (let i = 0; i < CHIPS; i++) z += r[off + n * CHIPS + i] * c[i];
       const d = z >= 0 ? 1 : -1;
-      if (d !== b[j]) errors[j]++;
-      if (sic) for (let i = 0; i < CHIPS; i++) r[i] -= amp[j] * d * c[i];
+      if (d !== data[j][n]) errors[j]++;
+      if (sic) for (let i = 0; i < CHIPS; i++) r[off + n * CHIPS + i] -= amp[j] * d * c[i];
     }
   }
   const w = errors.map((e) => wilson(e, bits));
