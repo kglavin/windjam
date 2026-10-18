@@ -121,8 +121,9 @@ export const LEVEL_8: LevelDef = {
           id: 'A1',
           title: 'Example: a 5-stage register',
           visual: { kind: 'register', degree: 5 },
+          video: 'level8-A1',
           paragraphs: [
-            'The [[codes|code]] in this lab come from a shift register: a row of stages, each holding a 0 or a 1. At every step each bit moves one stage along, the last one comes out as the next [[chip|chip]], and a new bit comes in at the front.',
+            'The [[codes|code]] in this lab come from a [[shift register|shift-register]]: a row of stages, each holding a 0 or a 1. At every step each bit moves one stage along, the last one comes out as the next [[chip|chip]], and a new bit comes in at the front.',
             'The new bit is the sum of a few stages, the taps, counted modulo 2 (1 + 1 = 0). With the right taps the register runs through every pattern except all zeros before it repeats.',
           ],
           steps: [
@@ -131,7 +132,7 @@ export const LEVEL_8: LevelDef = {
             'There are 2^5 = 32 patterns of 5 bits. All zeros would stay all zeros, so it never appears: the register runs through the other 31 and starts again.',
             'Period = 2^5 − 1 = 31 chips: the 31-chip example code. 16 of its chips are 1 and 15 are 0.',
           ],
-          rule: 'A register of n stages with the right taps repeats every 2^n − 1 chips: an m-sequence.',
+          rule: 'A register of n stages with the right taps repeats every 2^n − 1 chips: an [[m-sequence|m-sequence]].',
           check: {
             question: 'A register has 10 stages. What is the period of its m-sequence, in chips?',
             answer: 1023,
@@ -177,9 +178,10 @@ export const LEVEL_8: LevelDef = {
           id: 'B1',
           title: 'Example: 10 chips give away 31',
           visual: { kind: 'rebuild', link: 'example' },
+          video: 'level8-B1',
           paragraphs: [
             'A register of n stages is fixed by n bits of state and its taps. So a short stretch of its chips is enough to find it, and then every chip that follows.',
-            'The Berlekamp–Massey method finds the shortest register that makes a given stretch of chips. That length is the code\'s linear complexity: n for an m-sequence. 2n chips in a row are always enough; fewer can fit a wrong register.',
+            'The [[Berlekamp–Massey|berlekamp-massey]] method finds the shortest register that makes a given stretch of chips. That length is the code\'s [[linear complexity|linear-complexity]]: n for an m-sequence. 2n chips in a row are always enough; fewer can fit a wrong register.',
           ],
           steps: [
             'The example code comes from 5 stages. Capture 10 chips: 2 × 5.',
@@ -236,7 +238,7 @@ export const LEVEL_8: LevelDef = {
           visual: { kind: 'gold' },
           paragraphs: [
             'Many links can share a band if each uses its own code and the codes look unlike each other at every offset. One m-sequence family has few such members.',
-            'Gold codes fix that. Take two m-sequences of the same length that suit each other, a preferred pair, and add them chip by chip at every one of their N offsets. With the pair itself that gives N + 2 codes.',
+            '[[Gold codes|gold-code]] fix that. Take two m-sequences of the same length that suit each other, a preferred pair, and add them chip by chip at every one of their N offsets. With the pair itself that gives N + 2 codes.',
             'Any two of them cross-correlate at only three values. For 31 chips: −1, −9 or +7, against a peak of 31 when a code meets itself. Level 10 builds on this to separate many users.',
           ],
           check: {
@@ -257,10 +259,11 @@ export const LEVEL_8: LevelDef = {
           id: 'D1',
           title: 'Example: the sliding correlator',
           visual: { kind: 'acquire' },
+          video: 'level8-D1',
           paragraphs: [
-            'Before a receiver can despread, it must know where the [[code|code]] starts. Each message begins with a [[preamble|preamble]], the code sent over and over, and the receiver searches it.',
-            'It tries one starting point (a code phase) at a time: it multiplies one code period by its copy of the code and adds up. On the right phase the chips line up and the sum is large; on the wrong ones it is noise. This is a sliding correlator.',
-            'It locks on the first phase whose sum passes a threshold. A high threshold misses the right phase more often; a low one locks on a wrong phase by chance, a false alarm. Either way the message is lost.',
+            'Before a receiver can despread, it must know where the [[code|code]] starts. Each message begins with a [[preamble|preamble]], the code sent over and over, and the receiver searches it: [[acquisition|acquisition]].',
+            'It tries one starting point (a code phase) at a time: it multiplies one code period by its copy of the code and adds up. On the right phase the chips line up and the sum is large; on the wrong ones it is noise. This is a [[sliding correlator|sliding-correlator]].',
+            'It locks on the first phase whose sum passes a threshold. A high threshold misses the right phase more often; a low one locks on a wrong phase by chance, a [[false alarm|false-alarm]]. Either way the message is lost.',
           ],
           steps: [
             'The example code has 31 phases. Each test takes one code period, 31 µs at 1 Mcps, so a full search takes 31 × 31 = 961 µs. On average the right phase comes up after about 16 tests.',
@@ -318,9 +321,10 @@ export const LEVEL_8: LevelDef = {
           id: 'E1',
           title: 'Keeping the lock',
           visual: { kind: 'scurve' },
+          video: 'level8-E1',
           paragraphs: [
-            'Once locked, the receiver must stay locked: its clock and the transmitter\'s drift apart, and the distance between them can change. A delay-locked loop keeps the timing.',
-            'Besides the prompt correlator it runs two more: one half a chip early, one half a chip late. On time, both see the same, and early − late = 0. If the receiver runs early, the early one sees less and the late one more: the difference turns positive and pulls the timing back. Late, the opposite.',
+            'Once locked, the receiver must stay locked: its clock and the transmitter\'s drift apart, and the distance between them can change. A [[delay-locked loop|dll]] keeps the timing.',
+            'Besides the prompt correlator it runs two more: one half a chip early, one half a chip late. On time, both see the same, and early − late = 0. If the receiver runs late, the early one sits nearer the peak than the late one: early − late turns positive, and the loop moves the timing earlier. If it runs early, the difference turns negative and pulls the other way.',
             'This S-curve only steers within about a chip. A jolt bigger than that, or a jammer that buries the correlators, loses the lock, and the receiver must search again.',
           ],
           check: {
@@ -341,8 +345,9 @@ export const LEVEL_8: LevelDef = {
           id: 'F1',
           title: 'Example: jam the preamble, lose the packet',
           visual: { kind: 'packets', variants: [{ label: 'Preamble only', on: 'preamble' }, { label: 'Payload only', on: 'payload' }], jsDb: 8 },
+          video: 'level8-F1',
           paragraphs: [
-            'A receiver that never locks despreads nothing: the whole packet is lost. So a [[jammer|jammer]] can aim at the search instead of the bits.',
+            'A receiver that never locks despreads nothing: the whole packet is lost. So a [[jammer|jammer]] can aim at the search instead of the bits: [[sync jamming|sync-jamming]].',
             'The search fails when the right phase\'s correlation sinks below the threshold. That happens when 2n ÷ (J/S) falls to about the threshold squared, 9.6: J/S ≈ 10 × log10(2n ÷ 9.6) dB.',
           ],
           steps: [
