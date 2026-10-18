@@ -2,8 +2,9 @@ import { useMemo } from 'react';
 import type { Pt } from '../../engine/lab/geoloc';
 import {
   type ApplyStep, type Truth, LEG_MAX_KM, UAV_HEIGHT_M, dfStepTry, legEnd, legPoints, level6Scene, siteSigmaDeg, siteSnrDb,
-  siteTimingSigmaUs, tdoaHyperbola, txOf, xcorrEnemy, FOLLOW_PROC_US, e3Ellipse, e3Geometry, e3ShareAt,
+  siteTimingSigmaUs, tdoaHyperbola, txOf, xcorrEnemy, FOLLOW_PROC_US, e3Ellipse, e3Geometry, e3ShareAt, level9Network, networkTry,
 } from '../../engine/lab/levels';
+import type { Network } from '../../engine/lab/tactics';
 import { followerDelayUs } from '../../engine/lab/fh';
 import { distanceKm } from '../../engine/lab/geoloc';
 import { type DfSite, DfView } from './instruments/DfView';
@@ -20,7 +21,33 @@ export function DfTask({ step, state, truth, onPlace, onRemove }: {
 }) {
   const method = step.dfMethod ?? 'bearings';
   if (method === 'follower') return <FollowerTask state={state} truth={truth} onPlace={onPlace} onRemove={onRemove} />;
+  if (method === 'network') return <NetworkTask state={state} truth={truth} onPlace={onPlace} />;
   return <DfLocate step={step} state={state} truth={truth} onPlace={onPlace} onRemove={onRemove} />;
+}
+
+// Level 9: a network on the map with each link green, or red where the jammer breaks it.
+export function NetworkMap({ net, at, title = 'Map: the enemy network', onPlace, notes = [] }: {
+  net: Network;
+  at?: Pt;
+  title?: string;
+  onPlace?: (p: Pt) => void;
+  notes?: string[];
+}) {
+  const res = at ? networkTry(net, at) : undefined;
+  return (
+    <DfView
+      title={title}
+      sites={at ? [{ ...at, label: 'pack' }] : []}
+      marks={net.nodes.map((n) => ({ ...n, label: n.name }))}
+      links={net.links.map((l, i) => ({ a: net.nodes[l.from], b: net.nodes[l.to], denied: !!res?.links[i].denied }))}
+      onPlace={onPlace}
+      notes={[...(res ? [`links into the hub broken: ${res.inbound} of 5; all links broken: ${res.links.filter((l) => l.denied).length} of ${res.links.length}`] : []), ...notes]}
+    />
+  );
+}
+
+function NetworkTask({ state, truth, onPlace }: { state: StepState; truth: Truth; onPlace: (p: Pt) => void }) {
+  return <NetworkMap net={level9Network(truth)} at={state.df?.sites?.[0]} onPlace={onPlace} notes={state.df?.sites?.length ? [] : ['Click the map to place the pack.']} />;
 }
 
 // Level 7 E3: the enemy transmitter and receiver, the follower the player placed and the share of each dwell it

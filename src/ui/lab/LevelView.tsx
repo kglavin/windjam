@@ -15,6 +15,9 @@ import {
   practiceJsAt,
   practiceLinkAt,
   scoreLocate,
+  LOCATE_FULL_TRIES,
+  level9Network,
+  networkTry,
   xcorrEnemy,
   withinTol,
 } from '../../engine/lab/levels';
@@ -30,6 +33,8 @@ import { XcorrView } from './instruments/XcorrView';
 import { Waterfall } from './instruments/Waterfall';
 import { RebuildView } from './instruments/RebuildView';
 import { PacketView } from './instruments/PacketView';
+import { SharingPanel } from './instruments/SharingPanel';
+import { bestShare, shareOutcome } from '../../engine/lab/tactics';
 import { hopPreview } from '../../engine/lab/fh';
 import { LinkScene } from './LinkScene';
 import { SETUPS } from './levelSetup';
@@ -411,6 +416,27 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         {runCurve}
         {instruments.length > 0 && (
           <div className="level-instruments">
+            {shown?.kind === 'apply' && shown.share && (
+              <SharingPanel
+                targets={shown.share.targets(truth)}
+                goalBer={shown.share.goalBer}
+                plan={states[shownIdx].share ?? { mode: 'power', chosen: [] }}
+                locked={!!states[shownIdx].share?.committed}
+                onChange={(plan) => patch(shownIdx, { share: { ...plan, committed: undefined } })}
+                onCommit={() => {
+                  const share = shown.share!;
+                  update(shownIdx, (s) => {
+                    const plan = s.share ?? { mode: 'power' as const, chosen: [] };
+                    const ts = share.targets(truth);
+                    const denied = shareOutcome(ts, plan.chosen, plan.mode, share.goalBer).filter((x) => x.denied).length;
+                    const best = bestShare(ts, share.goalBer).denied;
+                    const points = denied >= best ? share.points : denied > 0 && denied === best - 1 ? share.points / 2 : 0;
+                    const next: StepState = { ...s, share: { ...plan, committed: { denied, best, points } } };
+                    return { ...next, done: applyDone(shown, next) };
+                  });
+                }}
+              />
+            )}
             {instruments.includes('rebuild') && <RebuildView code={code} title="Rebuild the enemy code" />}
             {instruments.includes('waterfall') && truth.fh && <Waterfall link={truth.fh} hops={hopPreview(truth.fh, truth.seed, 40)} title="Hop waterfall: enemy link" />}
             {instruments.includes('xcorr') && (
@@ -422,6 +448,19 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
                 state={states[shownIdx]}
                 truth={truth}
                 onPlace={(pt) => {
+                  if (shown.dfMethod === 'network') {
+                    // Level 9 E2: every placement is a try; the goal is every link into the hub broken.
+                    const goal = shown.locate;
+                    update(shownIdx, (s) => {
+                      const tries = (s.df?.tries ?? 0) + 1;
+                      const next: StepState = { ...s, df: { sites: [pt], tries } };
+                      if (goal && !s.located && networkTry(level9Network(truth), pt).all) {
+                        next.located = { points: tries <= LOCATE_FULL_TRIES ? goal.points : Math.round(goal.points / 2), tryNo: tries };
+                      }
+                      return { ...next, done: s.done || applyDone(shown, next) };
+                    });
+                    return;
+                  }
                   const max = shown.locate?.maxSites ?? (shown.dfMethod === 'follower' ? 1 : 0);
                   if (!inZone(pt) || max === 0) return;
                   update(shownIdx, (s) => {

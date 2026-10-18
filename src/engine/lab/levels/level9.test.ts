@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { dcPowerW, lookThroughLossDb, platform, timeOnAirH } from '../tactics';
+import { bestShare, dcPowerW, lookThroughLossDb, platform, shareOutcome, timeOnAirH } from '../tactics';
 import {
-  type LessonStep, type StepDef, LEVEL_9, LEVELS, a2Set, affordableRfW, b3GoalDb, fillText, level9Truth, level9Values, missionHours, packKmFor,
+  type LessonStep, type StepDef, EXAMPLE_NET, EXAMPLE_TARGETS, LEVEL_9, SHARE_GOAL_BER, bestShareOf, fDuty, fMissionHours, level9Network, networkTry, shareTargets, LEVELS, a2Set, affordableRfW, b3GoalDb, fillText, level9Truth, level9Values, missionHours, packKmFor,
 } from '../levels';
 
 const steps = (): StepDef[] => LEVEL_9.units.flatMap((u) => u.steps);
@@ -14,7 +14,7 @@ const text = (id: string) => {
 describe('level 9 units A to C', () => {
   it('is in LEVELS', () => {
     expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(LEVEL_9.units.map((u) => u.id)).toEqual(['A', 'B', 'C']);
+    expect(LEVEL_9.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
   });
 
   it('A1: the soldier pack', () => {
@@ -47,9 +47,60 @@ describe('level 9 units A to C', () => {
     expect(step<LessonStep>('C1').check!.answer).toBe(0.97);
   });
 
-  it('B3 scores 15, A3 15: 30 so far; every placeholder resolves', () => {
-    const pts = steps().flatMap((s) => (s.kind === 'apply' ? s.fields.map((f) => f.points) : s.kind === 'find' ? [s.points ?? 0] : []));
-    expect(pts.reduce((a, b) => a + b, 0)).toBe(30);
+  it('D1: the three example links under each plan', () => {
+    const out = (mode: 'power' | 'time', chosen: number[]) => shareOutcome(EXAMPLE_TARGETS, chosen, mode, SHARE_GOAL_BER);
+    expect(out('power', [0, 1, 2]).map((x) => Number(x.ber.toPrecision(1)))).toEqual([0.003, 0.0003, 8e-7]);
+    expect(out('time', [0, 1, 2]).map((x) => Number(x.ber.toPrecision(1)))).toEqual([0.02, 0.008, 0.0008]);
+    expect(out('time', [0, 1]).slice(0, 2).map((x) => Number(x.ber.toPrecision(2)))).toEqual([0.028, 0.012]);
+    expect(bestShare(EXAMPLE_TARGETS, SHARE_GOAL_BER)).toEqual({ denied: 2, mode: 'time', chosen: [0, 1] });
+  });
+
+  it('D3: the best plan breaks at least two links, and all three under power sharing is never it', () => {
+    for (let s = 1; s <= 30; s++) {
+      const t = level9Truth(s);
+      const b = bestShareOf(t);
+      expect(b.denied).toBeGreaterThanOrEqual(2);
+      expect(shareOutcome(shareTargets(t), [0, 1, 2], 'power', SHARE_GOAL_BER).filter((x) => x.denied).length).toBeLessThan(b.denied);
+    }
+  });
+
+  it('E: near the hub breaks every link into it, near an outstation does not; the area is small', () => {
+    const hub = EXAMPLE_NET.nodes[0];
+    expect(networkTry(EXAMPLE_NET, { xKm: hub.xKm, yKm: hub.yKm - 1.5 }).all).toBe(true);
+    const sp = EXAMPLE_NET.nodes[1];
+    expect(networkTry(EXAMPLE_NET, { xKm: sp.xKm, yKm: sp.yKm - 1.5 }).inbound).toBeLessThan(5);
+    for (let s = 1; s <= 20; s++) {
+      const net = level9Network(level9Truth(s));
+      for (const n of net.nodes) {
+        expect(n.yKm).toBeLessThanOrEqual(16);
+        expect(Math.abs(n.xKm)).toBeLessThanOrEqual(10);
+      }
+      let hits = 0;
+      let all = 0;
+      for (let x = -10; x <= 10; x += 0.5) {
+        for (let y = -4; y <= 16; y += 0.5) {
+          all++;
+          if (networkTry(net, { xKm: x, yKm: y }).all) hits++;
+        }
+      }
+      expect(hits).toBeGreaterThan(0);
+      expect(hits / all).toBeLessThan(0.15);
+    }
+  });
+
+  it('F: the pack\'s duty for the mission', () => {
+    for (let s = 1; s <= 10; s++) {
+      const t = level9Truth(s);
+      expect(fDuty(t)).toBeCloseTo(4.5 / fMissionHours(t), 9);
+    }
+    expect(10 * Math.log10(1 / 0.5)).toBeCloseTo(3, 1);
+  });
+
+  it('scores 100 points; every placeholder resolves', () => {
+    const pts = steps().flatMap((s) =>
+      s.kind === 'apply' ? [...s.fields.map((f) => f.points), s.locate?.points ?? 0, s.share?.points ?? 0]
+        : s.kind === 'find' ? [s.points ?? 0] : s.kind === 'questions' ? s.questions.map((q) => q.points) : []);
+    expect(pts.reduce((a, b) => a + b, 0)).toBe(100);
     for (let s = 1; s <= 8; s++) {
       for (const n of [0, 1, 3]) {
         const v = level9Values(level9Truth(s), n, b3GoalDb(level9Truth(s)) - 12);

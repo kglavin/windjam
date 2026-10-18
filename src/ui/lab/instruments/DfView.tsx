@@ -27,7 +27,7 @@ const end = (p: Pt, deg: number, km = REACH_KM) => {
   return { x: sx(p.xKm + km * Math.sin(r)), y: sy(p.yKm + km * Math.cos(r)) };
 };
 
-export function DfView({ title = 'DF view', sites, bearings = [], wedges = true, fix, target, zone, onPlace, onRemove, notes = [], path, hyperbolas = [], marks = [], outlines = [] }: {
+export function DfView({ title = 'DF view', sites, bearings = [], wedges = true, fix, target, zone, onPlace, onRemove, notes = [], path, hyperbolas = [], marks = [], outlines = [], links = [] }: {
   title?: string;
   sites: DfSite[];
   bearings?: BearingLine[];
@@ -42,6 +42,7 @@ export function DfView({ title = 'DF view', sites, bearings = [], wedges = true,
   hyperbolas?: Pt[][]; // TDOA curves
   marks?: (Pt & { label: string })[]; // level 7: the enemy transmitter and receiver
   outlines?: Pt[][]; // level 7: the follower's ellipse
+  links?: { a: Pt; b: Pt; denied: boolean }[]; // level 9: network links, drawn a little to the right of a → b
 }) {
   const click = (e: MouseEvent<SVGRectElement>) => {
     if (!onPlace) return;
@@ -118,6 +119,17 @@ export function DfView({ title = 'DF view', sites, bearings = [], wedges = true,
             <path d={`M${sx(fix.xKm) - 5},${sy(fix.yKm) - 5} l10,10 m0,-10 l-10,10`} className="df-fix" />
           )}
           {target && <circle cx={sx(target.xKm)} cy={sy(target.yKm)} r={6} className="df-target" />}
+          {links.map((l, i) => {
+            const dx = sx(l.b.xKm) - sx(l.a.xKm);
+            const dy = sy(l.b.yKm) - sy(l.a.yKm);
+            const len = Math.hypot(dx, dy) || 1;
+            const ox = (-dy / len) * 3;
+            const oy = (dx / len) * 3;
+            return (
+              <line key={`l${i}`} x1={sx(l.a.xKm) + ox} y1={sy(l.a.yKm) + oy} x2={sx(l.b.xKm) + ox} y2={sy(l.b.yKm) + oy}
+                className={l.denied ? 'net-link net-denied' : 'net-link'} />
+            );
+          })}
           {outlines.map((o, i) => (
             <polyline key={`o${i}`} points={o.map((p) => `${sx(p.xKm).toFixed(1)},${sy(p.yKm).toFixed(1)}`).join(' ')} className="df-outline" />
           ))}

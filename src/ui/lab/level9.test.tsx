@@ -3,7 +3,10 @@ import { renderToString as ssr } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { LEVEL_9, b3GoalDb, findTarget, flatSteps, knownLinkInfo, practiceLinkAt } from '../../engine/lab/levels';
 import { jammerDistanceForJs, sceneBudget } from '../../engine/lab/scene';
+import { EXAMPLE_NET, EXAMPLE_TARGETS } from '../../engine/lab/levels';
+import { NetworkMap } from './DfTask';
 import { DistanceView } from './instruments/DistanceView';
+import { SharingPanel } from './instruments/SharingPanel';
 import { PlatformCard } from './instruments/PlatformCard';
 import { moveJammerToJs } from './levelScene';
 import { SETUPS } from './levelSetup';
@@ -51,9 +54,23 @@ describe('level 9 in the stage panel', () => {
 
   it('scores B3 only when reached', () => {
     const states = flat.map((): StepState => ({ done: false }));
-    expect(scoreLevel(LEVEL_9, states).characterisation.max).toBe(30);
+    expect(scoreLevel(LEVEL_9, states).characterisation.max).toBe(80);
     states[idx('B3')] = { done: true };
     expect(scoreLevel(LEVEL_9, states).characterisation.got).toBe(15);
+  });
+});
+
+describe('sharing and network views', () => {
+  it('the sharing panel shows each link broken or not under the plan', () => {
+    const html = renderToString(createElement(SharingPanel, { targets: EXAMPLE_TARGETS, goalBer: 0.01, plan: { mode: 'time', chosen: [0, 1] }, onChange: noop, onCommit: noop }));
+    expect((html.match(/>broken</g) ?? []).length).toBe(2);
+    expect(html).toContain('Commit plan');
+  });
+  it('the network map colours the links the pack breaks', () => {
+    const hub = EXAMPLE_NET.nodes[0];
+    const html = renderToString(createElement(NetworkMap, { net: EXAMPLE_NET, at: { xKm: hub.xKm, yKm: hub.yKm - 1.5 } }));
+    expect((html.match(/net-link net-denied/g) ?? []).length).toBeGreaterThanOrEqual(5);
+    expect(html).toContain('links into the hub broken: 5 of 5');
   });
 });
 

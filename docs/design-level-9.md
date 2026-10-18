@@ -48,9 +48,9 @@ and glossary marks.
 | A Power is scarce | A1 example, A2 practice, A3 enemy | Platforms: what each can carry and generate; amplifier efficiency; DC power and time on air; J/S per watt | 15: the DC power and time on air of a given platform | Four platforms, their power and endurance |
 | B Distance beats power | B1 example, B2 practice, B3 enemy | 12 dB per halving near the ground, 6 dB in free space; a directional jammer antenna; Egli, and why f² cancels | 15: move a small jammer until J/S reaches a goal at the enemy receiver | The same J/S from a big jammer far and a small one near |
 | C Look-through | C1 example, C2 practice | Stop to listen; the share of jamming lost; reacting to a link that moves | – | – |
-| D Sharing across targets | D1 example, D2 practice, D3 enemy | Power sharing against time sharing; which suits strong links and which weak ones | 20: choose power or time sharing and the targets, deny the most links | One jammer, three links, two ways to share |
-| E Networks as targets | E1 example, E2 enemy | Hub and spoke, shared net; where to stand; links denied per watt | 20: place the jammer on the map to deny the hub's inbound links | Jamming near the hub cuts every spoke |
-| F Planning | F1 lesson, F2 enemy | Platform, power, position and time on target together | 10: choose a platform and position that hold the hub's links for the mission time | – |
+| D Sharing across targets | D1 example, D2 practice, D3 enemy | Power sharing against time sharing; which suits strong links and which weak ones | 20: choose the targets and power or time sharing, one commit; full points for the most links any plan breaks, half for one fewer | One jammer, three links, two ways to share |
+| E Networks as targets | E1 example, E2 enemy | Hub and spoke, shared net; where to stand; links denied per watt | 20: place the 10 W pack so every link into the hub breaks; full points within 3 placements, half after | Jamming near the hub cuts every spoke |
+| F Planning | F1 lesson, F2 enemy | Platform, power, position and time on target together | 10: the duty that makes the pack's battery last the mission (5), and the average J/S it costs (5) | – |
 | G Check | G1 questions | Three questions | 20 | – |
 
 Total 100, pass mark 60. The enemy geometry, link margins and mission times come from the level seed.

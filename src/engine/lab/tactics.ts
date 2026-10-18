@@ -83,6 +83,20 @@ export function shareOutcome(targets: Target[], chosen: number[], mode: ShareMod
   });
 }
 
+// The plan that denies the most targets: every choice of targets, both modes. Ties go to fewer targets.
+export function bestShare(targets: Target[], goalBer: number): { denied: number; mode: ShareMode; chosen: number[] } {
+  let best = { denied: -1, mode: 'power' as ShareMode, chosen: [] as number[] };
+  const n = targets.length;
+  for (let m = 1; m < 1 << n; m++) {
+    const chosen = [...Array(n).keys()].filter((i) => m & (1 << i));
+    for (const mode of ['power', 'time'] as const) {
+      const denied = shareOutcome(targets, chosen, mode, goalBer).filter((x) => x.denied).length;
+      if (denied > best.denied || (denied === best.denied && chosen.length < best.chosen.length)) best = { denied, mode, chosen };
+    }
+  }
+  return best;
+}
+
 // --- Networks as targets -----------------------------------------------------------------------------------------
 
 export interface NetNode extends Pt {

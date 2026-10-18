@@ -1275,6 +1275,19 @@ select {
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
+.net-link {
+  stroke: #34d399;
+  stroke-width: 2;
+}
+.net-link.net-denied {
+  stroke: #f87171;
+}
+.share-ok {
+  color: #f87171;
+}
+.share-no {
+  color: var(--muted);
+}
 .plat-table {
   width: 100%;
   border-collapse: collapse;

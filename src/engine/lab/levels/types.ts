@@ -4,6 +4,7 @@ import { createRng } from '../../rng';
 import type { FhJammer, FhLink, HopRecord } from '../fh';
 import type { FrontEndConfig } from '../frontend';
 import type { PacketLink, PacketRecord, SyncJammer } from '../sync';
+import type { Target } from '../tactics';
 import type { JammerSpec } from '../jammers';
 
 export interface Truth {
@@ -171,6 +172,8 @@ export type Visual =
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
   | { kind: 'platforms' } // level 9: the platform card
+  | { kind: 'sharing' } // level 9: one jammer over three example links
+  | { kind: 'network'; example: 'hub' | 'spoke' } // level 9: the example network with the jammer near the hub or a spoke
   | { kind: 'distance' } // level 9: J/S against distance for two jammers
   | { kind: 'register'; degree: number } // level 8: a shift register stepping
   | { kind: 'rebuild'; link: 'example' } // level 8: Berlekamp–Massey on the example code
@@ -187,7 +190,7 @@ export type Visual =
 export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr' | 'waterfall' | 'rebuild';
 
 // How a level 6 step locates: bearings from ground sites, bearings from a UAV flying a leg, or arrival times.
-export type DfMethod = 'bearings' | 'leg' | 'tdoa' | 'follower'; // follower: level 7, one jammer placed on the map
+export type DfMethod = 'bearings' | 'leg' | 'tdoa' | 'follower' | 'network'; // follower: level 7; network: level 9, a jammer placed among a network
 
 // Scene fields the player may edit in a step. 'jammer' is the jammer's position only (drag and x/y).
 export type SceneField =
@@ -366,6 +369,8 @@ export interface ApplyStep {
   locate?: LocateGoal; // level 6: appears once the fields are submitted; met by placing sites and taking bearings
   dfSites?: { xKm: number; yKm: number; label: string }[]; // level 6: DF sites already in place, with their bearings shown
   dfMethod?: DfMethod; // level 6: 'bearings' when absent
+  // Level 9: choose how to share one jammer across targets; scored on links denied against the best plan.
+  share?: { targets: (t: Truth) => Target[]; goalBer: number; points: number };
   editable?: SceneField[]; // scene fields the player may change in this step (the level's default when absent)
   hiddenRows?: string[]; // budget rows hidden from the scene's ladder until the step is done
 }

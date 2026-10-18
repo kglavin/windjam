@@ -1,6 +1,6 @@
 import type { IQ } from '../../../engine/lab/signal';
 import {
-  type KnownLink, type Visual, DF_EXAMPLES, FOLLOW_EXAMPLE, FOLLOW_PROC_US, followerNumbers, exampleBearings, exampleHyperbolas, knownLinkInfo, legPoints, xcorrExample, xcorrPractice,
+  type KnownLink, type Visual, DF_EXAMPLES, EXAMPLE_NET, EXAMPLE_TARGETS, SHARE_GOAL_BER, FOLLOW_EXAMPLE, FOLLOW_PROC_US, followerNumbers, exampleBearings, exampleHyperbolas, knownLinkInfo, legPoints, xcorrExample, xcorrPractice,
 } from '../../../engine/lab/levels';
 import { fixFromBearings } from '../../../engine/lab/geoloc';
 import { Autocorr } from '../instruments/Autocorr';
@@ -13,6 +13,8 @@ import { AcquireView } from '../instruments/AcquireView';
 import { SCurveView } from '../instruments/SCurveView';
 import { PacketDemo } from './PacketDemo';
 import { DistanceView } from '../instruments/DistanceView';
+import { SharingDemo } from '../instruments/SharingPanel';
+import { NetworkMap } from '../DfTask';
 import { PlatformCard } from '../instruments/PlatformCard';
 import { RebuildView } from '../instruments/RebuildView';
 import { RegisterView } from '../instruments/RegisterView';
@@ -128,6 +130,14 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
           hyperbolas={exampleHyperbolas(ex)}
         />
       );
+    }
+    case 'sharing':
+      return <SharingDemo targets={EXAMPLE_TARGETS} goalBer={SHARE_GOAL_BER} />;
+    case 'network': {
+      const hub = EXAMPLE_NET.nodes[0];
+      const spoke = EXAMPLE_NET.nodes[1];
+      const at = visual.example === 'hub' ? { xKm: hub.xKm, yKm: hub.yKm - 1.5 } : { xKm: spoke.xKm, yKm: spoke.yKm - 1.5 };
+      return <NetworkMap net={EXAMPLE_NET} at={at} title="Example: the 10 W pack near the hub" />;
     }
     case 'platforms':
       return <PlatformCard />;

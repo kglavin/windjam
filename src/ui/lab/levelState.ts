@@ -36,6 +36,7 @@ export interface StepState {
   goal?: { points: number; run: RunSummary; runNo: number }; // apply with a deny goal: the run that reached it
   df?: { sites: { xKm: number; yKm: number }[]; tries: number; last?: LocateTry }; // level 6: the sites placed and the latest try
   located?: { points: number; tryNo: number; cepKm?: number; crossingDeg?: number }; // apply with a locate goal: the try that met it
+  share?: { mode: 'power' | 'time'; chosen: number[]; committed?: { denied: number; best: number; points: number } }; // level 9 sharing plan
   retryRun?: { prediction?: number; result?: RunSummary }; // apply: the unscored retry of a run
   runInput?: number; // apply: the edited value of the run's runInput field (NaN while the entry is not a number)
   retries?: number; // apply: how many retries were started, for the run seed
@@ -43,7 +44,7 @@ export interface StepState {
 
 // An apply step is done when every field and the goal, if there is one, are settled.
 export function applyDone(step: ApplyStep, st: StepState | undefined): boolean {
-  return step.fields.every((f) => !!st?.fields?.[f.id]) && (!step.goal || !!st?.goal) && (!step.locate || !!st?.located)
+  return step.fields.every((f) => !!st?.fields?.[f.id]) && (!step.goal || !!st?.goal) && (!step.locate || !!st?.located) && (!step.share || !!st?.share?.committed)
     && (!step.runUnscored || !!st?.runs?.length);
 }
 
@@ -83,6 +84,10 @@ export function scoreLevel(level: LevelDef, states: StepState[]): Score {
       if (step.locate) {
         part.max += step.locate.points;
         part.got += st?.located?.points ?? 0;
+      }
+      if (step.share) {
+        part.max += step.share.points;
+        part.got += st?.share?.committed?.points ?? 0;
       }
     } else if (step.kind === 'find' && step.points) {
       // Level 9: a scene goal reached, not skipped.

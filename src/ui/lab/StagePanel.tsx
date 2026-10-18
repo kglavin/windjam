@@ -337,7 +337,25 @@ function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: Ste
       {step.run && settled && predictField(step.fields) && <ApplyPredict {...p} field={predictField(step.fields)!} />}
       {step.run && settled && step.runUnscored && <UnscoredRun {...p} />}
       {step.run && settled && step.goal && <DenyRun {...p} goal={step.goal} />}
-      {step.locate && settled && <LocateBox {...p} goal={step.locate} />}
+      {step.locate && settled && step.dfMethod !== 'network' && <LocateBox {...p} goal={step.locate} />}
+      {step.locate && step.dfMethod === 'network' && (
+        <div className="stage-fields">
+          <p className="stage-task"><Rich text={fillText(step.locate.task, p.values)} /></p>
+          <p className="stage-note">Placements so far: {state.df?.tries ?? 0}.</p>
+          {state.located && <p className="stage-result ok">✓ Placement {state.located.tryNo} broke every link into the hub: {state.located.points}/{step.locate.points} pts</p>}
+        </div>
+      )}
+      {step.share && (
+        <div className="stage-fields">
+          {state.share?.committed ? (
+            <p className={`stage-result ${state.share.committed.points === step.share.points ? 'ok' : 'partial'}`}>
+              Your plan breaks {state.share.committed.denied} link{state.share.committed.denied === 1 ? '' : 's'}; the best possible is {state.share.committed.best}: {state.share.committed.points}/{step.share.points} pts
+            </p>
+          ) : (
+            <p className="stage-note">Tick the links to jam, choose the sharing, then press Commit plan. One commit counts.</p>
+          )}
+        </div>
+      )}
       {state.done && (
         <>
           <p className="stage-subhead">Worked answer</p>
