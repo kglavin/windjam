@@ -443,3 +443,33 @@ class TownView:
                                 for a in np.linspace(deg - half, deg + half, 13)]
         poly = Polygon(*pts)
         return Intersection(poly, self.frame(), stroke_width=0, fill_color=color, fill_opacity=opacity)
+
+
+class MeshView:
+    """Level 12's mesh map (src/ui/lab/instruments/MeshMap.tsx): 12 × 9 km, x east and y north, drawn `height` units
+    tall with its centre at `center`."""
+
+    def __init__(self, center=(-3.1, 0.4, 0), height=5.6, span=(12, 9)):
+        self.span = span
+        self.s = height / span[1]
+        self.c = np.array(center, dtype=float)
+
+    def p(self, x, y):
+        return self.c + np.array([(x - self.span[0] / 2) * self.s, (y - self.span[1] / 2) * self.s, 0])
+
+    def frame(self):
+        return VGroup(Rectangle(width=self.span[0] * self.s, height=self.span[1] * self.s, stroke_color=GREY, stroke_width=1.2)
+                      .move_to(self.p(self.span[0] / 2, self.span[1] / 2)),
+                      label(f"{self.span[0]} × {self.span[1]} km", GREY, 16).next_to(self.p(0, 0), DOWN, buff=0.1, aligned_edge=LEFT))
+
+    def link(self, a, b, color=GREEN_C3, width=2, opacity=0.7):
+        return Line(self.p(a["xKm"], a["yKm"]), self.p(b["xKm"], b["yKm"]), stroke_color=color, stroke_width=width, stroke_opacity=opacity)
+
+    def node(self, n, name, color=GREEN_C3, square=False):
+        at = self.p(n["xKm"], n["yKm"])
+        mark = Square(side_length=0.22, fill_color=color, fill_opacity=1, stroke_width=0) if square else Dot(at, radius=0.1, color=color)
+        mark.move_to(at)
+        return VGroup(mark, label(name, GREY if isinstance(color, str) and color == GREEN_C3 else color, 18).next_to(at, UR, buff=0.04))
+
+    def ring(self, x, y, r, color=RED, opacity=0.08):
+        return Circle(radius=r * self.s, stroke_color=color, stroke_width=2, fill_color=color, fill_opacity=opacity).move_to(self.p(x, y))

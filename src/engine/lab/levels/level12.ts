@@ -219,6 +219,7 @@ export const LEVEL_12: LevelDef = {
           id: 'A1',
           title: 'Multi-hop and self-healing',
           visual: { kind: 'mesh', example: 'route' },
+          video: 'level12-A1',
           paragraphs: [
             'In a [[mesh|mesh]] there is no base station and no hub. Every radio sends its own messages and relays other radios\' messages. A message to a radio out of range goes from neighbour to neighbour: [[multi-hop|multi-hop]] forwarding.',
             'Each hop is short, so each radio needs little power. Each hop also adds delay, and every relay spends battery receiving and sending again.',
@@ -242,6 +243,7 @@ export const LEVEL_12: LevelDef = {
           id: 'B1',
           title: 'Listen first, or take turns',
           visual: { kind: 'mac', example: 'access' },
+          video: 'level12-B1',
           paragraphs: [
             'All the radios share one channel. If two near the same receiver send at once, both messages are lost. Two ways to share:',
             '[[CSMA|csma]], listen before you talk: a radio measures the channel and sends only if it is quiet, below a threshold. If it is busy, the radio waits a random time and listens again. No clock is needed, but every radio must keep listening, and under heavy load collisions grow.',
@@ -260,6 +262,7 @@ export const LEVEL_12: LevelDef = {
           id: 'B2',
           title: 'The hidden terminal',
           visual: { kind: 'mac', example: 'rts' },
+          video: 'level12-B2',
           paragraphs: [
             'Listening first fails when two senders cannot hear each other. A and C are both in range of B but not of each other. A sends to B; C listens, hears nothing, and sends too. The two collide at B. A and C are [[hidden terminals|hidden-terminal]].',
             'The cure is a handshake, [[RTS/CTS|rts-cts]]. A sends a short request to send (RTS); B answers with a short clear to send (CTS). Each carries how long the rest of the exchange lasts. C cannot hear A, but it hears B\'s CTS, and keeps quiet that long. That wait is the [[NAV|nav]].',
@@ -284,6 +287,7 @@ export const LEVEL_12: LevelDef = {
           id: 'C1',
           title: 'Routes on demand',
           visual: { kind: 'mesh', example: 'flood' },
+          video: 'level12-C1',
           paragraphs: [
             'A radio that needs a route it does not have asks for one. In [[AODV|aodv]] it broadcasts a route request; every radio that hears it for the first time notes who it came from and sends it on once. The request floods the whole mesh: one send per radio.',
             'When it reaches the destination, the reply goes back along the noted path, and each radio on it now knows the next hop. If a link on the path breaks, the radio before it sends a route error back, and the source asks again. To save sends, a repair can first ask only a few hops out, widening the ring if that fails.',
@@ -301,6 +305,7 @@ export const LEVEL_12: LevelDef = {
           id: 'C2',
           title: 'Routes kept ready',
           visual: { kind: 'mesh', example: 'mpr' },
+          video: 'level12-C2',
           paragraphs: [
             'The other way keeps routes ready all the time. In [[OLSR|olsr]] each radio sends [[HELLO|hello]] messages to learn its neighbours, and floods the links it has to everyone, so every radio can work out every route before it is needed.',
             'That costs sends whether or not anyone talks. If every one of N radios floods, the cost is N × N, not more: 20 radios, 400 sends a round.',
@@ -324,6 +329,7 @@ export const LEVEL_12: LevelDef = {
           id: 'D1',
           title: 'A backbone through the mesh',
           visual: { kind: 'mesh', example: 'backbone' },
+          video: 'level12-D1',
           paragraphs: [
             'A large flat mesh wastes sends: every flood reaches every radio, and neighbours repeat each other. Structure helps.',
             'Clustering groups radios round a [[cluster head|cluster-head]] that schedules them and gathers their reports; gateway radios join neighbouring clusters. Ordinary members can sleep and wake only to report.',
@@ -347,6 +353,7 @@ export const LEVEL_12: LevelDef = {
           id: 'E1',
           title: 'Time of arrival and round trip',
           visual: { kind: 'mac', example: 'rtt' },
+          video: 'level12-E1',
           paragraphs: [
             'Radio travels at 300 m each microsecond. Time a signal\'s flight and you have the distance: [[time of arrival|toa]]. That needs both radios\' clocks in step to a few nanoseconds.',
             'The [[round trip|rtt]] needs no common clock. A sends; B answers after a known turnaround; A times the whole exchange on its own clock. Distance = (round trip − turnaround) ÷ 2 × 300 m per µs.',
@@ -371,6 +378,7 @@ export const LEVEL_12: LevelDef = {
           id: 'F1',
           title: 'Example: a quiet zone',
           visual: { kind: 'meshJam', example: 'csma' },
+          video: 'level12-F1',
           paragraphs: [
             'Part 2 attacks the mesh. Start with the channel. A CSMA radio sends only when the channel is quiet, below its clear-channel threshold, here −85 dBm. A jammer that keeps the channel above that threshold near a radio stops it sending at all. It does not need to beat the signal: no J/S is involved. This is [[carrier-sense denial|csma-denial]].',
             'Breaking the data is far harder. These links spread with 15 dB of processing gain and need Eb/J0 of 7 dB, so they stand J/S up to 8 dB. The jammer must beat each link\'s signal by that much.',
@@ -478,6 +486,7 @@ export const LEVEL_12: LevelDef = {
           id: 'H1',
           title: 'Example: split the mesh',
           visual: { kind: 'meshJam', example: 'backbone' },
+          video: 'level12-H1',
           paragraphs: [
             'A mesh heals round one lost radio, but only if another path exists. Where every path between two groups passes a few radios, those radios hold the mesh together: a cut node, or the backbone radios on the way.',
             'The backbone and the cut nodes are where one jammer does most. Silence them by carrier sense and every radio beyond is cut off from the gateway, though the jammer is nowhere near most of them.',
@@ -562,6 +571,7 @@ export const LEVEL_12: LevelDef = {
           id: 'J1',
           title: 'Hopping, spreading, authenticated preambles',
           visual: { kind: 'none' },
+          video: 'level12-J1',
           paragraphs: [
             'Frequency hopping: a jammer on one frequency hits only the hops that land there, and carrier-sense denial must cover the whole hop band. Partial-band and follower jamming still work (level 7).',
             'Direct sequence: protects the data by its processing gain. It does not stop carrier-sense denial if the radio judges the channel by energy alone; a radio that judges it by finding its own code (a correlating clear-channel check) ignores the jammer. Short commercial codes give little: 802.15.4 sends 32 chips for 4 bits, a gain of 8, or 9 dB.',
