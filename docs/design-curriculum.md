@@ -62,12 +62,12 @@ and jamming it (levels 2–5, 9) is worth more than any spoke.
 T5. **Nulling is protection.** An adaptive array that puts a null on the jammer lowers J/S by the null's depth: level 0
 F2's antenna pattern taken to its end (level 10), and the defence to level 9's tactics.
 
+T6. **Sync is the weak point.** The preamble that lets a receiver lock on (level 1 D1) is the cheapest thing to jam
+(level 8): without lock nothing despreads.
+
 T7. **The open-terrain models stop working in town.** Free space and two-ray (level 0 F1, the scene) give way to
 shadowing and multipath (level 11); the same multipath that fades a link bends bearings and smears TDOA peaks
 (level 6), and a jammer's J/S depends on which street it stands in.
-
-T6. **Sync is the weak point.** The preamble that lets a receiver lock on (level 1 D1) is the cheapest thing to jam
-(level 8): without lock nothing despreads.
 
 ## 4. Corrections to the source material
 
