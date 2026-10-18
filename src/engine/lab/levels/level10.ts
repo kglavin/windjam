@@ -1,6 +1,7 @@
 // Level 10: Many users and antenna arrays (docs/design-level-10.md). Units A to C: many users in one band, near and
 // far, finding an unknown code. Every number in the texts is checked in level10.test.ts.
 import { createRng } from '../../rng';
+import { type Source, beamwidthDeg, idealCovariance, jammerSuppressionDb, mvdr } from '../array';
 import { type User, CHIPS, codeOf, discoverCode } from '../cdma';
 import { type LevelDef, type Truth, EXAMPLE, PRACTICE, shortCodeTruth } from './types';
 
@@ -46,6 +47,21 @@ export function fewestPieces(code: number, snrDb: number, seed = 1): number {
   return best;
 }
 
+// --- Units D to F: the enemy receiver's array, and emitters to find ---------------------------------------------------
+
+export const arrayM = (t: Truth): number => pick(t, 0xd3, [4, 6, 8, 10, 12]);
+export const e2Setup = (t: Truth) => ({ jamDeg: pick(t, 0xe2, [-50, -30, 25, 50]), jsDb: pick(t, 0xe3, [10, 15, 20]) });
+export const e2SuppressionDb = (t: Truth): number => {
+  const { jamDeg } = e2Setup(t);
+  return jammerSuppressionDb(mvdr(idealCovariance(arrayM(t), [{ thetaDeg: jamDeg, power: 1000 }], 1), 0), 0, jamDeg);
+};
+const F2_PAIRS = [[-35, 10], [-12, 28], [5, 42], [-50, -5]];
+export const f2Sources = (t: Truth): Source[] => pick(t, 0xf2, F2_PAIRS).map((thetaDeg) => ({ thetaDeg, power: 10 }));
+export const F2_M = 8;
+export const F2_SNAPSHOTS = 400;
+const D2_M = [4, 6, 10, 12];
+export const d2M = (n: number) => at(D2_M, n);
+
 const f1 = (v: number) => v.toFixed(1);
 
 export function level10Values(t: Truth, practiceN: number): Record<string, string> {
@@ -73,6 +89,20 @@ export function level10Values(t: Truth, practiceN: number): Record<string, strin
     sicDb: f1(b.sicDb),
     snrC: String(c.snrDb),
     pieces: String(fewestPieces(c.code, c.snrDb)),
+    m: String(arrayM(t)),
+    mGain: f1(10 * Math.log10(arrayM(t))),
+    mBw: f1(beamwidthDeg(arrayM(t))),
+    mRuleBw: f1(102 / arrayM(t)),
+    mMinus: String(arrayM(t) - 1),
+    jamDeg: String(e2Setup(t).jamDeg),
+    jsBefore: String(e2Setup(t).jsDb),
+    supp: f1(e2SuppressionDb(t)),
+    jsAfter: f1(e2Setup(t).jsDb + e2SuppressionDb(t)),
+    f2a: String(Math.min(...f2Sources(t).map((s) => s.thetaDeg))),
+    f2b: String(Math.max(...f2Sources(t).map((s) => s.thetaDeg))),
+    pM: String(d2M(practiceN)),
+    pMGain: f1(10 * Math.log10(d2M(practiceN))),
+    pMBw: f1(102 / d2M(practiceN)),
   };
 }
 
@@ -225,7 +255,185 @@ export const LEVEL_10: LevelDef = {
         },
       ],
     },
+    {
+      id: 'D',
+      title: 'Arrays and beams',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'D1',
+          title: 'Example: pointing a beam',
+          visual: { kind: 'beam', mode: 'das' },
+          paragraphs: [
+            'Put M antennas in a line, half a wavelength apart: an array. A wave from an angle reaches each one a little later than the last, the level 6 interferometer\'s phase step repeated along the line.',
+            'Delay each element\'s signal to undo that step and add them up: signals from the look direction add in step, everything else adds out of step. This is delay-and-sum beamforming. Change the delays and the beam swings, with nothing moving.',
+          ],
+          steps: [
+            '8 elements: the signal adds 8 times stronger in power than the noise, which adds at random. Gain = 10 × log10(8) = 9.0 dB.',
+            'The beam is about 102° ÷ 8 = 12.8° wide at half power.',
+            'Slide the elements: twice as many, 3 dB more gain and a beam half as wide.',
+          ],
+          rule: 'Array gain = 10 × log10(M) dB. Beamwidth ≈ 102° ÷ M, for half-wave spacing.',
+          check: {
+            question: 'An array of 16 elements. What is its gain, in dB?',
+            unit: 'dB',
+            answer: 12,
+            tol: { abs: 0.1 },
+            wrong: '10 × log10(16).',
+          },
+        },
+        {
+          kind: 'practice',
+          id: 'D2',
+          title: 'Try it',
+          link: 'practice',
+          visual: { kind: 'beam', mode: 'das' },
+          task: 'An array of {pM} elements. What is its gain, and how wide is its beam?',
+          hint: 'Gain = 10 × log10(M). Beamwidth ≈ 102° ÷ M.',
+          fields: [
+            { id: 'gain', label: 'Gain', unit: 'dB', truth: (_t, ctx) => 10 * Math.log10(d2M(ctx.practiceN ?? 0)), check: { abs: 0.1 }, points: 0 },
+            { id: 'bw', label: 'Beamwidth', unit: '°', truth: (_t, ctx) => 102 / d2M(ctx.practiceN ?? 0), check: { rel: 0.06 }, points: 0 },
+          ],
+          worked: ['10 × log10({pM}) = {pMGain} dB.', '102 ÷ {pM} = {pMBw}°.'],
+        },
+        {
+          kind: 'apply',
+          id: 'D3',
+          title: 'The enemy: its array',
+          instruments: [],
+          task: 'The enemy receiver has an array of {m} elements. What gain does it give the signal it looks at, and how wide is its beam?',
+          hint: 'Gain = 10 × log10(M). Beamwidth ≈ 102° ÷ M.',
+          fields: [
+            { id: 'gain', label: 'Gain', unit: 'dB', truth: (t) => 10 * Math.log10(arrayM(t)), check: { abs: 0.1 }, points: 7 },
+            { id: 'bw', label: 'Beamwidth', unit: '°', truth: (t) => 102 / arrayM(t), check: { rel: 0.06 }, points: 8 },
+          ],
+          reveal: ['10 × log10({m}) = {mGain} dB.', '102 ÷ {m} = {mRuleBw}°; worked exactly, {mBw}°.'],
+        },
+      ],
+    },
+    {
+      id: 'E',
+      title: 'Nulling',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'E1',
+          title: 'Example: a null on the jammer',
+          visual: { kind: 'beam', mode: 'mvdr' },
+          paragraphs: [
+            'An array can do more than point. Capon\'s method (MVDR) chooses the weights that keep the look direction at full strength and let through as little of everything else as possible. A strong jammer is most of everything else, so the weights put a deep null on it.',
+            'In this lab the elements\' channels are matched to 35 dB, the practical limit: a null takes about 35 + 10 × log10(M) dB off the jammer. That comes straight off J/S. Nulling is protection, and it is aimed: move the jammer and the null follows.',
+            'M elements give M − 1 nulls. Slide the jammers up to the number of elements and the nulls run out.',
+          ],
+          steps: [
+            '8 elements, a jammer at 40°: it is suppressed by about 44 dB, against 17 dB in the side lobe of a plain beam.',
+            'A jammer at J/S 15 dB at one antenna is at about −29 dB behind the array: the link does not notice it.',
+            'Add jammers from other directions: 7 are each suppressed by about 44 dB; with an 8th, the worst drops to about 24 dB.',
+          ],
+          rule: 'An adaptive array nulls up to M − 1 jammers, taking about 35 + 10 × log10(M) dB off each here; past that its nulls collapse. To beat it, come from M directions.',
+          check: {
+            question: 'An 8-element adaptive array. How many jammers from different directions can it null?',
+            answer: 7,
+            tol: { exact: true },
+            wrong: 'M − 1.',
+          },
+        },
+        {
+          kind: 'apply',
+          id: 'E2',
+          title: 'The enemy: its nulls',
+          instruments: ['beam'],
+          task: 'The enemy receiver ({m} elements) nulls your jammer, which arrives from {jamDeg}° at J/S {jsBefore} dB at one antenna. Read how much the null takes off, then: what J/S is left, how many jammers can the array null, and how many directions do you need to beat it?',
+          hint: 'J/S left = J/S at one antenna + the suppression (negative). M − 1 nulls; one more jammer than that.',
+          fields: [
+            { id: 'js', label: 'J/S left', unit: 'dB', truth: (t) => e2Setup(t).jsDb + e2SuppressionDb(t), check: { abs: 0.5 }, points: 5 },
+            { id: 'nulls', label: 'Jammers it can null', unit: '', truth: (t) => arrayM(t) - 1, check: { exact: true }, points: 5 },
+            { id: 'beat', label: 'Directions to beat it', unit: '', truth: (t) => arrayM(t), check: { exact: true }, points: 5 },
+          ],
+          reveal: ['{jsBefore} + ({supp}) = {jsAfter} dB: the null wins.', '{m} elements null {mMinus} jammers; it takes {m}, from different directions, to get through.'],
+        },
+      ],
+    },
+    {
+      id: 'F',
+      title: 'Many directions at once',
+      steps: [
+        {
+          kind: 'lesson',
+          id: 'F1',
+          title: 'Example: MUSIC',
+          visual: { kind: 'music' },
+          paragraphs: [
+            'Level 6 took one bearing per antenna. An array can find several transmitters at once. Sweeping its beam (the orange curve) shows a hump for each, but two transmitters closer than a beamwidth merge into one.',
+            'MUSIC splits what the array hears into a part made by the transmitters and a part made only by noise. The noise part is at right angles to every direction a transmitter is in, so testing each angle against it gives a sharp peak exactly there (the blue curve).',
+          ],
+          steps: [
+            '6 elements: the beam is about 17° wide. Two transmitters 10° apart, at −5° and +5°, merge in the scan.',
+            'MUSIC separates them, sharper the more snapshots it averages.',
+            'It can find up to M − 1 transmitters: 5 for 6 elements.',
+          ],
+          rule: 'MUSIC finds up to M − 1 transmitters, closer together than a beamwidth, given enough snapshots.',
+          check: {
+            question: 'A 6-element array. At most how many transmitters can MUSIC find?',
+            answer: 5,
+            tol: { exact: true },
+            wrong: 'M − 1.',
+          },
+        },
+        {
+          kind: 'apply',
+          id: 'F2',
+          title: 'The enemy: two transmitters',
+          instruments: ['music'],
+          task: 'Your 8-element array hears two enemy transmitters. Read their directions from the MUSIC spectrum, west one first.',
+          hint: 'Hover over each blue peak to read its angle.',
+          fields: [
+            { id: 'a', label: 'First (most negative)', unit: '°', truth: (t) => Math.min(...f2Sources(t).map((s) => s.thetaDeg)), check: { abs: 2 }, points: 5 },
+            { id: 'b', label: 'Second', unit: '°', truth: (t) => Math.max(...f2Sources(t).map((s) => s.thetaDeg)), check: { abs: 2 }, points: 5 },
+          ],
+          reveal: ['They are at {f2a}° and {f2b}°.'],
+        },
+      ],
+    },
+    {
+      id: 'G',
+      title: 'Check',
+      steps: [
+        {
+          kind: 'questions',
+          id: 'G1',
+          title: 'Three questions',
+          task: 'Three short questions. One attempt each.',
+          questions: [
+            {
+              id: 'q1',
+              text: 'Ten users share a CDMA band with equal power. What happens when an eleventh joins?',
+              options: ['Nothing: codes keep users apart completely', "Every user's SINR drops a little", 'Only the new user suffers'],
+              correct: 1,
+              explain: 'Each user is noise to the others, cut by the processing gain: SINR ≈ Gp ÷ (K − 1).',
+              points: 7,
+            },
+            {
+              id: 'q2',
+              text: 'An enemy receiver has an 8-element adaptive array. How do you get a jammer through?',
+              options: ['Jam from 8 different directions', 'Use twice the power from one direction', 'Jam from directly behind it'],
+              correct: 0,
+              explain: 'It can put nulls on M − 1 = 7 directions. The 8th gets through.',
+              points: 7,
+            },
+            {
+              id: 'q3',
+              text: 'Why can an attacker find a short spreading code without being told it?',
+              options: ['It is printed in the preamble', 'It is always an m-sequence', 'It repeats every bit, so averaging code-length pieces reveals it'],
+              correct: 2,
+              explain: 'The noise averages away, the repeated code does not. A long code never repeats within the capture.',
+              points: 6,
+            },
+          ],
+        },
+      ],
+    },
   ],
   debrief:
-    'Codes let many users share a band, each paying for the others in interference: SINR ≈ Gp ÷ (K − 1). A near user can bury a far one, which cancellation undoes. And a short code can be found without being told it, by averaging pieces of the signal: one more reason links spread data with long codes.',
+    'Codes let many users share a band, each paying for the others in interference, and a near user can bury a far one until cancellation undoes it. A short code can be found blind. An array points a beam, nulls up to M − 1 jammers, and finds several transmitters at once: protection for the link, and a harder target for the jammer.',
 };

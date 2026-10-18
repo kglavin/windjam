@@ -14,6 +14,8 @@ import { SCurveView } from '../instruments/SCurveView';
 import { PacketDemo } from './PacketDemo';
 import { DistanceView } from '../instruments/DistanceView';
 import { CdmaDemo } from '../instruments/CdmaPanel';
+import { BeamDemo } from '../instruments/BeamView';
+import { MusicDemo } from '../instruments/MusicView';
 import { DiscoveryView } from '../instruments/DiscoveryView';
 import { SharingDemo } from '../instruments/SharingPanel';
 import { NetworkMap } from '../DfTask';
@@ -133,6 +135,10 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
         />
       );
     }
+    case 'beam':
+      return <BeamDemo mode={visual.mode} />;
+    case 'music':
+      return <MusicDemo />;
     case 'cdma':
       return <CdmaDemo example={visual.example} many={exampleUsers} nearFar={NEAR_FAR} />;
     case 'discover':

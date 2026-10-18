@@ -31,7 +31,9 @@ noise if enough pieces are averaged. Only a short code works: a long code never 
 D4. **Arrays on a line.** A uniform linear array of M elements half a wavelength apart (the level 6 interferometer
 extended). Delay-and-sum points a beam: gain 10·log10 M toward the look direction, beamwidth about 102° ÷ M. Capon
 (MVDR) weights keep the look direction and minimise everything else, which puts a null on a jammer; its depth is the
-J/S the array takes away. MUSIC splits the covariance into signal and noise parts and finds up to M − 1 emitters'
+J/S the array takes away. Channel mismatch between elements (35 dB here, the practical limit) leaves part of every
+jammer that no null removes, so suppression is about 35 + 10·log10 M dB; past M − 1 well-spread jammers it collapses.
+MUSIC splits the covariance into signal and noise parts and finds up to M − 1 emitters'
 directions as sharp peaks.
 
 D5. **One linear algebra core.** A Hermitian eigendecomposition (Jacobi on the real 2M × 2M form) and a complex solve
@@ -48,7 +50,7 @@ glossary marks.
 | B Near and far | B1 example, B2 enemy | A strong user buries a weak one; power control; successive cancellation | 15: the weak user's SINR before and after cancelling the strong one | Decode, subtract, decode |
 | C Finding an unknown code | C1 example, C2 enemy | Pieces of one code period; the main eigenvector; how many pieces below the noise; why a long code defeats it | 10: the pieces needed, read from the discovery instrument | The code emerging from noise as pieces add up |
 | D Arrays and beams | D1 example, D2 practice, D3 enemy | Steering; delay-and-sum; gain and beamwidth against M | 15: array gain and beamwidth for the enemy's array | A beam swinging across |
-| E Nulling | E1 example, E2 enemy | Capon/MVDR; the null on a jammer; null depth as J/S lost; an M-element array nulls up to M − 1 jammers | 15: the J/S your jammer loses to the null; how many jammers beat the array | The null following the jammer |
+| E Nulling | E1 example, E2 enemy | Capon/MVDR; the null on a jammer; null depth as J/S lost; an M-element array nulls up to M − 1 jammers | 15: the J/S left behind the null (read from the beam plot), the jammers it can null, the directions needed to beat it | The null following the jammer |
 | F Many directions at once | F1 example, F2 enemy | MUSIC: signal and noise parts; peaks at the emitters; up to M − 1 | 10: the emitters' directions from the spectrum | Peaks sharpening as snapshots add up |
 | G Check | G1 questions | Three questions | 20 | – |
 

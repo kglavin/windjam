@@ -17,6 +17,11 @@ import {
   scoreLocate,
   LOCATE_FULL_TRIES,
   c2Setup,
+  arrayM,
+  e2Setup,
+  f2Sources,
+  F2_M,
+  F2_SNAPSHOTS,
   level9Network,
   networkTry,
   xcorrEnemy,
@@ -36,6 +41,8 @@ import { RebuildView } from './instruments/RebuildView';
 import { PacketView } from './instruments/PacketView';
 import { SharingPanel } from './instruments/SharingPanel';
 import { DiscoveryView } from './instruments/DiscoveryView';
+import { BeamPlot } from './instruments/BeamView';
+import { MusicPlot } from './instruments/MusicView';
 import { bestShare, shareOutcome } from '../../engine/lab/tactics';
 import { hopPreview } from '../../engine/lab/fh';
 import { LinkScene } from './LinkScene';
@@ -439,6 +446,8 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
                 }}
               />
             )}
+            {instruments.includes('beam') && <BeamPlot m={arrayM(truth)} lookDeg={0} jammers={[e2Setup(truth).jamDeg]} mode="mvdr" />}
+            {instruments.includes('music') && <MusicPlot m={F2_M} sources={f2Sources(truth)} snapshots={F2_SNAPSHOTS} showTruth={!!states[shownIdx]?.done} seed={truth.seed} />}
             {instruments.includes('discover') && <DiscoveryView code={c2Setup(truth).code} snrDb={c2Setup(truth).snrDb} title="Find the enemy code" />}
             {instruments.includes('rebuild') && <RebuildView code={code} title="Rebuild the enemy code" />}
             {instruments.includes('waterfall') && truth.fh && <Waterfall link={truth.fh} hops={hopPreview(truth.fh, truth.seed, 40)} title="Hop waterfall: enemy link" />}

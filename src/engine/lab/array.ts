@@ -17,9 +17,14 @@ export interface Source {
   power: number; // linear, per element
 }
 
-// The exact covariance Σ p·a·aᴴ + noise·I.
-export function idealCovariance(m: number, sources: Source[], noise: number): CMatrix {
-  const re = Array.from({ length: m }, (_, i) => Array.from({ length: m }, (_, j) => (i === j ? noise : 0)));
+// Channel mismatch between elements leaves this share of every source's power uncorrelated from element to element,
+// which no weighting can cancel: it limits nulls to about 35 dB, as in practice (the lab's assumption).
+export const MISMATCH_DB = -35;
+
+// The exact covariance Σ p·a·aᴴ + noise·I, plus the mismatch residual of each source on the diagonal.
+export function idealCovariance(m: number, sources: Source[], noise: number, mismatchDb = MISMATCH_DB): CMatrix {
+  const floor = noise + sources.reduce((t, s) => t + s.power, 0) * 10 ** (mismatchDb / 10);
+  const re = Array.from({ length: m }, (_, i) => Array.from({ length: m }, (_, j) => (i === j ? floor : 0)));
   const im = Array.from({ length: m }, () => new Array<number>(m).fill(0));
   for (const s of sources) {
     const a = steering(m, s.thetaDeg);
@@ -90,6 +95,14 @@ export const patternDb = (w: CVector, lookDeg: number, grid: number[]): number[]
   return grid.map((t) => 10 * Math.log10(Math.max(response(w, t) / ref, 1e-12)));
 };
 
+// How much weaker the jammer gets through the array than through one element, with the signal kept: the pattern at the
+// jammer plus the mismatch residual, which reaches the output through every weight (dB, negative = suppressed).
+export function jammerSuppressionDb(w: CVector, lookDeg: number, jammerDeg: number, mismatchDb = MISMATCH_DB): number {
+  const look = response(w, lookDeg);
+  const norm = w.re.reduce((t, v, k) => t + v * v + w.im[k] * w.im[k], 0);
+  return 10 * Math.log10((response(w, jammerDeg) + 10 ** (mismatchDb / 10) * norm) / look);
+}
+
 // Half-power beamwidth of delay-and-sum at broadside, about 102° ÷ M for half-wave spacing.
 export const beamwidthDeg = (m: number): number => {
   const w = delayAndSum(m, 0);
@@ -115,11 +128,30 @@ export function musicSpectrumDb(R: CMatrix, k: number, grid: number[]): number[]
   return p.map((v) => 10 * Math.log10(v / top));
 }
 
+// The delay-and-sum scan (Bartlett): power aᴴRa ÷ M² at each angle, dB with the peak at 0. Its peaks are a beamwidth
+// wide, so emitters closer than that merge.
+export function bartlettDb(R: CMatrix, grid: number[]): number[] {
+  const m = R.re.length;
+  const p = grid.map((t) => {
+    const a = steering(m, t);
+    let re = 0;
+    for (let i = 0; i < m; i++) {
+      for (let j = 0; j < m; j++) re += a.re[i] * (R.re[i][j] * a.re[j] - R.im[i][j] * a.im[j]) + a.im[i] * (R.re[i][j] * a.im[j] + R.im[i][j] * a.re[j]);
+    }
+    return re / (m * m);
+  });
+  const top = Math.max(...p);
+  return p.map((v) => 10 * Math.log10(Math.max(v / top, 1e-12)));
+}
+
 // The peaks of a spectrum: local maxima above `floorDb`, highest first.
 export function peaks(grid: number[], db: number[], count: number, floorDb = -20): number[] {
   const out: { t: number; v: number }[] = [];
   for (let i = 1; i < db.length - 1; i++) if (db[i] > db[i - 1] && db[i] >= db[i + 1] && db[i] > floorDb) out.push({ t: grid[i], v: db[i] });
   return out.sort((a, b) => b.v - a.v).slice(0, count).map((p) => p.t);
 }
+
+// Jammer directions spread evenly in sin θ (so each needs its own null), for showing that M elements null M − 1.
+export const NULL_DIRS = [14.5, -14.5, 30, -30, 48.6, -48.6, 71.8, -71.8, 22, -22, 38.7, -38.7, 61, -61, 8.6, -8.6];
 
 export const angleGrid = (step = 0.5): number[] => Array.from({ length: Math.round(180 / step) + 1 }, (_, i) => -90 + i * step);

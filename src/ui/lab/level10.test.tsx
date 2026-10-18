@@ -3,7 +3,9 @@ import { renderToString as ssr } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { LEVEL_10, NEAR_FAR, exampleUsers, flatSteps, knownLinkInfo, practiceLinkAt } from '../../engine/lab/levels';
 import { sceneBudget } from '../../engine/lab/scene';
+import { BeamPlot } from './instruments/BeamView';
 import { CdmaPanel } from './instruments/CdmaPanel';
+import { MusicPlot } from './instruments/MusicView';
 import { DiscoveryView } from './instruments/DiscoveryView';
 import { SETUPS } from './levelSetup';
 import { type StepState, scoreLevel } from './levelState';
@@ -35,6 +37,10 @@ describe('level 10 in the stage panel', () => {
 });
 
 describe('level 10 instruments', () => {
+  it('the beam and MUSIC plots render with their readouts', () => {
+    expect(renderToString(createElement(BeamPlot, { m: 8, lookDeg: 0, jammers: [40], mode: 'mvdr' }))).toMatch(/jammer at 40°: -4[34]\.\d dB/);
+    expect(renderToString(createElement(MusicPlot, { m: 6, sources: [{ thetaDeg: -5, power: 10 }, { thetaDeg: 5, power: 10 }], snapshots: 20, showTruth: true }))).toContain('inst-goal');
+  });
   it('the CDMA panel lists every user with its BER', () => {
     const html = renderToString(createElement(CdmaPanel, { users: exampleUsers(6), sic: false, title: 't' }));
     expect((html.match(/<tr>/g) ?? []).length).toBe(7);
