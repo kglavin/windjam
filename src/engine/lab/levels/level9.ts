@@ -150,9 +150,10 @@ export const LEVEL_9: LevelDef = {
           id: 'A1',
           title: 'Example: what a soldier can carry',
           visual: { kind: 'platforms' },
+          video: 'level9-A1',
           paragraphs: [
             'A [[jammer|jammer]] needs power where it stands. A soldier carries batteries; a small UAV has a few hundred grams to spare; a vehicle has a generator; an aircraft takes power from its engines. The table gives the lab\'s round figures.',
-            'The power amplifier turns only part of its supply into radio power: here 30 to 50%. The rest is heat. So every watt sent costs two or three watts of battery.',
+            'The [[power amplifier|efficiency]] turns only part of its supply into radio power: here 30 to 50%. The rest is heat. So every watt sent costs two or three watts of battery.',
           ],
           steps: [
             'The soldier pack sends 10 W of radio power at 30% efficiency.',
@@ -212,10 +213,11 @@ export const LEVEL_9: LevelDef = {
           id: 'B1',
           title: 'Example: a small jammer close in',
           visual: { kind: 'distance' },
+          video: 'level9-B1',
           paragraphs: [
             'J/S is set at the enemy receiver. Near the ground, the jammer\'s signal falls by 12 dB each time its distance doubles (level 0, F1). So halving the distance gains 12 dB: the same as 16 times the power.',
             'A directional jammer antenna adds its gain toward the target: 10 dBi is worth 10 times the power, if it is pointed at the receiver.',
-            'Planning models such as Egli add a term for frequency, but the jammer and the link share the frequency, so it cancels out of J/S.',
+            'Planning models such as [[Egli|egli]] add a term for frequency, but the jammer and the link share the frequency, so it cancels out of J/S.',
           ],
           steps: [
             'A 200 W vehicle jammer gets the J/S it needs from 20 km.',
@@ -269,7 +271,7 @@ export const LEVEL_9: LevelDef = {
           title: 'Example: stop to listen',
           visual: { kind: 'none' },
           paragraphs: [
-            'A jammer cannot hear the link while it transmits: its own signal drowns everything. To know whether the target is still there, or has moved to another frequency, it must stop now and then and listen. This is look-through.',
+            'A jammer cannot hear the link while it transmits: its own signal drowns everything. To know whether the target is still there, or has moved to another frequency, it must stop now and then and listen. This is [[look-through|look-through]].',
             'Every look costs jamming time. Too few looks and the jammer may be shouting at an empty channel; too many and its average J/S falls.',
           ],
           steps: [
@@ -311,8 +313,9 @@ export const LEVEL_9: LevelDef = {
           id: 'D1',
           title: 'Example: one jammer, three links',
           visual: { kind: 'sharing' },
+          video: 'level9-D1',
           paragraphs: [
-            'One jammer, several enemy links. Power sharing splits its power: each link gets 1/k of it all the time, 10 × log10(k) dB less. Time sharing jams one link at a time with everything: each is hit for 1/k of the time, like level 3\'s pulses.',
+            'One jammer, several enemy links. [[Power sharing|power-sharing]] splits its power: each link gets 1/k of it all the time, 10 × log10(k) dB less. [[Time sharing|time-sharing]] jams one link at a time with everything: each is hit for 1/k of the time, like level 3\'s pulses.',
             'Which is better is level 3\'s best-duty rule again: time sharing wins when each link, under the whole jammer, keeps an Eb/J0 above about −1.5 dB.',
           ],
           steps: [
@@ -366,6 +369,7 @@ export const LEVEL_9: LevelDef = {
           id: 'E1',
           title: 'Example: stand near the hub',
           visual: { kind: 'network', example: 'hub' },
+          video: 'level9-E1',
           paragraphs: [
             'An enemy [[hub|hub]] talks to five outstations. Every message to the hub arrives at one receiver; every message from it goes to five.',
             'A jammer near the hub raises J/S at the one receiver all the outstations send to: every link into the hub breaks at once. Near one outstation, it breaks only the hub\'s link to that outstation.',
