@@ -1338,6 +1338,12 @@ select {
   stroke-dasharray: 5 4;
 }
 .mesh-jammer { fill: #f87171; }
+.mesh-guard {
+  fill: #94a3b8;
+  fill-opacity: 0.08;
+  stroke: #94a3b8;
+  stroke-dasharray: 3 3;
+}
 .mac-send { fill: #60a5fa; }
 .mac-nav { fill: #f59e0b; opacity: 0.55; }
 .mac-wait { fill: #475569; }

@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
-import { EXAMPLE_FRAMES, RTT_EXAMPLE } from '../../../engine/lab/levels';
-import { C_KM_PER_US, navCtsUs, navRtsUs, rttKm, tdmaFrameMs } from '../../../engine/lab/mesh';
+import { EXAMPLE_FRAMES, I1_EXAMPLE, RTT_EXAMPLE, TURN_US } from '../../../engine/lab/levels';
+import { C_KM_PER_US, dutySavingDb, helloDuty, linkDropS, navCtsUs, navRtsUs, rttKm, tdmaFrameMs } from '../../../engine/lab/mesh';
 import { PAD, PW } from './plot';
 
 // Level 12: frames on a time line, one row per radio. B1: CSMA and TDMA; B2: the hidden terminal with and without
@@ -56,8 +56,37 @@ function Lines({ rows, bars, tMax, unit, ticks, title, notes, controls }: {
   );
 }
 
-export function MacTimeline({ example }: { example: 'access' | 'rts' | 'rtt' }) {
+export function MacTimeline({ example }: { example: 'access' | 'rts' | 'rtt' | 'hello' | 'repeater' }) {
   const [hs, setHs] = useState(false);
+  if (example === 'hello') {
+    // HELLOs of 2 ms every 1 s; the jammer hits each from 1 s; the link drops 2 missed HELLOs after the last heard (0 s).
+    const drop = linkDropS(1, 2);
+    const bars: Bar[] = [
+      ...[0, 1, 2, 3, 4].map((t) => ({ row: 0, t0: t, t1: t + 0.002, label: 'HELLO', cls: 'mac-send' })),
+      ...[1, 2, 3, 4].map((t) => ({ row: 1, t0: t - 0.01, t1: t + 0.012, label: 'jam', cls: 'mac-bad' })),
+      { row: 2, t0: 0, t1: drop, label: 'link up', cls: 'mac-send' },
+      { row: 2, t0: drop, t1: 4.6, label: 'link dropped', cls: 'mac-bad' },
+    ];
+    const duty = helloDuty(2, 1);
+    return <Lines title="Jamming only the HELLOs" rows={['A: HELLOs', 'jammer', 'B: link to A']} bars={bars} tMax={4.6} unit="s" ticks={[0, 1, 2, 3, 4]}
+      notes={[`HELLOs of 2 ms every 1 s: the jammer is on ${(100 * duty).toFixed(1)}% of the time, ${dutySavingDb(duty).toFixed(1)} dB less average power.`, `B drops the link after 2 missed HELLOs, ${linkDropS(1, 2)} s after the last one it heard.`]} />;
+  }
+  if (example === 'repeater') {
+    const { km, delayUs } = I1_EXAMPLE;
+    const fly = km / C_KM_PER_US;
+    const bars: Bar[] = [
+      { row: 0, t0: 0, t1: fly, label: 'flight', cls: 'mac-wait' },
+      { row: 0, t0: fly, t1: fly + TURN_US, label: 'turnaround', cls: 'mac-nav' },
+      { row: 0, t0: fly + TURN_US, t1: 2 * fly + TURN_US, label: 'flight', cls: 'mac-wait' },
+      { row: 1, t0: 0, t1: fly, label: 'flight', cls: 'mac-wait' },
+      { row: 1, t0: fly, t1: fly + delayUs, label: 'delay', cls: 'mac-bad' },
+      { row: 1, t0: fly + delayUs, t1: fly + delayUs + TURN_US, label: 'turnaround', cls: 'mac-nav' },
+      { row: 1, t0: fly + delayUs + TURN_US, t1: 2 * fly + delayUs + TURN_US, label: 'flight', cls: 'mac-wait' },
+    ];
+    const round = 2 * fly + TURN_US;
+    return <Lines title="A repeater in the round trip" rows={['true', 'repeater']} bars={bars} tMax={16} unit="µs" ticks={[0, 4, 8, 12, 16]}
+      notes={[`True: ${round.toFixed(2)} µs, range ${rttKm(round, TURN_US).toFixed(3)} km.`, `With ${delayUs} µs of delay: ${(round + delayUs).toFixed(2)} µs, range ${rttKm(round + delayUs, TURN_US).toFixed(3)} km, ${(rttKm(round + delayUs, TURN_US) - km).toFixed(3)} km too far.`]} />;
+  }
   if (example === 'access') {
     // CSMA: A sends; C finds the channel busy, backs off and sends after. TDMA: 5 slots of 2 ms, one radio each.
     const slots = ['A', 'B', 'C', 'D', 'E'];

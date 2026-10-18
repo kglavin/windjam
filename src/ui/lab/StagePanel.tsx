@@ -337,7 +337,14 @@ function Apply(p: StagePanelProps & { step: ApplyStep; index: number; state: Ste
       {step.run && settled && predictField(step.fields) && <ApplyPredict {...p} field={predictField(step.fields)!} />}
       {step.run && settled && step.runUnscored && <UnscoredRun {...p} />}
       {step.run && settled && step.goal && <DenyRun {...p} goal={step.goal} />}
-      {step.locate && settled && step.dfMethod !== 'network' && step.dfMethod !== 'town' && <LocateBox {...p} goal={step.locate} />}
+      {step.locate && settled && step.dfMethod !== 'network' && step.dfMethod !== 'town' && step.dfMethod !== 'mesh' && <LocateBox {...p} goal={step.locate} />}
+      {step.locate && step.dfMethod === 'mesh' && (
+        <div className="stage-fields">
+          <p className="stage-task"><Rich text={fillText(step.locate.task, p.values)} /></p>
+          <p className="stage-note">Placements so far: {state.df?.tries ?? 0}.</p>
+          {state.located && <p className="stage-result ok">✓ Placement {state.located.tryNo} cut off at least {p.values.hGoal} radios from HQ: {state.located.points}/{step.locate.points} pts</p>}
+        </div>
+      )}
       {step.locate && step.dfMethod === 'town' && (
         <div className="stage-fields">
           <p className="stage-task"><Rich text={fillText(step.locate.task, p.values)} /></p>

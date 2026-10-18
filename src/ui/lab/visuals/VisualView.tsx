@@ -17,7 +17,7 @@ import { DistanceView } from '../instruments/DistanceView';
 import { CdmaDemo } from '../instruments/CdmaPanel';
 import { ShadowHist } from '../instruments/ShadowHist';
 import { FadingStrip } from '../instruments/FadingStrip';
-import { MeshDemo } from '../instruments/MeshMap';
+import { MeshDemo, MeshJamDemo } from '../instruments/MeshMap';
 import { MacTimeline } from '../instruments/MacTimeline';
 import { TOWN_EXAMPLE, TownMap } from '../instruments/TownMap';
 import { UrbanLossPlot } from '../instruments/UrbanLossPlot';
@@ -165,6 +165,8 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
       return <FadingStrip />;
     case 'mesh':
       return <MeshDemo example={visual.example} />;
+    case 'meshJam':
+      return <MeshJamDemo example={visual.example} />;
     case 'mac':
       return <MacTimeline example={visual.example} />;
     case 'beam':

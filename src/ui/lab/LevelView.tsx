@@ -26,6 +26,8 @@ import {
   networkTry,
   e3Layout,
   townTry,
+  h2Mesh,
+  meshTry,
   xcorrEnemy,
   withinTol,
 } from '../../engine/lab/levels';
@@ -478,6 +480,20 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
                   });
                 }}
                 onPlace={(pt) => {
+                  if (shown.dfMethod === 'mesh') {
+                    // Level 12 H2: every placement is a try; the goal is enough radios cut off from HQ.
+                    const goal = shown.locate;
+                    const h = h2Mesh(truth);
+                    update(shownIdx, (s) => {
+                      const tries = (s.df?.tries ?? 0) + 1;
+                      const next: StepState = { ...s, df: { sites: [pt], tries } };
+                      if (goal && !s.located && meshTry(h.mesh, pt).cut.length >= h.goal) {
+                        next.located = { points: tries <= LOCATE_FULL_TRIES ? goal.points : Math.round(goal.points / 2), tryNo: tries };
+                      }
+                      return { ...next, done: s.done || applyDone(shown, next) };
+                    });
+                    return;
+                  }
                   if (shown.dfMethod === 'town') {
                     update(shownIdx, (s) => ({ ...s, df: { tries: 0, ...s.df, sites: [pt] } }));
                     return;

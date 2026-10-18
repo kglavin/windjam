@@ -1,12 +1,13 @@
 import { createElement } from 'react';
 import { renderToString as ssr } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { LEVEL_12, flatSteps, knownLinkInfo, practiceLinkAt } from '../../engine/lab/levels';
+import { type ApplyStep, LEVEL_12, flatSteps, guarded, h2Mesh, knownLinkInfo, meshTry, practiceLinkAt } from '../../engine/lab/levels';
 import { sceneBudget } from '../../engine/lab/scene';
 import { MacTimeline } from './instruments/MacTimeline';
-import { MeshDemo } from './instruments/MeshMap';
+import { MeshDemo, MeshJamDemo } from './instruments/MeshMap';
+import { DfTask } from './DfTask';
 import { SETUPS } from './levelSetup';
-import { type StepState, scoreLevel } from './levelState';
+import { type StepState, applyDone, scoreLevel } from './levelState';
 import { StagePanel, type StagePanelProps } from './StagePanel';
 
 const renderToString = (e: Parameters<typeof ssr>[0]) => ssr(e).replace(/<!-- -->/g, '');
@@ -46,5 +47,26 @@ describe('level 12', () => {
     expect(renderToString(createElement(MacTimeline, { example: 'access' }))).toContain('every 10 ms');
     expect(renderToString(createElement(MacTimeline, { example: 'rts' }))).toContain('collision');
     expect(renderToString(createElement(MacTimeline, { example: 'rtt' }))).toContain('749 m');
+    expect(renderToString(createElement(MacTimeline, { example: 'hello' }))).toContain('27.0 dB less');
+    expect(renderToString(createElement(MacTimeline, { example: 'repeater' }))).toContain('range 1.500 km, 0.300 km too far');
+    expect(renderToString(createElement(MeshJamDemo, { example: 'csma' }))).toContain('silenced 1.50 km');
+    expect(renderToString(createElement(MeshJamDemo, { example: 'backbone' }))).toContain('Cut off from G: 10 radios');
+  });
+
+  it('H2: a placement that meets the goal completes the step for 20 points', () => {
+    const idx = flat.findIndex((f) => f.step.id === 'H2');
+    const h2 = flat[idx].step as ApplyStep;
+    const { mesh, goal } = h2Mesh(truth);
+    let at = { xKm: 0, yKm: 0 };
+    for (let x = 0.25; x < 12 && !at.xKm; x += 0.25) for (let y = 0.25; y < 9; y += 0.25) {
+      const p = { xKm: x, yKm: y };
+      if (!guarded(mesh, p) && meshTry(mesh, p).cut.length >= goal) { at = p; break; }
+    }
+    expect(renderToString(createElement(DfTask, { step: h2, state: { done: false }, truth, onPlace: noop, onRemove: noop }))).toContain('outside the 3 km guard');
+    const st: StepState = { done: true, df: { sites: [at], tries: 2 }, located: { points: 20, tryNo: 2 } };
+    expect(renderToString(createElement(DfTask, { step: h2, state: st, truth, onPlace: noop, onRemove: noop }))).toContain(`(goal ${goal})`);
+    expect(applyDone(h2, st)).toBe(true);
+    const states = flat.map((_, i): StepState => (i === idx ? st : { done: false }));
+    expect(scoreLevel(LEVEL_12, states).total).toBe(20);
   });
 });

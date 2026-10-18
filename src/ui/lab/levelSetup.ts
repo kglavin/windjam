@@ -30,6 +30,7 @@ import {
   level10Values,
   level11Truth,
   level12Truth,
+  level12Values,
   level11Values,
   maxPeriodUsOf,
   recoveryUsOf,
@@ -277,6 +278,6 @@ const setup10: LevelSetup = {
 const setup11: LevelSetup = { ...setup10, truth: level11Truth, values: (a) => level11Values(a.truth, a.practiceN ?? 0) };
 
 // Level 12: no scene; the mesh map and the time lines hold the geometry.
-const setup12: LevelSetup = { ...setup10, truth: level12Truth, values: () => ({}) };
+const setup12: LevelSetup = { ...setup10, truth: level12Truth, values: (a) => level12Values(a.truth, a.practiceN ?? 0) };
 
 export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7, 8: setup8, 9: setup9, 10: setup10, 11: setup11, 12: setup12 };

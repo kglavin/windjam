@@ -1,7 +1,7 @@
 import { type MouseEvent, useState } from 'react';
 import type { Pt } from '../../../engine/lab/geoloc';
-import { EXAMPLE_BACKBONE, EXAMPLE_MESH, MESH_AREA, ROUTE_TO, type MeshLayout } from '../../../engine/lab/levels';
-import { allFloodSends, floodSends, linkCount, mpr, mprFlood, route } from '../../../engine/lab/mesh';
+import { EXAMPLE_BACKBONE, EXAMPLE_MESH, F1_JAMMER, H1_JAMMER, MESH_AREA, ROUTE_TO, type MeshLayout, meshTry } from '../../../engine/lab/levels';
+import { MESH_RADIO, allFloodSends, denialRadii, floodSends, linkCount, mpr, mprFlood, radiusKm, route } from '../../../engine/lab/mesh';
 
 // Level 12: a mesh on a km map (x east, y north): radios, links, the gateway, a route, a backbone, chosen relays,
 // radios knocked out, and (part 2) a jammer with its rings, the links it breaks and the radios cut off.
@@ -13,7 +13,7 @@ const sx = (x: number) => PAD + x * S;
 const sy = (y: number) => H - PAD - y * S;
 const key = (a: number, b: number) => `${Math.min(a, b)}-${Math.max(a, b)}`;
 
-export function MeshMap({ mesh, title = 'Mesh map', path, gone = [], backbone = [], chosen = [], selected, jammer, rings = [], broken = [], cut = [], onNode, onPlace, notes = [] }: {
+export function MeshMap({ mesh, title = 'Mesh map', path, gone = [], backbone = [], chosen = [], selected, jammer, rings = [], broken = [], cut = [], guard, onNode, onPlace, notes = [] }: {
   mesh: MeshLayout;
   title?: string;
   path?: number[]; // a route, drawn thick
@@ -25,6 +25,7 @@ export function MeshMap({ mesh, title = 'Mesh map', path, gone = [], backbone = 
   rings?: { rKm: number; label: string }[]; // round the jammer
   broken?: [number, number][]; // links the jammer breaks
   cut?: number[]; // radios cut off from the gateway
+  guard?: number; // km round the gateway the jammer may not enter
   onNode?: (i: number) => void;
   onPlace?: (p: Pt) => void;
   notes?: string[];
@@ -64,6 +65,7 @@ export function MeshMap({ mesh, title = 'Mesh map', path, gone = [], backbone = 
       <svg className="inst-svg df-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title}>
         <rect x={PAD} y={PAD} width={MESH_AREA.xMax * S} height={MESH_AREA.yMax * S} className="inst-frame" />
         {onPlace && <rect x={PAD} y={PAD} width={MESH_AREA.xMax * S} height={MESH_AREA.yMax * S} fill="transparent" className="df-click" onClick={click} />}
+        {guard && <circle cx={sx(mesh.nodes[mesh.gateway].xKm)} cy={sy(mesh.nodes[mesh.gateway].yKm)} r={guard * S} className="mesh-guard" />}
         {jammer && rings.map((r) => (
           <g key={r.label}>
             <circle cx={sx(jammer.xKm)} cy={sy(jammer.yKm)} r={r.rKm * S} className="mesh-ring" />
@@ -89,6 +91,24 @@ export function MeshMap({ mesh, title = 'Mesh map', path, gone = [], backbone = 
       {notes.length > 0 && <dl className="inst-meter">{notes.map((n) => <div key={n}><dd>{n}</dd></div>)}</dl>}
     </section>
   );
+}
+
+// Part 2's pictures: F1's quiet zone, H1's jammer between the two backbone radios.
+export function MeshJamDemo({ example }: { example: 'csma' | 'backbone' }) {
+  const m = EXAMPLE_MESH;
+  const j = example === 'csma' ? F1_JAMMER : H1_JAMMER;
+  const r = meshTry(m, j, j.powerW);
+  const names = (l: number[]) => l.map((i) => m.names[i]).join(', ') || 'none';
+  if (example === 'csma') {
+    const d = denialRadii(MESH_RADIO, j.powerW, 0.8);
+    return <MeshMap mesh={m} title="Example: a quiet zone" jammer={j} gone={r.silenced} broken={r.broken}
+      rings={[{ rKm: d.silenceKm, label: `silenced ${d.silenceKm.toFixed(2)} km` }, { rKm: d.dataKm, label: `data, 0.8 km link ${d.dataKm.toFixed(2)} km` }]}
+      notes={[`1 W jammer. Silenced (never send): ${names(r.silenced)}. Links whose data it breaks: ${r.broken.map(([a, b]) => `${m.names[a]}–${m.names[b]}`).join(', ') || 'none'}.`]} />;
+  }
+  const rk = radiusKm(MESH_RADIO, j.powerW, MESH_RADIO.ccaDbm);
+  return <MeshMap mesh={m} title="Example: split the mesh" jammer={j} gone={r.silenced} broken={r.broken} cut={r.cut} backbone={EXAMPLE_BACKBONE}
+    rings={[{ rKm: rk, label: `silenced ${rk.toFixed(2)} km` }]}
+    notes={[`0.5 W jammer between W3 and W4. Silenced: ${names(r.silenced)}. Cut off from G: ${r.cut.length} radios (${names(r.cut)}).`]} />;
 }
 
 // Part 1's pictures on the example mesh.

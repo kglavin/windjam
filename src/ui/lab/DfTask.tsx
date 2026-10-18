@@ -3,8 +3,10 @@ import type { Pt } from '../../engine/lab/geoloc';
 import {
   type ApplyStep, type Truth, LEG_MAX_KM, UAV_HEIGHT_M, dfStepTry, legEnd, legPoints, level6Scene, siteSigmaDeg, siteSnrDb,
   siteTimingSigmaUs, tdoaHyperbola, txOf, xcorrEnemy, FOLLOW_PROC_US, e3Ellipse, e3Geometry, e3ShareAt, level9Network, networkTry,
-  ENEMY_GOAL_JS_DB, FRIEND_TOLERANCE_JS_DB, JAMMER, e3Layout, townTry, type TownLayout,
+  ENEMY_GOAL_JS_DB, FRIEND_TOLERANCE_JS_DB, JAMMER, e3Layout, townTry, type TownLayout, GUARD_KM, H_JAM_W, guarded, h2Mesh, meshTry,
 } from '../../engine/lab/levels';
+import { MESH_RADIO, backbone, radiusKm } from '../../engine/lab/mesh';
+import { MeshMap } from './instruments/MeshMap';
 import type { Network } from '../../engine/lab/tactics';
 import { followerDelayUs } from '../../engine/lab/fh';
 import { distanceKm } from '../../engine/lab/geoloc';
@@ -25,6 +27,7 @@ export function DfTask({ step, state, truth, onPlace, onRemove, onBeam, onJam }:
 }) {
   const method = step.dfMethod ?? 'bearings';
   if (method === 'town') return <TownTask state={state} truth={truth} onPlace={onPlace} onBeam={onBeam} onJam={onJam} />;
+  if (method === 'mesh') return <MeshTask state={state} truth={truth} onPlace={onPlace} />;
   if (method === 'follower') return <FollowerTask state={state} truth={truth} onPlace={onPlace} onRemove={onRemove} />;
   if (method === 'network') return <NetworkTask state={state} truth={truth} onPlace={onPlace} />;
   return <DfLocate step={step} state={state} truth={truth} onPlace={onPlace} onRemove={onRemove} />;
@@ -95,6 +98,21 @@ function TownTask({ state, truth, onPlace, onBeam, onJam }: {
       </div>
       <TownMap title="Map: the enemy in town" radios={townRadios(l, res?.js)} jammer={at} beamDeg={at ? beamDeg : undefined} halfBeamDeg={JAMMER.halfBeamDeg} onPlace={onPlace} notes={notes} />
     </div>
+  );
+}
+
+// Level 12 H2: the enemy mesh with its backbone; each placement shows the radios silenced and cut off from HQ.
+function MeshTask({ state, truth, onPlace }: { state: StepState; truth: Truth; onPlace: (p: Pt) => void }) {
+  const { mesh, goal } = h2Mesh(truth);
+  const at = state.df?.sites?.[0];
+  const r = at ? meshTry(mesh, at) : undefined;
+  const rk = radiusKm(MESH_RADIO, H_JAM_W, MESH_RADIO.ccaDbm);
+  const notes = r
+    ? [`Placement ${state.df?.tries}: silenced ${r.silenced.length}, cut off from HQ ${r.cut.length} (goal ${goal}).`]
+    : [`Click the map to place the ${H_JAM_W} W jammer, outside the ${GUARD_KM} km guard round HQ.`];
+  return (
+    <MeshMap mesh={mesh} title="Map: the enemy mesh" backbone={backbone(mesh.adj, mesh.gateway)} guard={GUARD_KM} jammer={at} gone={r?.silenced} broken={r?.broken} cut={r?.cut}
+      rings={at ? [{ rKm: rk, label: `silenced ${rk.toFixed(2)} km` }] : []} onPlace={(p) => !guarded(mesh, p) && onPlace(p)} notes={notes} />
   );
 }
 
