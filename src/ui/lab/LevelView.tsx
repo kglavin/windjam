@@ -24,6 +24,8 @@ import {
   F2_SNAPSHOTS,
   level9Network,
   networkTry,
+  e3Layout,
+  townTry,
   xcorrEnemy,
   withinTol,
 } from '../../engine/lab/levels';
@@ -459,7 +461,27 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
                 step={shown}
                 state={states[shownIdx]}
                 truth={truth}
+                onBeam={(deg) => update(shownIdx, (s) => ({ ...s, df: { sites: [], tries: 0, ...s.df, beamDeg: deg } }))}
+                onJam={() => {
+                  // Level 11 E3: every Jam is a try; the goal is the enemy jammed and every other radio clear.
+                  const goal = shown.locate;
+                  update(shownIdx, (s) => {
+                    const at = s.df?.sites?.[0];
+                    if (!at) return s;
+                    const beamDeg = s.df?.beamDeg ?? 0;
+                    const tries = (s.df?.tries ?? 0) + 1;
+                    const next: StepState = { ...s, df: { ...s.df!, tries, jammed: { ...at, beamDeg } } };
+                    if (goal && !s.located && townTry(e3Layout(truth), at, beamDeg).ok) {
+                      next.located = { points: tries <= LOCATE_FULL_TRIES ? goal.points : Math.round(goal.points / 2), tryNo: tries };
+                    }
+                    return { ...next, done: s.done || applyDone(shown, next) };
+                  });
+                }}
                 onPlace={(pt) => {
+                  if (shown.dfMethod === 'town') {
+                    update(shownIdx, (s) => ({ ...s, df: { tries: 0, ...s.df, sites: [pt] } }));
+                    return;
+                  }
                   if (shown.dfMethod === 'network') {
                     // Level 9 E2: every placement is a try; the goal is every link into the hub broken.
                     const goal = shown.locate;

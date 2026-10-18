@@ -34,7 +34,7 @@ export interface StepState {
   prediction?: number; // a step with a run: the BER predicted, locked when Run was pressed
   runs?: RunSummary[]; // every run finished in this step, in order
   goal?: { points: number; run: RunSummary; runNo: number }; // apply with a deny goal: the run that reached it
-  df?: { sites: { xKm: number; yKm: number }[]; tries: number; last?: LocateTry }; // level 6: the sites placed and the latest try
+  df?: { sites: { xKm: number; yKm: number }[]; tries: number; last?: LocateTry; beamDeg?: number; jammed?: { xKm: number; yKm: number; beamDeg: number } }; // level 6: the sites placed and the latest try; level 11: the beam and the latest jam
   located?: { points: number; tryNo: number; cepKm?: number; crossingDeg?: number }; // apply with a locate goal: the try that met it
   share?: { mode: 'power' | 'time'; chosen: number[]; committed?: { denied: number; best: number; points: number } }; // level 9 sharing plan
   retryRun?: { prediction?: number; result?: RunSummary }; // apply: the unscored retry of a run

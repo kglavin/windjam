@@ -171,9 +171,10 @@ export type Visual =
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
-  | { kind: 'town' } // level 11: a street grid with the enemy and friendly radios
+  | { kind: 'town'; example?: 'isolation' } // level 11: a street grid with the enemy and friendly radios; E1's jammer and beam
   | { kind: 'urbanLoss' } // level 11: loss against distance in town and in the open
   | { kind: 'shadowing' } // level 11: J/S scattered over many spots
+  | { kind: 'fading' } // level 11: the level along a street, one path or a rake
   | { kind: 'beam'; mode: 'das' | 'mvdr' } // level 10: an array's beam, with nulls for MVDR
   | { kind: 'music' } // level 10: MUSIC against the delay-and-sum scan
   | { kind: 'cdma'; example: 'many' | 'nearfar' } // level 10: users sharing a band
@@ -197,7 +198,7 @@ export type Visual =
 export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr' | 'waterfall' | 'rebuild' | 'discover' | 'beam' | 'music';
 
 // How a level 6 step locates: bearings from ground sites, bearings from a UAV flying a leg, or arrival times.
-export type DfMethod = 'bearings' | 'leg' | 'tdoa' | 'follower' | 'network'; // follower: level 7; network: level 9, a jammer placed among a network
+export type DfMethod = 'bearings' | 'leg' | 'tdoa' | 'follower' | 'network' | 'town'; // follower: level 7; network: level 9, a jammer placed among a network; town: level 11, a jammer placed and pointed
 
 // Scene fields the player may edit in a step. 'jammer' is the jammer's position only (drag and x/y).
 export type SceneField =

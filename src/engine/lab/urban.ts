@@ -70,8 +70,41 @@ export function jsSamples(meanDb: number, sigmaJDb: number, sigmaSDb: number, co
 
 // Rayleigh fading: the chance one path's level is more than `fadeDb` below its average, 1 − e^(−10^(−F/10)).
 export const fadeProbability = (fadeDb: number): number => 1 - Math.exp(-(10 ** (-fadeDb / 10)));
-// With L independent paths combined (a rake), all must fade together: about that chance to the power L.
-export const rakeFadeProbability = (fadeDb: number, paths: number): number => fadeProbability(fadeDb) ** paths;
+// With L independent, equal paths added in power (a rake), the chance the sum is more than `fadeDb` below its average:
+// 1 − e^(−Lx) × Σ (Lx)^k ÷ k! for k < L, with x = 10^(−F/10). Close to the single-path chance to the power L, a
+// few times more.
+export function rakeFadeProbability(fadeDb: number, paths: number): number {
+  const lx = paths * 10 ** (-fadeDb / 10);
+  let term = 1;
+  let sum = 0;
+  for (let k = 0; k < paths; k++) {
+    sum += term;
+    term *= lx / (k + 1);
+  }
+  return 1 - Math.exp(-lx) * sum;
+}
+
+// The level along a street, `n` points over `lengthM` metres, in dB against its average: `waves` copies from random
+// directions with random phases add up (Rayleigh). With `paths` > 1, that many independent tracks are added in power
+// (a rake), so a fade needs all of them low at once.
+export function fadingTrack(lengthM: number, n: number, freqMHz: number, seed: number, paths = 1, waves = 12): number[] {
+  const rng = createRng(seed);
+  const k = (2 * Math.PI * freqMHz) / 300; // radians per metre
+  const tracks = Array.from({ length: paths }, () => {
+    const w = Array.from({ length: waves }, () => ({ c: Math.cos(2 * Math.PI * rng()), ph: 2 * Math.PI * rng() }));
+    return Array.from({ length: n }, (_, i) => {
+      const x = (i * lengthM) / (n - 1);
+      let re = 0;
+      let im = 0;
+      for (const v of w) {
+        re += Math.cos(k * x * v.c + v.ph);
+        im += Math.sin(k * x * v.c + v.ph);
+      }
+      return (re * re + im * im) / waves;
+    });
+  });
+  return Array.from({ length: n }, (_, i) => 10 * log10(tracks.reduce((s, t) => s + t[i], 0) / paths));
+}
 
 // A bearing taken where the direct path is blocked points at the wall that reflects the signal: the error is the
 // angle between the wall and the transmitter as seen from the site.

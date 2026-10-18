@@ -1,13 +1,16 @@
 import { createElement } from 'react';
 import { renderToString as ssr } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { LEVEL_11, flatSteps, knownLinkInfo, practiceLinkAt } from '../../engine/lab/levels';
+import { type ApplyStep, LEVEL_11, e3Layout, flatSteps, isolationSolutions, knownLinkInfo, practiceLinkAt } from '../../engine/lab/levels';
 import { sceneBudget } from '../../engine/lab/scene';
+import { FadingStrip } from './instruments/FadingStrip';
 import { ShadowHist } from './instruments/ShadowHist';
 import { TOWN_EXAMPLE, TownMap } from './instruments/TownMap';
 import { UrbanLossPlot } from './instruments/UrbanLossPlot';
 import { SETUPS } from './levelSetup';
-import { type StepState, scoreLevel } from './levelState';
+import { type StepState, applyDone, scoreLevel } from './levelState';
+import { DfTask } from './DfTask';
+import { VisualView } from './visuals/VisualView';
 import { StagePanel, type StagePanelProps } from './StagePanel';
 
 const renderToString = (e: Parameters<typeof ssr>[0]) => ssr(e).replace(/<!-- -->/g, '');
@@ -41,5 +44,23 @@ describe('level 11', () => {
     const pct = Number(/(\d+\.\d)%/.exec(h)![1]);
     expect(pct).toBeGreaterThan(87);
     expect(pct).toBeLessThan(93);
+    const f = renderToString(createElement(FadingStrip, {}));
+    expect(f).toContain('9.5%');
+    expect(renderToString(createElement(VisualView, { visual: { kind: 'town', example: 'isolation' }, links: LEVEL_11.links }))).toContain('J/S 22.3 dB');
+  });
+
+  it('E3: the town task shows J/S after a jam, and a working jam completes the step for 25 points', () => {
+    const idx = flat.findIndex((f) => f.step.id === 'E3');
+    const e3 = flat[idx].step as ApplyStep;
+    const sol = isolationSolutions(e3Layout(truth), true)[0];
+    const before = renderToString(createElement(DfTask, { step: e3, state: { done: false }, truth, onPlace: noop, onRemove: noop, onJam: noop }));
+    expect(before).toContain('Click the map to place the jammer');
+    const st: StepState = { done: true, df: { sites: [sol.at], tries: 2, beamDeg: sol.beamDeg, jammed: { ...sol.at, beamDeg: sol.beamDeg! } }, located: { points: 25, tryNo: 2 } };
+    const after = renderToString(createElement(DfTask, { step: e3, state: st, truth, onPlace: noop, onRemove: noop, onJam: noop }));
+    expect(after).toContain('Jam 2: enemy J/S');
+    expect(after).not.toContain('town-bad');
+    expect(applyDone(e3, st)).toBe(true);
+    const states = flat.map((_, i): StepState => (i === idx ? st : { done: false }));
+    expect(scoreLevel(LEVEL_11, states).total).toBe(25);
   });
 });

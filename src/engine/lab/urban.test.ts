@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   type Jammer, type Receiver, breakpointKm, bubbleRadiusKm, coverageMarginDb, fadeProbability, freeSpaceDb, hataSlope, hataUrbanDb, isolationCheck,
-  jammerGainDbi, jsAtReceivers, jsSamples, jsSpreadDb, microcellDb, rakeFadeProbability, reflectionBearingErrorDeg, zFor,
+  fadingTrack, jammerGainDbi, jsAtReceivers, jsSamples, jsSpreadDb, microcellDb, rakeFadeProbability, reflectionBearingErrorDeg, zFor,
 } from './urban';
 
 describe('urban path loss', () => {
@@ -34,10 +34,21 @@ describe('shadowing', () => {
 });
 
 describe('multipath', () => {
-  it('Rayleigh fades: 10 dB 1 time in 10, 20 dB 1 in 100; a rake of 3 paths, far rarer', () => {
+  it('Rayleigh fades: 10 dB 1 time in 10, 20 dB 1 in 100; a rake of 2 or 3 paths, far rarer', () => {
     expect(fadeProbability(10)).toBeCloseTo(0.095, 3);
     expect(fadeProbability(20)).toBeCloseTo(0.00995, 4);
-    expect(rakeFadeProbability(10, 3)).toBeLessThan(0.001);
+    expect(rakeFadeProbability(10, 1)).toBeCloseTo(fadeProbability(10), 12);
+    expect(rakeFadeProbability(10, 2)).toBeCloseTo(1 - Math.exp(-0.2) * 1.2, 12);
+    expect(rakeFadeProbability(10, 3)).toBeCloseTo(0.0036, 4);
+  });
+
+  it('a fading track fades as often as Rayleigh says, and a rake of 2 paths as its formula says', () => {
+    const share = (t: number[], db: number) => t.filter((v) => v < -db).length / t.length;
+    expect(share(fadingTrack(2000, 20000, 450, 5), 10)).toBeGreaterThan(0.08);
+    expect(share(fadingTrack(2000, 20000, 450, 5), 10)).toBeLessThan(0.11);
+    const two = share(fadingTrack(2000, 20000, 450, 5, 2), 10);
+    expect(two).toBeGreaterThan(0.6 * rakeFadeProbability(10, 2));
+    expect(two).toBeLessThan(1.5 * rakeFadeProbability(10, 2));
   });
 
   it('a bearing off a wall points at the wall', () => {

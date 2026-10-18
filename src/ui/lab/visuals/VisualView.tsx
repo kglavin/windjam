@@ -1,6 +1,7 @@
 import type { IQ } from '../../../engine/lab/signal';
 import {
   type KnownLink, type Visual, DF_EXAMPLES, DISCOVER_EXAMPLE, NEAR_FAR, exampleUsers, EXAMPLE_NET, EXAMPLE_TARGETS, SHARE_GOAL_BER, FOLLOW_EXAMPLE, FOLLOW_PROC_US, followerNumbers, exampleBearings, exampleHyperbolas, knownLinkInfo, legPoints, xcorrExample, xcorrPractice,
+  EXAMPLE_PLACE, EXAMPLE_TOWN, JAMMER, exampleJs,
 } from '../../../engine/lab/levels';
 import { fixFromBearings } from '../../../engine/lab/geoloc';
 import { Autocorr } from '../instruments/Autocorr';
@@ -15,13 +16,14 @@ import { PacketDemo } from './PacketDemo';
 import { DistanceView } from '../instruments/DistanceView';
 import { CdmaDemo } from '../instruments/CdmaPanel';
 import { ShadowHist } from '../instruments/ShadowHist';
+import { FadingStrip } from '../instruments/FadingStrip';
 import { TOWN_EXAMPLE, TownMap } from '../instruments/TownMap';
 import { UrbanLossPlot } from '../instruments/UrbanLossPlot';
 import { BeamDemo } from '../instruments/BeamView';
 import { MusicDemo } from '../instruments/MusicView';
 import { DiscoveryView } from '../instruments/DiscoveryView';
 import { SharingDemo } from '../instruments/SharingPanel';
-import { NetworkMap } from '../DfTask';
+import { NetworkMap, townRadios } from '../DfTask';
 import { PlatformCard } from '../instruments/PlatformCard';
 import { RebuildView } from '../instruments/RebuildView';
 import { RegisterView } from '../instruments/RegisterView';
@@ -138,12 +140,27 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
         />
       );
     }
-    case 'town':
-      return <TownMap radios={TOWN_EXAMPLE} title="Example: a town" />;
+    case 'town': {
+      if (visual.example !== 'isolation') return <TownMap radios={TOWN_EXAMPLE} title="Example: a town" />;
+      const beam = exampleJs(true);
+      const omni = exampleJs(false);
+      return (
+        <TownMap
+          title="Example: jammer and beam"
+          radios={townRadios(EXAMPLE_TOWN, beam)}
+          jammer={EXAMPLE_PLACE.at}
+          beamDeg={EXAMPLE_PLACE.beamDeg}
+          halfBeamDeg={JAMMER.halfBeamDeg}
+          notes={[`The same spot with an omni antenna: J/S ${omni.map((v) => v.toFixed(1)).join(', ')} dB. Every friendly is jammed.`]}
+        />
+      );
+    }
     case 'urbanLoss':
       return <UrbanLossPlot />;
     case 'shadowing':
       return <ShadowHist />;
+    case 'fading':
+      return <FadingStrip />;
     case 'beam':
       return <BeamDemo mode={visual.mode} />;
     case 'music':
