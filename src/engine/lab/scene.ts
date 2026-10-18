@@ -131,6 +131,21 @@ export function rxGainDbi(scene: Scene, toward: Station): number {
 }
 
 // S, J and N at the receiver input, the ratios after processing gain, and the ladder of terms.
+// Noise power in the chip bandwidth at the scene's receivers (dBm): all of them share noise figure and environment.
+export function sceneNoiseDbm(scene: Scene): number {
+  return noiseFloorDbm(scene.chipRateMcps * 1000, scene.noiseFigureDb, manMadeNoiseFigureDb(scene.freqMHz, scene.noiseEnv));
+}
+
+// The transmitter's signal at any listening station (dBm), as the intercept hears it.
+export function signalAtDbm(scene: Scene, at: Station, path: PathSetup): number {
+  return wattsToDbm(scene.tx.powerW) + scene.tx.gainDbi + at.gainDbi - pathLossDb(scene.freqMHz, scene.tx, at, path).totalDb;
+}
+
+// Chip SNR at a listening station: the intercept's, or a DF site's in level 6.
+export function chipSnrAtDb(scene: Scene, at: Station, path: PathSetup): number {
+  return signalAtDbm(scene, at, path) - sceneNoiseDbm(scene);
+}
+
 export function sceneBudget(scene: Scene): SceneBudget {
   const { freqMHz, tx, rx, jammer } = scene;
   const txPath = pathLossDb(freqMHz, tx, rx, scene.txPath);
@@ -142,11 +157,7 @@ export function sceneBudget(scene: Scene): SceneBudget {
   const jamPowerDbm = wattsToDbm(jammer.powerW);
   const sDbm = txPowerDbm + tx.gainDbi + rxGainToTxDbi - txPath.totalDb;
   const jDbm = jamPowerDbm + jammer.gainDbi + rxGainToJammerDbi - jamPath.totalDb;
-  const nDbm = noiseFloorDbm(
-    scene.chipRateMcps * 1000,
-    scene.noiseFigureDb,
-    manMadeNoiseFigureDb(freqMHz, scene.noiseEnv),
-  );
+  const nDbm = sceneNoiseDbm(scene);
 
   const gpDb = 10 * Math.log10((scene.chipRateMcps * 1000) / scene.dataRateKbps);
   const snrDb = sDbm - nDbm;
@@ -157,7 +168,7 @@ export function sceneBudget(scene: Scene): SceneBudget {
 
   const icPathTx = pathLossDb(freqMHz, tx, scene.intercept, scene.interceptPaths.fromTx);
   const icPathJam = pathLossDb(freqMHz, jammer, scene.intercept, scene.interceptPaths.fromJammer);
-  const icS = txPowerDbm + tx.gainDbi + scene.intercept.gainDbi - icPathTx.totalDb;
+  const icS = signalAtDbm(scene, scene.intercept, scene.interceptPaths.fromTx);
   const icJ = jamPowerDbm + jammer.gainDbi + scene.intercept.gainDbi - icPathJam.totalDb;
   const icChipSnr = icS - nDbm; // same noise figure, environment and bandwidth as the receiver
   const icJs = icJ - icS;

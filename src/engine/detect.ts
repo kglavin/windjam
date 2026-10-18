@@ -264,13 +264,36 @@ export interface BearingLine {
   sigmaDeg: number;
 }
 
-// Fix from bearing lines taken at known sensor positions. `truth` is only used to report the miss distance.
-export function fixFromBearings(map: HexMap, bearings: BearingLine[], truth?: Hex): Fix | undefined {
+// A bearing line in km: x east, y south (the map's convention), bearing clockwise from north.
+export interface KmLine {
+  x: number;
+  y: number;
+  bearingDeg: number;
+  sigmaDeg: number;
+}
+
+// A fix in km: the estimate, its 1σ error ellipse (angle from east toward south) and CEP.
+export interface KmFix {
+  x: number;
+  y: number;
+  cepKm: number;
+  ellipse: { aKm: number; bKm: number; angleRad: number };
+}
+
+// 1σ error ellipse of a 2 × 2 covariance [[a, b], [b, c]] (km²).
+export function ellipseFromCovariance(a: number, b: number, c: number): { aKm: number; bKm: number; angleRad: number } {
+  const mean = (a + c) / 2;
+  const diff = Math.sqrt(((a - c) / 2) ** 2 + b * b);
+  return { aKm: Math.sqrt(Math.max(0, mean + diff)), bKm: Math.sqrt(Math.max(0, mean - diff)), angleRad: 0.5 * Math.atan2(2 * b, a - c) };
+}
+
+// Least-squares fix of bearing lines in km (notes section 7), weighted by each line's cross-range error. Two passes:
+// the first, unweighted, gives ranges for the second's weights. The map game and the Link lab both use it.
+export function fixFromLinesKm(bearings: KmLine[]): KmFix | undefined {
   if (bearings.length < 2) return undefined;
   // Lines from one place all pass through it: they would 'fix' the sensor's own position. Two sites at least,
   // and the lines must actually cross: bearings within MIN_CROSSING_DEG of parallel give no usable intersection.
-  const sites = bearings.map((b) => hexToKm(map, b.sensorPos));
-  const apart = sites.some((a) => sites.some((b) => Math.hypot(a.x - b.x, a.y - b.y) >= MIN_BASELINE_KM));
+  const apart = bearings.some((a) => bearings.some((b) => Math.hypot(a.x - b.x, a.y - b.y) >= MIN_BASELINE_KM));
   if (!apart) return undefined;
   const between = (a: number, b: number) => {
     const d = Math.abs(a - b) % 180;
@@ -283,10 +306,9 @@ export function fixFromBearings(map: HexMap, bearings: BearingLine[], truth?: He
   );
   if (!crosses) return undefined;
   const lines = bearings.map((b) => {
-    const p = hexToKm(map, b.sensorPos);
     const t = (b.bearingDeg * Math.PI) / 180;
     // Direction (sin t, -cos t) in x-east, y-south; normal is perpendicular to it.
-    return { p, n: { x: Math.cos(t), y: Math.sin(t) }, sigmaRad: (b.sigmaDeg * Math.PI) / 180 };
+    return { p: { x: b.x, y: b.y }, n: { x: Math.cos(t), y: Math.sin(t) }, sigmaRad: (b.sigmaDeg * Math.PI) / 180 };
   });
   const solve = (weight: (l: (typeof lines)[number]) => number) => {
     let a11 = 0, a12 = 0, a22 = 0, b1 = 0, b2 = 0;
@@ -311,17 +333,20 @@ export function fixFromBearings(map: HexMap, bearings: BearingLine[], truth?: He
   });
   if (!second) return undefined;
   // Covariance = inverse normal matrix (km²). Its eigenvalues give the error ellipse.
-  const { a, b, c } = second.inv;
-  const mean = (a + c) / 2;
-  const diff = Math.sqrt(((a - c) / 2) ** 2 + b * b);
-  const s1 = Math.sqrt(Math.max(0, mean + diff));
-  const s2 = Math.sqrt(Math.max(0, mean - diff));
+  const ellipse = ellipseFromCovariance(second.inv.a, second.inv.b, second.inv.c);
+  return { x: second.x, y: second.y, cepKm: cepFromSigmas(ellipse.aKm, ellipse.bKm), ellipse };
+}
+
+// Fix from bearing lines taken at known sensor positions. `truth` is only used to report the miss distance.
+export function fixFromBearings(map: HexMap, bearings: BearingLine[], truth?: Hex): Fix | undefined {
+  const fix = fixFromLinesKm(bearings.map((b) => ({ ...hexToKm(map, b.sensorPos), bearingDeg: b.bearingDeg, sigmaDeg: b.sigmaDeg })));
+  if (!fix) return undefined;
   const t = truth ? hexToKm(map, truth) : undefined;
   return {
-    ...kmToHex(map, second.x, second.y),
-    cepKm: cepFromSigmas(s1, s2),
-    ellipse: { aKm: s1, bKm: s2, angleRad: 0.5 * Math.atan2(2 * b, a - c) },
-    missKm: t ? Math.hypot(second.x - t.x, second.y - t.y) : NaN,
+    ...kmToHex(map, fix.x, fix.y),
+    cepKm: fix.cepKm,
+    ellipse: fix.ellipse,
+    missKm: t ? Math.hypot(fix.x - t.x, fix.y - t.y) : NaN,
   };
 }
 
