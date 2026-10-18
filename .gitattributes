@@ -1,3 +1,5 @@
 # Lesson explainer videos are stored in Git LFS (docs/design-lesson-videos.md).
 public/videos/*.mp4 filter=lfs diff=lfs merge=lfs -text
 public/videos/*.jpg filter=lfs diff=lfs merge=lfs -text
+# Landing-page assets for the README (docs/assets).
+docs/assets/*.mp4 filter=lfs diff=lfs merge=lfs -text
