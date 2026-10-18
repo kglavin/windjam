@@ -27,6 +27,7 @@ import { Calculator } from './Calculator';
 import { DfTask } from './DfTask';
 import { XcorrView } from './instruments/XcorrView';
 import { Waterfall } from './instruments/Waterfall';
+import { RebuildView } from './instruments/RebuildView';
 import { hopPreview } from '../../engine/lab/fh';
 import { LinkScene } from './LinkScene';
 import { SETUPS } from './levelSetup';
@@ -395,6 +396,7 @@ export function LevelView({ level, seed, onExit, onReplay, onFinish }: {
         {runCurve}
         {instruments.length > 0 && (
           <div className="level-instruments">
+            {instruments.includes('rebuild') && <RebuildView code={code} title="Rebuild the enemy code" />}
             {instruments.includes('waterfall') && truth.fh && <Waterfall link={truth.fh} hops={hopPreview(truth.fh, truth.seed, 40)} title="Hop waterfall: enemy link" />}
             {instruments.includes('xcorr') && (
               <XcorrView data={xcorrEnemy(truth)} names={['T1', 'T2']} markPeak={!!states[shownIdx]?.done} />

@@ -169,13 +169,16 @@ export type Visual =
   | { kind: 'spectrum'; link: LinkKey; annotate?: boolean }
   | { kind: 'autocorr'; link: LinkKey; annotate?: boolean }
   | { kind: 'df'; example: string } // level 6: a fixed DF picture, one of DF_EXAMPLES
+  | { kind: 'register'; degree: number } // level 8: a shift register stepping
+  | { kind: 'rebuild'; link: 'example' } // level 8: Berlekamp–Massey on the example code
+  | { kind: 'gold' } // level 8: Gold code correlations
   | { kind: 'follower' } // level 7: E1's map, the follower's two places and the ellipse
   | { kind: 'xcorr'; source: 'example' | 'practice' } // level 6: a cross-correlation of two sites' captures
   // level 7: the hop waterfall of the example or practice hopping link; with variants, a Run button for each jammer
   | { kind: 'waterfall'; link: 'example' | 'practice'; variants?: { label: string; jammer: FhJammer; hopsPerBit?: 1 | 3 }[]; jsDb?: number }
   | { kind: 'none' };
 
-export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr' | 'waterfall';
+export type Instrument = 'spectrum' | 'autocorr' | 'df' | 'xcorr' | 'waterfall' | 'rebuild';
 
 // How a level 6 step locates: bearings from ground sites, bearings from a UAV flying a leg, or arrival times.
 export type DfMethod = 'bearings' | 'leg' | 'tdoa' | 'follower'; // follower: level 7, one jammer placed on the map

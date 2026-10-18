@@ -8,6 +8,10 @@ import { DfView } from '../instruments/DfView';
 import { XcorrView } from '../instruments/XcorrView';
 import { followerEllipse } from '../../../engine/lab/fh';
 import { WaterfallDemo } from './WaterfallDemo';
+import { GoldView } from '../instruments/GoldView';
+import { RebuildView } from '../instruments/RebuildView';
+import { RegisterView } from '../instruments/RegisterView';
+import { mSequence } from '../../../engine/lab/pn';
 import { Spectrum } from '../instruments/Spectrum';
 import { knownCapture } from '../knownCapture';
 import { BerCurve } from './BerCurve';
@@ -120,6 +124,12 @@ export function VisualView({ visual, links, hidden, practiceJsDb = 12, practiceN
         />
       );
     }
+    case 'register':
+      return <RegisterView degree={visual.degree} />;
+    case 'rebuild':
+      return <RebuildView code={mSequence(knownLinkInfo(links.example).degree)} title="Rebuild the example code" start={10} />;
+    case 'gold':
+      return <GoldView />;
     case 'follower': {
       const f = FOLLOW_EXAMPLE;
       return (

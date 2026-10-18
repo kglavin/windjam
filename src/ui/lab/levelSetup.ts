@@ -22,13 +22,15 @@ import {
   level6Values,
   level7Truth,
   level7Values,
+  level8Truth,
+  level8Values,
   maxPeriodUsOf,
   recoveryUsOf,
   textValues,
 } from '../../engine/lab/levels';
 import type { Scene, SceneBudget } from '../../engine/lab/scene';
 import { type FactsCard, factsOfTruth, knownFacts, level2Card, level3Card, level4Card, level5Card } from './knownFacts';
-import { level1Scene, level2Scene, level3Scene, level4Scene, level5Scene } from './levelScene';
+import { level1Scene, level2Scene, level3Scene, level4Scene, level5Scene, moveInterceptToSignal } from './levelScene';
 import type { StepState } from './levelState';
 
 export interface SetupArgs {
@@ -229,4 +231,16 @@ const setup7: LevelSetup = {
   card: () => null,
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7 };
+// Level 8: no scene; the intercept sits where the enemy code is clear, for A3's autocorrelation.
+const setup8: LevelSetup = {
+  truth: level8Truth,
+  scene: (t) => moveInterceptToSignal(level1Scene(t), 10),
+  hidden: ['jammer'],
+  editable: [],
+  noScene: true,
+  values: (a) => level8Values(a.truth, a.practiceN ?? 0),
+  hiddenRows: () => [],
+  card: () => null,
+};
+
+export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5, 6: setup6, 7: setup7, 8: setup8 };

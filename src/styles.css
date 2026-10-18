@@ -1275,6 +1275,68 @@ select {
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
+.reg-stage {
+  fill: #111a2e;
+  stroke: #94a3b8;
+  stroke-width: 1.5;
+}
+.reg-stage.reg-tap {
+  stroke: #f59e0b;
+  stroke-width: 2.5;
+}
+.reg-bit {
+  fill: #e5e7eb;
+  font-size: 16px;
+}
+.reg-wire {
+  stroke: #f59e0b;
+  stroke-width: 1.5;
+  fill: none;
+}
+.reg-xor {
+  fill: #111a2e;
+  stroke: #f59e0b;
+  stroke-width: 1.5;
+}
+.rb-rows {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  display: grid;
+  gap: 4px;
+  margin: 6px 0;
+}
+.rb-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+}
+.rb-name {
+  width: 76px;
+  color: var(--muted);
+}
+.rb-bit {
+  width: 12px;
+  text-align: center;
+}
+.rb-cap {
+  color: #f59e0b;
+}
+.rb-ok {
+  color: #34d399;
+}
+.rb-bad {
+  color: #f87171;
+}
+.rb-more {
+  color: var(--muted);
+}
+.gold-auto {
+  fill: #60a5fa;
+}
+.gold-cross {
+  fill: #f59e0b;
+}
 .wf-jam {
   fill: #f87171;
   opacity: 0.16;
