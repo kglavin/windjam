@@ -227,9 +227,10 @@ export const LEVEL_11: LevelDef = {
           id: 'A1',
           title: 'Blocked, reflected, close together',
           visual: { kind: 'town' },
+          video: 'level11-A1',
           paragraphs: [
             'In open country a signal has a clear path and loses a known amount with distance: 6 dB per doubling in free space, 12 dB near the ground (level 0, F1).',
-            'In a town the direct path is usually blocked. The signal gets through over rooftops, round corners and off walls, so it loses more, the loss changes from one street to the next, and several copies arrive at slightly different times.',
+            'In a town the direct path is usually blocked. The signal gets through over rooftops, round corners and off walls, so it loses more, the loss changes from one street to the next, and several copies arrive at slightly different times: [[multipath|multipath]].',
             'Everything is also close together: the enemy\'s radios, your own, and civilian phones and taxis share the same streets. A jammer aimed at one hits the others unless it is placed and pointed with care.',
           ],
           check: {
@@ -251,8 +252,9 @@ export const LEVEL_11: LevelDef = {
           id: 'B1',
           title: 'Example: one distance, three losses',
           visual: { kind: 'urbanLoss' },
+          video: 'level11-B1',
           paragraphs: [
-            'Planners use measured models. The Hata model fits a signal from a mast above the rooftops down into a town; a street microcell fits a low antenna along a street, free space at first and steeper beyond a breakpoint; a building adds its own loss on top.',
+            'Planners use measured models. The [[hata|Hata model]] fits a signal from a mast above the rooftops down into a town; a street microcell fits a low antenna along a street, free space at first and steeper beyond a breakpoint; a building adds its own loss on top.',
             'In Hata the loss grows by (44.9 − 6.55 × log10(mast height)) dB for each tenfold distance: 35 dB for a 30 m mast, against 20 in free space. Not the 40 or more sometimes quoted.',
           ],
           steps: [
@@ -308,6 +310,7 @@ export const LEVEL_11: LevelDef = {
           id: 'C1',
           title: 'Example: J/S as a spread',
           visual: { kind: 'shadowing' },
+          video: 'level11-C1',
           paragraphs: [
             'Two spots the same distance away can differ by many dB: one has a clear street, the other a block in the way. Measured over a town, the loss at a given distance scatters around the model with a standard deviation of 6 to 10 dB. This is [[shadowing|shadowing]].',
             'The jammer\'s path and the transmitter\'s path are shadowed separately, so J/S scatters by √(σJ² + σS²). To work at most spots, the jammer must plan its J/S above the need by a margin: 1.28 times the spread for 90% of spots, 1.64 for 95%.',
@@ -364,6 +367,7 @@ export const LEVEL_11: LevelDef = {
           id: 'D1',
           title: 'Many copies, fades and wrong bearings',
           visual: { kind: 'fading' },
+          video: 'level11-D1',
           paragraphs: [
             'In a street the signal arrives as many copies, off walls on every side. They add up or cancel depending on the exact spot, so the level rises and falls every few tens of centimetres. This is [[fading|fading]]. With no direct path it follows a known pattern (Rayleigh): 10 dB below the average about 1 time in 10, 20 dB below about 1 time in 100.',
             'Direct sequence (level 2) can use the copies. Copies that arrive more than a chip apart despread separately, and a [[rake|rake]] receiver adds them up. A deep fade then needs every copy low at once: with 2 copies a 10 dB fade drops from 1 time in 10 to about 1 in 60, with 3 to about 1 in 300.',
@@ -400,6 +404,7 @@ export const LEVEL_11: LevelDef = {
           id: 'E1',
           title: 'Example: the beam on the target',
           visual: { kind: 'town', example: 'isolation' },
+          video: 'level11-E1',
           paragraphs: [
             'In town your own radios and civilian ones stand a few hundred metres from the enemy\'s. A jammer that reaches the enemy reaches them too. Jamming your own side is [[fratricide|fratricide]]. Each radio has its own wanted signal, so each gets its own J/S, and each friendly has a tolerance it must stay below.',
             'A directional antenna gives [[isolation|electronic isolation]]: full gain in its beam, much less in its side lobes. Put the enemy receiver in the beam and the others in the side lobes.',

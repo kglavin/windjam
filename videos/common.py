@@ -402,3 +402,44 @@ class HopWaterfall:
         """A band over channels c0 to c1 (exclusive) for the whole time."""
         return Rectangle(width=self.width, height=(c1 - c0) / self.n * self.height, stroke_width=0, fill_color=color,
                          fill_opacity=opacity).move_to([self.x0 + self.width / 2, (self.ty(c0) + self.ty(c1)) / 2, 0])
+
+
+class TownView:
+    """Level 11's town map (src/ui/lab/instruments/TownMap.tsx): 2 km square, x east and y north, 120 m blocks on a
+    160 m pitch, drawn `height` units tall with its centre at `center`. Streets run along multiples of 0.16 km."""
+
+    def __init__(self, center=(-3.3, 0.35, 0), height=6.2, span=2.0):
+        self.span = span
+        self.s = height / span
+        self.c = np.array(center, dtype=float)
+
+    def p(self, x, y):
+        return self.c + np.array([(x - self.span / 2) * self.s, (y - self.span / 2) * self.s, 0])
+
+    def blocks(self):
+        g = VGroup()
+        starts = [v for v in np.arange(0.02, self.span, 0.16) if v + 0.12 <= self.span]
+        for x in starts:
+            for y in starts:
+                g.add(Square(side_length=0.12 * self.s, stroke_width=0, fill_color=GREY, fill_opacity=0.22).move_to(self.p(x + 0.06, y + 0.06)))
+        g.add(Rectangle(width=self.span * self.s, height=self.span * self.s, stroke_color=GREY, stroke_width=1.2).move_to(self.p(self.span / 2, self.span / 2)))
+        g.add(label("N ↑", GREY, 18).next_to(self.p(0, self.span), DR, buff=0.1))
+        g.add(label("2 km across", GREY, 16).next_to(self.p(0, 0), DOWN, buff=0.1, aligned_edge=LEFT))
+        return g
+
+    def radio(self, x, y, name, color, side=UR, size=20):
+        dot = Dot(self.p(x, y), radius=0.08, color=color)
+        return VGroup(dot, label(name, color, size).next_to(dot, side, buff=0.06))
+
+    def jammer(self, x, y, color=AMBER_C2):
+        return Square(side_length=0.2, stroke_width=0, fill_color=color, fill_opacity=1).move_to(self.p(x, y))
+
+    def frame(self):
+        return Rectangle(width=self.span * self.s, height=self.span * self.s).move_to(self.p(self.span / 2, self.span / 2))
+
+    def wedge(self, x, y, deg, half, color=AMBER_C2, opacity=0.22, km=3.0):
+        """A beam from (x, y): bearing deg (from north), half width half, cut to the map."""
+        pts = [self.p(x, y)] + [self.p(x + km * np.sin(np.radians(a)), y + km * np.cos(np.radians(a)))
+                                for a in np.linspace(deg - half, deg + half, 13)]
+        poly = Polygon(*pts)
+        return Intersection(poly, self.frame(), stroke_width=0, fill_color=color, fill_opacity=opacity)
