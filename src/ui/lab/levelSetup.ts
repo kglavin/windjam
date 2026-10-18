@@ -58,6 +58,17 @@ const JAMMER_ROWS = [
 // Shown only once the prediction step has been revealed.
 const LATE_ROWS = ['Processing gain', 'Eb/N0', 'Eb/(N0+J0)'];
 
+// Level 0 is lessons only: it borrows level 1's link and scene, which no lesson shows.
+const setup0: LevelSetup = {
+  truth: level1Truth,
+  scene: level1Scene,
+  hidden: ['jammer'],
+  editable: [],
+  values: () => ({}),
+  hiddenRows: () => [],
+  card: () => null,
+};
+
 const setup1: LevelSetup = {
   truth: level1Truth,
   scene: level1Scene,
@@ -188,4 +199,4 @@ const setup5: LevelSetup = {
   },
 };
 
-export const SETUPS: Record<number, LevelSetup> = { 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5 };
+export const SETUPS: Record<number, LevelSetup> = { 0: setup0, 1: setup1, 2: setup2, 3: setup3, 4: setup4, 5: setup5 };

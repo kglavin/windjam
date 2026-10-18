@@ -212,6 +212,8 @@ class LessonScene(Scene):
         for scenes whose figure reaches the bottom of the frame."""
         self.clear_caption()
         rule = VGroup(*[label(t, WHITE, 32 if clear else 28) for t in lines]).arrange(DOWN, buff=0.2)
+        if rule.width > 13.4:  # keep long rules inside the frame
+            rule.scale_to_fit_width(13.4)
         if clear:
             self.play(*[FadeOut(m) for m in self.mobjects])
         else:
