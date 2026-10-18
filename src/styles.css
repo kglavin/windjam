@@ -1303,6 +1303,46 @@ select {
   fill: #f87171;
   opacity: 0.7;
 }
+.mesh-link {
+  stroke: #34d399;
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+.mesh-link.mesh-path {
+  stroke: #60a5fa;
+  stroke-width: 4;
+  opacity: 1;
+}
+.mesh-link.mesh-broken {
+  stroke: #f87171;
+  stroke-dasharray: 4 3;
+  opacity: 1;
+}
+.mesh-link.mesh-dead {
+  stroke: #475569;
+  opacity: 0.5;
+}
+.mesh-node circle, .mesh-node rect { fill: #34d399; stroke: #0b1220; stroke-width: 1.5; }
+.mesh-node text { fill: #cbd5e1; font-size: 11px; }
+.mesh-node.mesh-gateway rect { fill: #e5e7eb; }
+.mesh-node.mesh-backbone circle, .mesh-node.mesh-backbone rect { fill: #f59e0b; }
+.mesh-node.mesh-chosen circle { fill: #a78bfa; }
+.mesh-node.mesh-selected circle, .mesh-node.mesh-selected rect { stroke: #60a5fa; stroke-width: 3; }
+.mesh-node.mesh-gone circle, .mesh-node.mesh-gone rect { fill: #475569; }
+.mesh-node.mesh-gone text { fill: #64748b; }
+.mesh-node.mesh-cut circle { fill: #f87171; }
+.mesh-ring {
+  fill: #f87171;
+  fill-opacity: 0.06;
+  stroke: #f87171;
+  stroke-dasharray: 5 4;
+}
+.mesh-jammer { fill: #f87171; }
+.mac-send { fill: #60a5fa; }
+.mac-nav { fill: #f59e0b; opacity: 0.55; }
+.mac-wait { fill: #475569; }
+.mac-bad { fill: #f87171; }
+.mac-label { fill: #0b1220; font-size: 11px; }
 .net-link {
   stroke: #34d399;
   stroke-width: 2;

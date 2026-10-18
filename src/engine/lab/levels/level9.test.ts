@@ -13,7 +13,7 @@ const text = (id: string) => {
 
 describe('level 9 units A to C', () => {
   it('is in LEVELS', () => {
-    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(LEVELS.map((l) => l.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     expect(LEVEL_9.units.map((u) => u.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
   });
 

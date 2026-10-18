@@ -175,6 +175,8 @@ export type Visual =
   | { kind: 'urbanLoss' } // level 11: loss against distance in town and in the open
   | { kind: 'shadowing' } // level 11: J/S scattered over many spots
   | { kind: 'fading' } // level 11: the level along a street, one path or a rake
+  | { kind: 'mesh'; example: 'route' | 'flood' | 'mpr' | 'backbone' } // level 12: the example mesh
+  | { kind: 'mac'; example: 'access' | 'rts' | 'rtt' } // level 12: a channel time line
   | { kind: 'beam'; mode: 'das' | 'mvdr' } // level 10: an array's beam, with nulls for MVDR
   | { kind: 'music' } // level 10: MUSIC against the delay-and-sum scan
   | { kind: 'cdma'; example: 'many' | 'nearfar' } // level 10: users sharing a band

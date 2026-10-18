@@ -111,23 +111,32 @@ export function cutNodes(adj: Adj): number[] {
   return adj.map((_, i) => i).filter((i) => parts(adj, new Set([i])).length > before);
 }
 
-// A backbone (connected dominating set): the inner nodes of a fewest-hop spanning tree from `root`. Every other node
-// is next to one of them, and they are connected. Assumes a connected mesh of 3 or more nodes.
+// A backbone (connected dominating set): a connected group of nodes that every other node is next to. Grown from
+// `root` by adding, each time, the neighbour of the group that covers the most nodes not yet covered, then trimmed of
+// any member it can do without. Assumes a connected mesh of 3 or more nodes.
 export function backbone(adj: Adj, root: number): number[] {
-  const parent = new Array<number>(adj.length).fill(-1);
-  const seen = new Set([root]);
-  const q = [root];
-  while (q.length) {
-    const u = q.shift()!;
-    for (const v of adj[u]) if (!seen.has(v)) {
-      seen.add(v);
-      parent[v] = u;
-      q.push(v);
+  const set = new Set([root]);
+  const covered = new Set([root, ...adj[root]]);
+  while (covered.size < adj.length) {
+    let best = -1;
+    let gain = 0;
+    for (const c of covered) {
+      if (set.has(c)) continue;
+      const g = adj[c].filter((v) => !covered.has(v)).length;
+      if (g > gain || (g === gain && g > 0 && c < best)) {
+        best = c;
+        gain = g;
+      }
     }
+    if (best < 0) break;
+    set.add(best);
+    for (const v of adj[best]) covered.add(v);
   }
-  const inner = new Set(parent.filter((p) => p >= 0));
-  if (adj[root].length === 1 && inner.size > 1) inner.delete(root); // a leaf root is dominated by its only child
-  return [...inner].sort((a, b) => a - b);
+  for (const m of [...set].sort((a, b) => adj[a].length - adj[b].length || a - b)) {
+    const without = [...set].filter((v) => v !== m);
+    if (without.length && isDominatingConnected(adj, without)) set.delete(m);
+  }
+  return [...set].sort((a, b) => a - b);
 }
 
 export function isDominatingConnected(adj: Adj, set: number[]): boolean {
