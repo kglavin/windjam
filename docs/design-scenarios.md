@@ -30,7 +30,8 @@ budget beside the order that chose it.
 
 D5. **Scripts are pre-planned, not reactive.** The autoplay is a written session for both sides. It knows the seed,
 so it can walk a hunter toward the fox or jam the right net at the right minute. It is deterministic and repeatable,
-which is what a teaching replay needs. Reactive play is the agents' job over the game server, on the same scenarios.
+which is what a teaching replay needs. Reactive play is the agents' job over the game server, on the same scenarios:
+`npm run serve -- --scenario s15`, with briefs in `agents/fox.md`, `agents/iads-blue.md` and `agents/iads-red.md`.
 
 D6. **One way to play.** The mission picker lists the scenarios with a line on what to look for. Play loads the
 script, runs it to the end and opens the replay. The script bar still allows stepping through a turn at a time.

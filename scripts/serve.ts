@@ -24,10 +24,12 @@ import { HELP, UNIT_ALIASES, knownIdsOf, parseCommand } from '../src/engine/miss
 import { createMission, enableC2, inbox, issue, pictureLines, reportNow, statusLines, unitStatusLines, visibleLog, visibleLogFor } from '../src/engine/mission/mission';
 import type { JammerMode, UnitKind } from '../src/engine/units';
 import type { LogEntry, MissionKind, MissionState, OrderMessage, PlayerSide } from '../src/engine/mission/types';
+import { SCENARIOS, scenarioById } from '../src/engine/mission/scenarios';
 
 interface Args {
   mission: MissionKind;
-  seed: number;
+  scenario?: string; // a scenario id: its forces, rules and seed (src/engine/mission/scenarios.ts)
+  seed?: number; // absent: the scenario's seed, else random
   turn: number;
   port: number;
   c2?: C2;
@@ -37,11 +39,12 @@ interface Args {
 type C2 = Partial<Record<PlayerSide, { agents: string[] }>>;
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { mission: 'uav', seed: Math.floor(Math.random() * 1_000_000), turn: 5, port: 8787 };
+  const a: Args = { mission: 'uav', turn: 5, port: 8787 };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     const v = argv[i + 1];
     if (k === '--mission') a.mission = v as MissionKind;
+    if (k === '--scenario') a.scenario = v;
     if (k === '--seed') a.seed = Number(v);
     if (k === '--turn') a.turn = Number(v);
     if (k === '--port') a.port = Number(v);
@@ -87,10 +90,15 @@ const GAMES_DIR = join(process.cwd(), 'games');
 const args = parseArgs(process.argv.slice(2));
 // The umpire's key: /full and /history show the whole truth, so a player must not be able to call them.
 const UMPIRE_KEY = process.env.WINDJAM_UMPIRE_KEY ?? Math.random().toString(36).slice(2, 10);
-let game = newGame(args.mission, args.seed, args.turn, args.c2);
+let game = newGame(args.mission, args.seed, args.turn, args.c2, args.scenario);
 
-function newGame(mission: MissionKind, seed: number, turnMin: number, c2?: C2): Game {
-  const state = createMission(seed, mission);
+// A game from a mission kind on the standard forces, or from a scenario (its own forces, rules and consoles; the seed
+// given here overrides the scenario's).
+function newGame(mission: MissionKind, seedArg: number | undefined, turnMin: number, c2?: C2, scenario?: string): Game {
+  const sc = scenario ? scenarioById(scenario) : undefined;
+  if (scenario && !sc) throw new Error(`unknown scenario ${scenario}. Scenarios: ${SCENARIOS.map((x) => x.id).join(' ')}`);
+  const seed = seedArg ?? sc?.seed ?? Math.floor(Math.random() * 1_000_000);
+  const state = sc ? createMission(seed, sc.mission, { forces: sc.forces, humans: sc.humans, emcon: sc.emcon, scenario: sc.id, playToEnd: sc.playToEnd }) : createMission(seed, mission);
   for (const side of ['blue', 'red'] as const) {
     const entry = c2?.[side];
     if (entry) enableC2(state, side, entry.agents);
@@ -219,6 +227,7 @@ function summary(g: Game, side?: PlayerSide) {
   const s = g.state;
   return {
     mission: s.mission,
+    scenario: s.scenario ?? null,
     seed: s.seed,
     minute: s.minute,
     limitMin: s.limitMin,
@@ -611,7 +620,7 @@ const server = createServer(async (req, res) => {
       const body = await readBody(req);
       const o = body ? (JSON.parse(body) as Partial<Args>) : {};
       try {
-        game = newGame(o.mission ?? game.state.mission, o.seed ?? Math.floor(Math.random() * 1_000_000), o.turn ?? game.turnMin, o.c2);
+        game = newGame(o.mission ?? game.state.mission, o.seed, o.turn ?? game.turnMin, o.c2, o.scenario);
       } catch (e) {
         return send(res, 400, { error: e instanceof Error ? e.message : String(e) });
       }

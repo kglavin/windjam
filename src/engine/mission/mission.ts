@@ -1365,7 +1365,7 @@ function file(s: MissionState, via: Unit, report: Report, what: string, links: L
   }
   // A fox hunter keeps its own picture: no report goes over the air and none is held.
   const own = s.mission === 'fox';
-  const hub = s.world.nets.find((n) => n.side === via.side && n.topology === 'hub');
+  const hub = hubNetOf(s, via);
   if (!own && hub && via.id !== hub.hubId) s.bursts.push({ minute: at, unitId: via.id, netId: hub.id, what: 'DF report' });
   const delivered = own || routeToHq(s, via.id, links).ok;
   s.events.push({ kind: 'report', minute: at, unitId: via.id, side: via.side as PlayerSide, bearings: report.bearings.length, delivered });
@@ -1422,7 +1422,7 @@ export function reportNow(state: MissionState, unitId: string): MissionState {
 export function routeToHq(s: MissionState, unitId: string, links: LinkView[]): { ok: boolean; via: string } {
   const unit = unitById(s.world, unitId);
   if (!unit) return { ok: false, via: 'unknown unit' };
-  const hubNet = s.world.nets.find((n) => n.side === unit.side && n.topology === 'hub');
+  const hubNet = hubNetOf(s, unit);
   if (!hubNet) return { ok: false, via: 'no command net' };
   if (unit.id === hubNet.hubId) return { ok: true, via: 'at HQ' };
   if (unit.kind === 'drone') {
@@ -1432,6 +1432,12 @@ export function routeToHq(s: MissionState, unitId: string, links: LinkView[]): {
   const link = links.find((v) => v.link.netId === hubNet.id && v.link.bId === unit.id);
   if (!link) return { ok: false, via: 'not on the command net' };
   return { ok: link.order.status !== 'lost', via: `${link.route}, ${link.order.status}` };
+}
+
+// The hub net a unit reports over: the one it is a member of (or hubs), else the side's first.
+function hubNetOf(s: MissionState, unit: Unit): Net | undefined {
+  const hubs = s.world.nets.filter((n) => n.side === unit.side && n.topology === 'hub');
+  return hubs.find((n) => n.hubId === unit.id || n.memberIds.includes(unit.id)) ?? hubs[0];
 }
 
 // Merge a report into its side's picture if the unit can reach HQ. Returns true when delivered.

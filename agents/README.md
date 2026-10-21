@@ -10,7 +10,7 @@ npm run dev                                                        # the GUI, th
 #   http://localhost:5173/?server=http://localhost:8787
 ```
 
-`--mission` is `duel` or `uav` (two consoles). `--turn N` is the turn length in minutes. With `--turn 0` either side may `wait` as in the hot-seat game.
+`--mission` is `duel` or `uav` (two consoles). `--scenario s15` plays a scenario instead (docs/design-scenarios.md): its forces, rules and seed, with `--seed` overriding the seed; `GET /` reports `scenario`. `--turn N` is the turn length in minutes. With `--turn 0` either side may `wait` as in the hot-seat game.
 
 ## Protocol
 
@@ -23,7 +23,7 @@ Every response is JSON. Lines use the console grammar (`help` lists it).
 | `GET /help?side=red` | The side's command list |
 | `POST /red` (body: text, one command per line) | Issue orders. Returns `accepted`, `rejected` (with reasons) and the console `lines` they produced |
 | `POST /red/end` | End the side's turn. When both sides have ended, the clock advances `turn` minutes; the reply says `advanced` and the new `minute` |
-| `POST /new` `{"mission":"uav","seed":1234,"turn":5}` | Start over |
+| `POST /new` `{"mission":"uav","seed":1234,"turn":5}` or `{"scenario":"s16","turn":5}` | Start over |
 | `POST /end` | Umpire: stop the game and open the debrief |
 | `GET /full?key=K` | The whole state for the browser. Umpire only: `K` is the key the server prints at start (or `WINDJAM_UMPIRE_KEY`) |
 | `GET /history?key=K` | Every line posted, with turn, side and minute. Umpire only |
@@ -111,6 +111,8 @@ Briefs for mission 4 (`--mission uav`), Blue side:
 - [blue-uav.md](blue-uav.md): Blue in mission 4, track the UAV.
 - [red-uav.md](red-uav.md): Red in mission 4, fly the UAV and keep reporting.
 - [hunt.md](hunt.md): either side in mission 5, UAV hunt (`--mission hunt`, long games: `--turn 10`).
+- [fox.md](fox.md): Blue, the hunter, in the fox-hunt scenarios (`--scenario s11` to `s14`).
+- [iads-blue.md](iads-blue.md) and [iads-red.md](iads-red.md): the air-defence scenarios (`--scenario s15` to `s18`).
 - [staff/es-analyst.md](staff/es-analyst.md), [staff/ew-attack.md](staff/ew-attack.md), [staff/ew-protect.md](staff/ew-protect.md), [staff/ops.md](staff/ops.md): the staff at HQ (roles `es`, `ewa`, `ewp`, `ops`), for any mission with a commander; launch with the staff prompt in [player-prompt.md](player-prompt.md).
 
 Each brief is the whole context a side's agent gets: objective, what it can see, its orders, and tactics worth knowing. Write a new pair for a new mission.
