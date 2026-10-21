@@ -1540,6 +1540,11 @@ function snapshot(s: MissionState): Snapshot {
     redTracks: s.redTracks.map((t) => ({ ...t, bearings: [...t.bearings] })),
     sectors: activeSectors(s),
     plans: flightPlans(s),
+    settings: {
+      units: Object.fromEntries(s.world.units.map((u) => [u.id, { powerW: u.radio.powerW, antenna: u.antenna, decoy: u.decoy, jammer: u.jammer }])),
+      nets: Object.fromEntries(s.world.nets.map((n) => [n.id, n.waveform])),
+      emcon: { ...s.emcon },
+    },
   };
 }
 
@@ -1771,6 +1776,22 @@ export const unfoundRedIds = (s: MissionState, side: PlayerSide = s.side): Set<s
   return new Set(s.world.units.filter((u) => u.side === enemy && !found.has(u.id)).map((u) => u.id));
 };
 
+// The world as it stood at a snapshot: every unit where it was, with the power, antenna, decoy and jammer settings and
+// the net waveforms of that minute (settings are absent in states saved before they were kept).
+export function worldAt(s: MissionState, snap: Snapshot): World {
+  const st = snap.settings;
+  return {
+    ...s.world,
+    units: s.world.units.map((u) => {
+      const su = st?.units[u.id];
+      return su
+        ? { ...u, pos: snap.positions[u.id] ?? u.pos, radio: { ...u.radio, powerW: su.powerW }, antenna: su.antenna, decoy: su.decoy, jammer: su.jammer }
+        : { ...u, pos: snap.positions[u.id] ?? u.pos };
+    }),
+    nets: st ? s.world.nets.map((n) => ({ ...n, waveform: st.nets[n.id] ?? n.waveform })) : s.world.nets,
+  };
+}
+
 // What the map and panel should show: the live mission, or the replay snapshot while stepping through the reveal.
 // `umpire` shows the truth: every unit, both sides' sectors, plans, trails and pictures (E* Blue's tracks on Red, B* Red's on Blue).
 export function viewOf(s: MissionState, side: PlayerSide = s.side, umpire = false): {
@@ -1787,7 +1808,7 @@ export function viewOf(s: MissionState, side: PlayerSide = s.side, umpire = fals
   const enemy = enemyOf(side);
   if (s.replay) {
     const snap = s.history[Math.min(s.replay.minute, s.history.length - 1)];
-    const world = { ...s.world, units: s.world.units.map((u) => ({ ...u, pos: snap.positions[u.id] ?? u.pos })) };
+    const world = worldAt(s, snap);
     const picture = umpire ? [...snap.tracks, ...snap.redTracks] : side === 'blue' ? snap.tracks : snap.redTracks;
     const found = foundIn(s, picture);
     const dim = umpire ? undefined : new Set(s.world.units.filter((u) => u.side === enemy && !found.has(u.id)).map((u) => u.id));

@@ -21,6 +21,8 @@ import { SequenceChart } from './ui/SequenceChart';
 import { parseCommand } from './engine/mission/commands';
 import { Console } from './ui/Console';
 import { type LoadedScript, ScriptBar } from './ui/ScriptBar';
+import { type Inspection, Inspector } from './ui/Inspector';
+import { fixBuildUp, lessonUrl, movingFix, movingMinutes } from './engine/mission/inspect';
 import { parseScript } from './engine/mission/script';
 import { MissionPicker } from './ui/MissionPicker';
 import { MissionPanel } from './ui/MissionPanel';
@@ -363,6 +365,29 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
   // Mission timeline (sequence chart) in place of the map.
   const [timeline, setTimeline] = useState(false);
 
+  // The replay inspector: open while the replay is paused. On the Fix tab the map draws the chosen track built from
+  // its first k bearings (or at the chosen minute for a moving emitter), as the panel explains it.
+  const [inspection, setInspection] = useState<Inspection>({ tab: 'minute' });
+  const inspecting = missionActive && !!mission.replay && !replayPlaying;
+  const mapTracks = useMemo(() => {
+    if (!inspecting || !view || inspection.tab !== 'fix') return view?.tracks;
+    const t = view.tracks.find((x) => x.id === inspection.trackId) ?? view.tracks[0];
+    if (!t) return view.tracks;
+    const truth = mission.history[Math.min(mission.replay!.minute, mission.history.length - 1)]?.positions[t.emitterId];
+    if (t.moving) {
+      const minutes = movingMinutes(t);
+      const k = Math.max(1, Math.min(inspection.k ?? minutes.length, minutes.length));
+      const at = minutes[k - 1];
+      const b = movingFix(view.truth.map, t, at, truth);
+      const cut: typeof t = { ...t, bearings: t.bearings.filter((x) => (x.heardMin ?? 0) <= at), fix: b.fix, fixes: (t.fixes ?? []).filter((f) => f.minute <= at) };
+      return view.tracks.map((x) => (x.id === t.id ? cut : x));
+    }
+    const k = Math.max(1, Math.min(inspection.k ?? t.bearings.length, t.bearings.length));
+    const b = fixBuildUp(view.truth.map, t, k, truth);
+    const cut: typeof t = { ...t, bearings: b.used, fix: b.fix };
+    return view.tracks.map((x) => (x.id === t.id ? cut : x));
+  }, [inspecting, view, inspection, mission]);
+
   const losActive = tool === 'los';
   const coverageActive = tool === 'coverage';
   const scopeActive = tool === 'scope';
@@ -387,7 +412,7 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
           losPreview={losActive && !!los.a && !los.b}
           flash={flash}
           detections={detection?.emitters}
-          tracks={view?.tracks}
+          tracks={mapTracks}
           dimUnitIds={dimUnitIds}
           sectors={view?.sectors}
           plans={view?.plans}
@@ -417,6 +442,20 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
             onPlay={setReplayPlaying}
             onSpeed={setReplaySpeed}
             onReveal={() => setMission((prev) => (prev ? issueMission(prev, { type: 'reveal' }) : prev))}
+          />
+        )}
+        {inspecting && (
+          <Inspector
+            mission={mission}
+            minute={mission.replay!.minute}
+            side={seatSide}
+            umpire={seat === 'umpire'}
+            world={view!.truth}
+            tracks={view!.tracks}
+            linkViews={linkViews}
+            inspection={inspection}
+            onChange={setInspection}
+            onLesson={(level) => window.open(lessonUrl({ level, step: '', title: '' }), '_blank', 'noopener')} // a new tab: the replay stays as it is
           />
         )}
         {missionActive && <ScriptBar script={script} onLoad={loadScript} onRunTo={runScriptTo} onUnload={() => setScript(undefined)} disabled={!!server} />}
@@ -458,6 +497,7 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
           server={server ? { url: server, ...(serverInfo ?? { turn: 0, turnMin: 0, waitingFor: [], status: 'connecting' }) } : undefined}
           onNewMission={() => startMission(mission.mission)}
           onExit={() => onChapter('sandbox')}
+          onInspectTrack={inspecting ? (trackId) => setInspection({ tab: 'fix', trackId, k: undefined }) : undefined}
         />
       ) : chapter === 'missions' ? (
         <MissionPicker onStart={startMission} onLoadScript={loadScript} />

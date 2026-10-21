@@ -185,6 +185,12 @@ The simplest two-sided mission, for long games between agents. Each side has an 
 
 When a mission is over, a bar under the map offers **Reveal and replay**, then transport controls: to start, back a minute, play/pause, forward a minute, next event, a scrubber, and a speed (3 s, 1 s or 0.3 s per mission minute). As it plays, the map and the timeline move to that minute and the console narrates what each side said and heard in it. The console commands `next`, `step`, `back` and `exit` still work.
 
+### Replay inspector (all missions)
+
+While the replay is open and paused, an inspector sits under the replay bar ([docs/design-replay-inspector.md](design-replay-inspector.md)). **Minute** lists what happened in the minute that just ended, by emitter: who transmitted, who heard it (SNR and the bearing measured), which reports got through and which tracks changed, plus the orders typed. **Fix** takes a track (choose one, or click a track row in the panel) and rebuilds its fix from its first k bearings: a slider walks from one wedge to two crossing lines to the ellipse, the map follows, and each bearing is traced to the minutes its sensor heard the emitter and the σ sum. **Link** shows a link's budget at that minute, with the orders that set the power, antenna, waveform and jamming it uses. Each view links to the Link lab lesson that teaches the sum, opened in a new tab so the replay stays put.
+
+Snapshots keep each minute's radio settings, so a replay minute's link colours and budgets are that minute's.
+
 ### Timeline (all missions)
 
 The **Timeline** button in the mission panel swaps the map for a sequence chart: one lifeline per unit on both sides, minutes down the page. Task windows are bars, transmissions are dots coloured by kind (amber orders, green reports, pink decoy, purple jamming, cyan UAV link, grey chatter), captures are arrows from emitter to sensor, reports are arrows to HQ, and fixes are diamonds on the HQ lifeline. Hover for detail; after the mission, click a minute to move the replay there. The chart is built from a structured event record the engine keeps alongside the console log.

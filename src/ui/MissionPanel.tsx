@@ -20,11 +20,12 @@ interface Props {
   onToggleTimeline: () => void;
   onNewMission: () => void;
   onExit: () => void;
+  onInspectTrack?: (trackId: string) => void; // replay: open the inspector's Fix tab on a track
 }
 
 const short = (name: string) => name.replace(/^(Blue|Red) /, '');
 
-export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSeat, oneConsole, onOneConsole, server, onToggleTimeline, onNewMission, onExit }: Props) {
+export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSeat, oneConsole, onOneConsole, server, onToggleTimeline, onNewMission, onExit, onInspectTrack }: Props) {
   const tracks = view.tracks;
   const fixed = realFixes(m);
   const uavMission = m.mission === 'uav';
@@ -288,7 +289,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
           const first = t.bearings[0];
           const last = t.bearings[t.bearings.length - 1];
           return (
-            <div key={t.id} className="track-row">
+            <div key={t.id} className={`track-row${onInspectTrack ? ' clickable' : ''}`} onClick={onInspectTrack ? () => onInspectTrack(t.id) : undefined} title={onInspectTrack ? 'Open in the inspector' : undefined}>
               <div className="row">
                 <span className="k">
                   <span className="dot" style={{ background: toCss(dfColorOf(t.id)), opacity: t.fix ? 1 : 0.5 }} /> <b>{t.id}</b> · {t.signature}

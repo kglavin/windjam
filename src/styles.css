@@ -784,6 +784,56 @@ select {
   display: flex;
   flex-shrink: 0;
 }
+.inspector {
+  flex-shrink: 0;
+  max-height: 42vh;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  background: #0b1220;
+  font-size: 12px;
+}
+.inspector-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+}
+.inspector-tabs button.active {
+  border-color: #c084fc;
+  background: #3b1f5c;
+}
+.inspector-body {
+  overflow: auto;
+  padding: 0 10px 8px;
+}
+.inspector-body h3 {
+  margin: 8px 0 3px;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+.inspector-block { margin-bottom: 4px; }
+.inspector-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  padding-top: 4px;
+}
+.inspector-row input[type='range'] { width: 160px; vertical-align: middle; }
+.inspector-bearing { margin: 2px 0 6px; }
+.inspector-lessons { margin-top: 6px; }
+.inspector .text-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #93c5fd;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+}
+.track-row.clickable { cursor: pointer; }
+.track-row.clickable:hover { background: #111a2e; }
 .script-bar {
   display: flex;
   flex-wrap: wrap;

@@ -266,7 +266,8 @@ function JammerControls({
   );
 }
 
-function LinkDetail({ world, view }: { world: World; view: LinkView }) {
+// compact: no profile chart (the replay inspector, where the chart would swamp the panel).
+export function LinkDetail({ world, view, compact }: { world: World; view: LinkView; compact?: boolean }) {
   const { link, budget } = view;
   const net = netById(world, link.netId)!;
   const a = unitById(world, link.aId)!;
@@ -279,15 +280,19 @@ function LinkDetail({ world, view }: { world: World; view: LinkView }) {
       </h2>
       {view.relay && <RouteSummary world={world} view={view} />}
       <OrderSummary view={view} />
-      <h3>Direct path</h3>
-      <ProfileChart
-        path={p}
-        groundAM={getTile(world.map, a.pos)!.elevationM}
-        groundBM={getTile(world.map, b.pos)!.elevationM}
-        antennaAM={a.radio.antennaHeightM}
-        antennaBM={b.radio.antennaHeightM}
-      />
-      <p className="muted">Green/red line: direct ray (clear/blocked). Yellow ring: worst obstacle.</p>
+      {!compact && (
+        <>
+          <h3>Direct path</h3>
+          <ProfileChart
+            path={p}
+            groundAM={getTile(world.map, a.pos)!.elevationM}
+            groundBM={getTile(world.map, b.pos)!.elevationM}
+            antennaAM={a.radio.antennaHeightM}
+            antennaBM={b.radio.antennaHeightM}
+          />
+          <p className="muted">Green/red line: direct ray (clear/blocked). Yellow ring: worst obstacle.</p>
+        </>
+      )}
       <h3>Path</h3>
       <Row k="Net" v={`${net.name}, ${net.freqMHz} MHz, ${net.waveform.kind === 'dsss' ? `${net.waveform.chipRateMcps} MHz spread` : `${net.bandwidthKHz} kHz`}, ${net.dataRateKbps} kbps`} />
       <Row k="Distance" v={`${p.distanceKm.toFixed(2)} km`} />

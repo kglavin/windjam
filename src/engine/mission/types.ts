@@ -1,6 +1,6 @@
 import type { Fix } from '../detect';
 import type { Hex } from '../hex';
-import type { Side, Waveform } from '../units';
+import type { Side, Unit, Waveform } from '../units';
 import type { OrderStatus } from '../timeliness';
 import type { World } from '../world';
 
@@ -169,9 +169,17 @@ export type MissionEvent =
   | { kind: 'busy'; minute: number; unitId: string; task: 'df' | 'sortie' | 'move'; detail: string }; // what a unit was doing this minute
 
 // The picture at the end of one minute, kept for the replay.
+// The settings a link budget depends on, kept per minute so a replay minute's budgets are that minute's.
+export interface SnapshotSettings {
+  units: Record<string, { powerW: number; antenna?: Unit['antenna']; decoy?: Unit['decoy']; jammer?: Unit['jammer'] }>;
+  nets: Record<string, Waveform>;
+  emcon: Record<string, number>;
+}
+
 export interface Snapshot {
   minute: number;
   positions: Record<string, Hex>; // every unit
+  settings?: SnapshotSettings; // absent in states saved before the replay inspector
   tracks: Track[]; // Blue's picture
   redTracks: Track[]; // Red's picture
   sectors: { pos: Hex; centreDeg: number; halfWidthDeg: number; label: string }[];
