@@ -1,5 +1,8 @@
 import { type Hex, offsetToAxial } from '../hex';
-import type { Waveform } from '../units';
+import type { JammerMode, Waveform } from '../units';
+
+// The jammer modes the console offers (ew: jam <net> <mode>); spot when none is given.
+export const JAM_MODES: JammerMode[] = ['spot', 'barrage', 'partial', 'pulse', 'follower', 'sync'];
 import type { MissionCommand, PlayerSide, SortieLeg } from './types';
 
 // Short names used at the prompt, per side.
@@ -18,7 +21,29 @@ export const aliasOf = (unitId: string): string => {
     const hit = Object.entries(UNIT_ALIASES[side]).find(([, id]) => id === unitId);
     if (hit) return hit[0];
   }
-  return unitId;
+  // Scenario units: the id less its side prefix (r-radar1 is radar1).
+  return unitId.replace(/^[br]-/, '');
+};
+
+// The ids a mission has, so a scenario's units and nets (r-radar1 as radar1, red-track as track) parse by name.
+export interface KnownIds {
+  units: string[];
+  nets: string[];
+}
+export const knownIdsOf = (w: { units: { id: string }[]; nets: { id: string }[] }): KnownIds => ({ units: w.units.map((u) => u.id), nets: w.nets.map((n) => n.id) });
+
+// A console name to a unit id: the alias table, else the side's prefix on the name when the mission has that unit.
+const unitIdFor = (side: PlayerSide, name: string, known?: KnownIds): string | undefined => {
+  const hit = UNIT_ALIASES[side][name];
+  if (hit) return hit;
+  const id = `${side[0]}-${name}`;
+  return known?.units.includes(id) ? id : undefined;
+};
+const netIdFor = (side: PlayerSide, name: string, known?: KnownIds): string | undefined => {
+  const hit = NET_ALIASES[side][name];
+  if (hit) return hit;
+  const id = `${side}-${name}`;
+  return known?.nets.includes(id) ? id : undefined;
 };
 
 export const netAliasOf = (netId: string): string => {
@@ -26,7 +51,7 @@ export const netAliasOf = (netId: string): string => {
     const hit = Object.entries(NET_ALIASES[side]).find(([, id]) => id === netId);
     if (hit) return hit[0];
   }
-  return netId;
+  return netId.replace(/^(blue|red)-/, '');
 };
 
 const COMPASS: Record<string, number> = {
@@ -65,7 +90,7 @@ export const HELP: Record<PlayerSide, string[]> = {
   blue: [
     '<unit>: df <direction> <minutes>   bearing sweep over a 90° sector; direction n ne e se s sw w nw, or degrees 0-359',
     'uav: sortie <col>,<row> <dir> <min>; ...   silent sortie: fly each leg, DF there, then home; all legs reported on return',
-    "ew: jam uavlink  ·  ew: jam off    mission 4: spot-jam the Red UAV's telemetry link (the jammer itself is loud)",
+    "ew: jam <net> [mode]  ·  ew: jam off   jam an enemy net: spot (default), barrage, partial, pulse, follower or sync (the jammer itself is loud)",
     'uav: launch  ·  uav: route <col>,<row>; ...  ·  uav: hold  ·  uav: resume  ·  uav: burst   mission 5: fly, re-route, pause, report now',
     'uav: power <W>  ·  uavlink: waveform fixed|dsss  ·  uav: antenna toward hq  ·  uav: antenna omni   mission 5: shape the report burst',
     ...COMMON_HELP,
@@ -78,7 +103,7 @@ export const HELP: Record<PlayerSide, string[]> = {
     '<net>: waveform fixed|slow|fast|dsss',
     '<unit>: antenna toward <unit>      directional antenna, HQ and relay only; <unit>: antenna omni to undo',
     "ew: decoy <net>  ·  ew: decoy off  transmit a net's signature from where the EW team stands",
-    "ew: jam cmd  ·  ew: jam off        spot-jam Blue's command net (holds Blue's reports; the jammer itself is loud)",
+    "ew: jam <net> [mode]  ·  ew: jam off   jam Blue's net: spot (default), barrage, partial, pulse, follower or sync (holds Blue's reports; the jammer itself is loud)",
     'uav: launch  ·  uav: hold  ·  uav: resume  ·  uav: burst   missions 4-5: fly the route, pause at the next waypoint, report to HQ now',
     'uav: route <col>,<row>; <col>,<row>; ...   mission 5: replace the UAV route (it flies on from where it is)',
     ...COMMON_HELP,
@@ -88,11 +113,11 @@ export const HELP: Record<PlayerSide, string[]> = {
 
 export type ParseResult = { ok: true; command: MissionCommand } | { ok: false; error: string };
 
-export function parseCommand(input: string, side: PlayerSide = 'blue'): ParseResult {
+export function parseCommand(input: string, side: PlayerSide = 'blue', known?: KnownIds): ParseResult {
   // send <unit>: <text> passes free text to a unit over the net. The text keeps its case; the bare send is mission 2's.
   const order = /^send\s+([^\s:]+)\s*:\s*(.*)$/i.exec(input.trim());
   if (order) {
-    const toId = UNIT_ALIASES[side][order[1].toLowerCase()];
+    const toId = unitIdFor(side, order[1].toLowerCase(), known);
     if (!toId) return { ok: false, error: `Unknown unit "${order[1].toLowerCase()}". Units: ${Object.keys(UNIT_ALIASES[side]).join(' ')}` };
     if (!order[2]) return { ok: false, error: 'send needs the order text, e.g. send sq1: df e 5' };
     return { ok: true, command: { type: 'order', toId, text: order[2] } };
@@ -116,7 +141,7 @@ export function parseCommand(input: string, side: PlayerSide = 'blue'): ParseRes
   }
   if (first === 'send') return { ok: true, command: { type: 'send' } };
   if (first === 'emcon') {
-    const netId = nets[rest[0] ?? ''];
+    const netId = netIdFor(side, rest[0] ?? '', known);
     const pct = Number(rest[1]);
     if (!netId) return { ok: false, error: `emcon needs a net (${Object.keys(nets).join(' ')}) and a percentage, e.g. emcon cmd 5` };
     if (!(pct >= 0 && pct <= 20)) return { ok: false, error: 'emcon percentage must be between 0 and 20' };
@@ -124,13 +149,15 @@ export function parseCommand(input: string, side: PlayerSide = 'blue'): ParseRes
   }
 
   // <net>: waveform ...
-  if (nets[first] && rest[0] === 'waveform') {
+  if (rest[0] === 'waveform' && (nets[first] || !units[first])) {
     const wf = WAVEFORMS[rest[1] ?? ''];
     if (!wf) return { ok: false, error: `waveform must be one of ${Object.keys(WAVEFORMS).join(', ')}` };
-    return { ok: true, command: { type: 'waveform', netId: nets[first], waveform: wf } };
+    const netId = netIdFor(side, first, known);
+    if (!netId) return { ok: false, error: `Unknown net "${first}"` };
+    return { ok: true, command: { type: 'waveform', netId, waveform: wf } };
   }
 
-  const unitId = units[first];
+  const unitId = unitIdFor(side, first, known);
   if (!unitId) {
     return { ok: false, error: `Unknown unit or net "${first}". Units: ${Object.keys(units).join(' ')}${side === 'red' ? ` · nets: ${Object.keys(nets).join(' ')}` : ''}` };
   }
@@ -190,7 +217,7 @@ export function parseCommand(input: string, side: PlayerSide = 'blue'): ParseRes
   if (verb === 'antenna') {
     if (rest[1] === 'omni') return { ok: true, command: { type: 'antenna', unitId } };
     if (rest[1] === 'toward' || rest[1] === 'towards') {
-      const towardId = units[rest[2] ?? ''];
+      const towardId = unitIdFor(side, rest[2] ?? '', known);
       if (!towardId) return { ok: false, error: 'antenna toward needs one of your units, e.g. hq: antenna toward relay' };
       return { ok: true, command: { type: 'antenna', unitId, towardId } };
     }
@@ -198,17 +225,20 @@ export function parseCommand(input: string, side: PlayerSide = 'blue'): ParseRes
   }
   if (verb === 'decoy') {
     if (rest[1] === 'off') return { ok: true, command: { type: 'decoy', unitId } };
-    const netId = nets[rest[1] ?? ''];
+    const netId = netIdFor(side, rest[1] ?? '', known);
     if (!netId) return { ok: false, error: `decoy needs a net (${Object.keys(nets).join(' ')}) or off` };
     return { ok: true, command: { type: 'decoy', unitId, netId } };
   }
   if (verb === 'jam') {
     if (rest[1] === 'off') return { ok: true, command: { type: 'jam', unitId } };
     // Red jams Blue's nets, Blue jams Red's.
-    const enemyNets = NET_ALIASES[side === 'red' ? 'blue' : 'red'];
-    const netId = enemyNets[rest[1] ?? ''];
+    const enemy: PlayerSide = side === 'red' ? 'blue' : 'red';
+    const enemyNets = NET_ALIASES[enemy];
+    const netId = netIdFor(enemy, rest[1] ?? '', known);
     if (!netId) return { ok: false, error: `jam needs an enemy net (${Object.keys(enemyNets).join(' ')}) or off` };
-    return { ok: true, command: { type: 'jam', unitId, netId } };
+    const mode = rest[2];
+    if (mode !== undefined && !JAM_MODES.includes(mode as JammerMode)) return { ok: false, error: `jam mode must be one of ${JAM_MODES.join(', ')}` };
+    return { ok: true, command: { type: 'jam', unitId, netId, mode: mode as JammerMode | undefined } };
   }
   return { ok: false, error: `Unknown order "${verb}". Type help for the list.` };
 }

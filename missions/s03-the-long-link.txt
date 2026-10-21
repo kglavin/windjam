@@ -1,0 +1,21 @@
+# Scenario s03, the long link. Squads 1 and 2 are 30 km forward at 1 W and still reach HQ directly from high
+# ground. At T+15 Red spot-jams Blue's command net, and their second reports are held.
+# Inspector, Link tab on Blue HQ to Blue Squad 1 before and after T+15: the budget, J/S, the relay route; Minute tab
+# at T+26: reports held.
+scenario s03
+expect ended
+blue> sq1: power 1
+blue> sq2: power 1
+blue> status
+blue> sq1: df e 10
+blue> sq2: df e 10
+wait 10
+blue> picture
+wait 5
+red> ew: jam cmd
+blue> sq1: df e 10
+blue> sq2: df e 10
+wait 11
+blue> status
+wait 4
+reveal

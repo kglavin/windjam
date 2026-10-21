@@ -1,0 +1,31 @@
+# Scenario s06, waveform race. Red's command net is fixed-frequency for 15 minutes, slow hopping for the next 15,
+# then direct sequence. Three Blue squads listen throughout.
+# Inspector, Minute tab: captures of the 45 MHz net thin out, then stop; Link tab on Red HQ to Red Relay: Gp appears.
+scenario s06
+red> cmd: waveform fixed
+red> emcon cmd 20
+blue> sq1: df e 15
+blue> sq2: df e 15
+blue> sq3: df e 15
+red> send
+wait 15
+blue> picture
+red> cmd: waveform slow
+red> send
+blue> sq1: df e 15
+blue> sq2: df e 15
+blue> sq3: df e 15
+wait 10
+red> send
+wait 5
+blue> picture
+red> cmd: waveform dsss
+red> send
+blue> sq1: df e 15
+blue> sq2: df e 15
+blue> sq3: df e 15
+wait 10
+red> send
+wait 5
+blue> picture
+reveal

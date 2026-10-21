@@ -1,0 +1,22 @@
+# Scenario s07, jammer against the clock. Red passes an order every ten minutes on a fixed-frequency command net.
+# Blue's EW team jams that net in spot mode from T+0, barrage from T+10, pulse from T+20, then off from T+30.
+# Inspector, Link tab on Red HQ to Red Squad 2: J/S, clear/jammed/lost and the order verdict under each mode.
+scenario s07
+red> cmd: waveform fixed
+blue> ew: jam cmd spot
+red> send
+wait 10
+blue> ew: jam cmd barrage
+red> send
+wait 10
+blue> ew: jam cmd pulse
+red> send
+wait 10
+blue> ew: jam off
+red> send
+wait 10
+red> send
+wait 10
+red> send
+wait 10
+reveal

@@ -1,13 +1,15 @@
 import type { Fix } from '../detect';
 import type { Hex } from '../hex';
-import type { Side, Unit, Waveform } from '../units';
+import type { JammerMode, Side, Unit, Waveform } from '../units';
 import type { OrderStatus } from '../timeliness';
 import type { World } from '../world';
 
 export type PlayerSide = 'blue' | 'red';
 // duel: both sides human, hide-mission rules. uav: both sides human; Red flies a UAV that must report, Blue tracks it.
 // hunt: both sides human; each has an HQ and a UAV, and each UAV hunts the other by its reports.
-export type MissionKind = 'find' | 'hide' | 'duel' | 'uav' | 'hunt';
+// fox: a hunter closes on a transmitter on foot. iads: Red runs an air-defence engagement cycle over its nets, Blue
+// denies it (docs/design-scenarios.md).
+export type MissionKind = 'find' | 'hide' | 'duel' | 'uav' | 'hunt' | 'fox' | 'iads';
 
 // One leg of a drone sortie: fly to a point, then listen there (minutes 0 = transit only).
 export interface SortieLeg {
@@ -36,7 +38,7 @@ export type MissionCommand =
   | { type: 'waveform'; netId: string; waveform: Waveform }
   | { type: 'antenna'; unitId: string; towardId?: string } // undefined = omni
   | { type: 'decoy'; unitId: string; netId?: string } // undefined = off
-  | { type: 'jam'; unitId: string; netId?: string } // undefined = off
+  | { type: 'jam'; unitId: string; netId?: string; mode?: JammerMode } // undefined = off; mode spot by default
   // Mission 4 (Red): the reconnaissance UAV.
   | { type: 'uav'; unitId: string; action: 'launch' | 'burst' | 'hold' | 'resume' | 'route'; legs?: Hex[] }; // route: replace the waypoints
 
@@ -221,7 +223,10 @@ export interface MissionState {
   // Mission 4.
   uav?: UavState; // Red's UAV (missions 4 and 5)
   blueUav?: UavState; // Blue's UAV (mission 5)
-  found?: { by: PlayerSide; minute: number; km: number; sensorId: string; mutual?: boolean }; // mission 5: who heard the other UAV from close by, first (mutual: both in the same minute, a draw)
+  found?: { by: PlayerSide; minute: number; km: number; sensorId: string; mutual?: boolean }; // mission 5: who heard the other UAV from close by, first (mutual: both in the same minute, a draw); fox: the hunter within reach
+  scenario?: string; // the scenario this mission was built from, if any
+  playToEnd?: boolean; // scenarios: no early win; the result is read at the time limit
+  iads?: IadsState;
   actor?: PlayerSide; // transient: which side's console current log lines belong to
 }
 
@@ -282,6 +287,32 @@ export const MISSION_RULES = {
 export const enemyOf = (side: Side): PlayerSide => (side === 'blue' ? 'red' : 'blue');
 
 // Mission 5: two HQs far apart, one UAV each. The first UAV to hear the other's report from close by finds it.
+// A scenario's air-defence cycle: each radar reports a track to the fire control node, which orders a launcher.
+export interface Engagement {
+  minute: number;
+  radarId: string;
+  reportStatus: OrderStatus;
+  launcherId?: string;
+  orderStatus: OrderStatus;
+  ok: boolean; // both legs on time
+}
+export interface IadsState {
+  engagements: Engagement[];
+  nextLauncher: number;
+}
+
+export const FOX_RULES = {
+  limitMin: 60,
+  foundKm: 1, // a hunter this close to a transmitter has found it
+} as const;
+
+export const IADS_RULES = {
+  limitMin: 60,
+  cycleMin: 5, // a track report from every radar this often, from T+5
+  denyToWin: 6, // Blue: engagements denied (either leg late or lost)
+  completeToWin: 8, // Red, at the end: engagements with both legs on time
+} as const;
+
 export const HUNT_RULES = {
   limitMin: 180,
   reportEveryMin: 5,

@@ -7,14 +7,16 @@ import { type DetectOptions, type Emission, type Fix, bearingDeg, bearingSigmaDe
 import { type Hex, axialToOffset, hexEquals, hexKey, hexLine } from '../hex';
 import { hexDistanceKm } from '../rf';
 import { createRng } from '../rng';
-import { createScenario, refToHex } from '../scenario';
+import { type Forces, createScenario, refToHex } from '../scenario';
 import { RADIO_PRESETS, type Net, type Unit } from '../units';
+import { DEFAULTS as JAM_DEFAULTS } from '../ew';
 import { type LinkView, type World, allLinkBudgets, jammers, nearestFreeHex, step, unitAt, unitById } from '../world';
 import { linkBudget } from '../budget';
+import type { OrderStatus } from '../timeliness';
 import { findPath } from '../path';
 import { getTile } from '../map';
 import { TERRAIN, accessLabel, canEnter } from '../terrain';
-import { HELP, UNIT_ALIASES, aliasOf, netAliasOf, parseCommand } from './commands';
+import { HELP, UNIT_ALIASES, aliasOf, knownIdsOf, netAliasOf, parseCommand } from './commands';
 import { PLAYBOOKS } from './playbooks';
 import {
   MISSION_RULES as R,
@@ -37,10 +39,21 @@ import {
   UAV_RULES as U,
   HUNT_RULES as H,
   type UavState,
+  FOX_RULES as FOX,
+  IADS_RULES as IADS,
 } from './types';
 
-export function createMission(seed: number, mission: MissionKind = 'find'): MissionState {
-  const base = createScenario(seed);
+// How a scenario builds its mission: its own forces, which sides are consoles, chatter settings, and its id.
+export interface MissionOptions {
+  forces?: Forces;
+  humans?: PlayerSide[];
+  emcon?: Record<string, number>; // net id to chatter duty, applied at the start
+  scenario?: string;
+  playToEnd?: boolean; // no early win: a teaching replay should show every step
+}
+
+export function createMission(seed: number, mission: MissionKind = 'find', opts: MissionOptions = {}): MissionState {
+  const base = createScenario(seed, opts.forces);
   // Jammers start off in both missions.
   const world: World = { ...base, units: base.units.map((u) => (u.jammer ? { ...u, jammer: { mode: 'off' } } : u)) };
   const side: PlayerSide = mission === 'hide' ? 'red' : 'blue';
@@ -48,10 +61,10 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
     world,
     mission,
     side,
-    humans: mission === 'duel' || mission === 'uav' || mission === 'hunt' ? ['blue', 'red'] : [side],
+    humans: opts.humans ?? (mission === 'duel' || mission === 'uav' || mission === 'hunt' || mission === 'iads' ? ['blue', 'red'] : [side]),
     seed,
     minute: 0,
-    limitMin: mission === 'hunt' ? H.limitMin : R.limitMin,
+    limitMin: mission === 'hunt' ? H.limitMin : mission === 'fox' ? FOX.limitMin : mission === 'iads' ? IADS.limitMin : R.limitMin,
     orders: {},
     held: [],
     tracks: [],
@@ -67,8 +80,18 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
     redOrders: [],
     messages: [],
     nextOrderNo: 1,
+    scenario: opts.scenario,
+    playToEnd: opts.playToEnd,
   };
-  if (mission === 'find') {
+  if (opts.emcon) state.emcon = { ...opts.emcon };
+  if (mission === 'fox') {
+    log(state, 'info', `Mission: fox hunt. Get a squad within ${FOX.foundKm} km of a Red transmitter within ${FOX.limitMin} minutes.`, 'both');
+    log(state, 'info', 'The hunter keeps its own picture: df, read the bearing, move along it, df again. Type help.', 'blue');
+  } else if (mission === 'iads') {
+    state.iads = { engagements: [], nextLauncher: 0 };
+    log(state, 'info', `Mission: air defence. Every ${IADS.cycleMin} minutes each Red radar reports a track to the fire control node, which orders a launcher. An engagement counts when both reach on time.`, 'both');
+    log(state, 'info', `Blue wins by denying ${IADS.denyToWin} engagements: find the links and jam them (ew: jam <net> [mode]). Red wins with ${IADS.completeToWin} completed at T+${IADS.limitMin}; otherwise a draw.`, 'both');
+  } else if (mission === 'find') {
     log(state, 'info', `Mission: find the enemy. Fix ${R.fixesToWin} Red emitters to CEP under ${R.winCepKm} km within ${R.limitMin} minutes.`);
     log(state, 'info', 'Red is hidden. Your squads and the UAV can take bearings (df). Reports reach HQ over your radio net. Type help.');
   } else if (mission === 'duel') {
@@ -76,7 +99,7 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
     log(state, 'info', `Duel: Blue hunts, Red hides. Blue wins with ${R.fixesToWin} fixes under ${R.winCepKm} km on real Red emitters before T+${R.limitMin}.`, 'both');
     log(state, 'info', `Red wins if Blue has fewer at T+${R.limitMin} and Red delivered ${R.redOrdersToWin} of ${R.redOrderCount} orders on time. Otherwise a draw. wait from either console advances the clock.`, 'both');
     log(state, 'info', 'Red is hidden. Your squads and the UAV can take bearings (df). Type help.', 'blue');
-    log(state, 'info', `Every transmission is a bearing for Blue. Type help for your electronic-protection measures; send passes the current order. Order 1 is for ${unitById(world, state.redOrders[0].toId)!.name}, window T+0-${R.redOrderWindowMin}.`, 'red');
+    if (state.redOrders.length) log(state, 'info', `Every transmission is a bearing for Blue. Type help for your electronic-protection measures; send passes the current order. Order 1 is for ${unitById(world, state.redOrders[0].toId)!.name}, window T+0-${R.redOrderWindowMin}.`, 'red');
   } else if (mission === 'hunt') {
     setupHunt(state);
     log(state, 'info', `Mission: UAV hunt. Each side has an HQ and a UAV. A UAV must report to its HQ every ${H.reportEveryMin} minutes; every report is a burst the other side can hear.`, 'both');
@@ -91,13 +114,18 @@ export function createMission(seed: number, mission: MissionKind = 'find'): Miss
   } else {
     state.playbook = buildPlaybook(seed);
     state.redOrders = redOrderSchedule(world);
+    if (state.redOrders.length === 0) return finish(state);
     log(state, 'info', `Mission: stay hidden. Blue is hunting you. It wins with ${R.fixesToWin} fixes under ${R.winCepKm} km; you win if it has fewer at T+${R.limitMin} and you delivered ${R.redOrdersToWin} of your ${R.redOrderCount} orders on time.`);
     log(state, 'info', 'Every transmission is a bearing for Blue. Type help for your electronic-protection measures; send passes the current order.');
     log(state, 'info', `Order 1 is for ${unitById(world, state.redOrders[0].toId)!.name}, window T+0-${R.redOrderWindowMin}.`);
   }
+  return finish(state);
+}
+
+const finish = (state: MissionState): MissionState => {
   state.history = [snapshot(state)];
   return state;
-}
+};
 
 // Put a side in C2 mode: the unit aliases in `agents` get an agent, every other unit of the side executes its orders itself.
 // A side with an EW team also gets an EW net (Blue 56 MHz, Red 50 MHz): a hub net from HQ with no chatter, so it carries
@@ -209,7 +237,9 @@ function buildPlaybook(seed: number): Playbook {
 
 function redOrderSchedule(world: World) {
   const squads = world.units.filter((u) => u.side === 'red' && u.kind === 'squad').map((u) => u.id);
-  const order = [squads[0], squads[2], squads[1], squads[0], squads[2], squads[1]];
+  if (squads.length === 0) return [];
+  const pick = (i: number) => squads[i % squads.length];
+  const order = [pick(0), pick(2), pick(1), pick(0), pick(2), pick(1)];
   return Array.from({ length: R.redOrderCount }, (_, i) => ({
     n: i + 1,
     toId: order[i % order.length],
@@ -407,13 +437,15 @@ export function issue(state: MissionState, cmd: MissionCommand, as: PlayerSide =
       return s;
     }
     const net = s.world.nets.find((n) => n.id === cmd.netId);
-    const r = step(s.world, [{ type: 'setJammer', unitId: unit.id, config: { mode: 'spot', targetNetId: cmd.netId } }]);
+    const mode = cmd.mode ?? 'spot';
+    const config = { mode, targetNetId: cmd.netId, ...(mode === 'partial' ? { bandFraction: JAM_DEFAULTS.bandFraction } : mode === 'pulse' ? { dutyCycle: JAM_DEFAULTS.dutyCycle } : mode === 'multitone' ? { tones: JAM_DEFAULTS.tones } : {}) };
+    const r = step(s.world, [{ type: 'setJammer', unitId: unit.id, config }]);
     if (r.rejected.length) {
       log(s, 'error', r.rejected[0].reason);
       return s;
     }
     s.world = r.world;
-    log(s, 'order', `${unit.name}: spot-jamming ${net?.name ?? cmd.netId}. Their reports will be held while their links are down. You are now their loudest emitter.`);
+    log(s, 'order', `${unit.name}: ${mode === 'spot' ? 'spot-jamming' : `${mode} jamming`} ${net?.name ?? cmd.netId}. Their reports will be held while their links are down. You are now their loudest emitter.`);
     return s;
   }
   unitCommand(s, cmd, unit);
@@ -761,7 +793,7 @@ function autoExecute(s: MissionState, m: number, msg: OrderMessage, unit: Unit) 
   const c2 = s.c2?.[msg.side];
   const alias = aliasOf(unit.id);
   if (!c2 || c2.agents.includes(alias)) return;
-  const p = parseCommand(`${alias}: ${msg.text}`, msg.side);
+  const p = parseCommand(`${alias}: ${msg.text}`, msg.side, knownIdsOf(s.world));
   if (!p.ok) {
     log(s, 'error', `${unit.name}: cannot execute order ${msg.n}: ${p.error}`, msg.side, unit.id);
     return;
@@ -924,6 +956,9 @@ function tick(s: MissionState): MissionState {
   // Orders sent over the net arrive, are acknowledged, or time out.
   deliverOrders(s, m, links);
 
+  // Air defence: the engagement cycle, on the links as they stand this minute.
+  if (s.mission === 'iads') iadsCycle(s, m, links);
+
   // Mission 4: the UAV takes its next leg, and a report is forced if the interval has run out.
   for (const uav of uavStates(s)) {
     s.actor = uav.side;
@@ -1019,6 +1054,19 @@ function tick(s: MissionState): MissionState {
   // Mission 4: did this minute's UAV report reach HQ from where the UAV now is?
   for (const uav of uavStates(s)) uavReports(s, m, 'after', uav);
 
+  // Fox hunt: a Blue squad within reach of a Red transmitter has found it.
+  if (s.mission === 'fox' && !s.found) {
+    for (const hunter of s.world.units.filter((u) => u.side === 'blue' && u.kind === 'squad')) {
+      for (const fox of s.world.units.filter((u) => u.side === 'red' && u.radio.powerW > 0)) {
+        const km = hexDistanceKm(s.world.map, hunter.pos, fox.pos);
+        if (km <= FOX.foundKm && !s.found) {
+          s.found = { by: 'blue', minute: m, km, sensorId: hunter.id };
+          log(s, 'hq', `${hunter.name} is ${km.toFixed(1)} km from ${fox.name}: found.`, 'both');
+        }
+      }
+    }
+  }
+
   // Mission 5: each HQ and each airborne UAV listens all round. HQ's bearings reach the picture now; the UAV's wait
   // for its next delivered report. A UAV that hears the other UAV's report from close by has found it.
   if (s.mission === 'hunt') {
@@ -1093,12 +1141,73 @@ function tick(s: MissionState): MissionState {
   return s;
 }
 
+// Air defence (docs/design-scenarios.md D3): every cycle each radar sends a track report to the fire control node on
+// the report net, and the node sends an engagement order to the next launcher on the order net. Each leg is on time,
+// late or lost by the link's order delivery as it stands this minute; both must be on time to engage. Both legs are
+// bursts Blue can hear.
+function iadsCycle(s: MissionState, m: number, links: LinkView[]) {
+  const I = s.iads;
+  if (!I || m === 0 || m % IADS.cycleMin !== 0) return;
+  const fc = s.world.units.find((u) => u.side === 'red' && u.kind === 'hq');
+  const track = s.world.nets.find((n) => n.side === 'red' && n.id.endsWith('-track'));
+  const fire = s.world.nets.find((n) => n.side === 'red' && n.id.endsWith('-fire'));
+  if (!fc || !track || !fire) return;
+  const radars = s.world.units.filter((u) => u.side === 'red' && u.kind === 'relay' && track.memberIds.includes(u.id));
+  const launchers = s.world.units.filter((u) => u.side === 'red' && u.kind === 'squad' && fire.memberIds.includes(u.id));
+  const linkOf = (net: Net, a: string, b: string) =>
+    links.find((v) => v.link.netId === net.id && ((v.link.aId === a && v.link.bId === b) || (v.link.aId === b && v.link.bId === a)));
+  s.actor = 'red';
+  for (const radar of radars) {
+    const report = linkOf(track, fc.id, radar.id)?.order.status ?? 'lost';
+    const n = s.nextOrderNo++;
+    s.bursts.push({ minute: m, unitId: radar.id, netId: track.id, what: 'track report' });
+    s.events.push({ kind: 'send', minute: m, orderN: n, fromId: radar.id, toId: fc.id, status: report });
+    let launcher: Unit | undefined;
+    let order: OrderStatus = 'lost';
+    if (report !== 'lost' && launchers.length) {
+      launcher = launchers[I.nextLauncher++ % launchers.length];
+      order = linkOf(fire, fc.id, launcher.id)?.order.status ?? 'lost';
+      const k = s.nextOrderNo++;
+      s.bursts.push({ minute: m, unitId: fc.id, netId: fire.id, what: 'engagement order' });
+      s.events.push({ kind: 'send', minute: m, orderN: k, fromId: fc.id, toId: launcher.id, status: order });
+    }
+    const ok = report === 'on time' && order === 'on time';
+    I.engagements.push({ minute: m, radarId: radar.id, reportStatus: report, launcherId: launcher?.id, orderStatus: order, ok });
+    log(s, 'hq', `${radar.name} → ${fc.name}: track report ${report}${launcher ? `; ${fc.name} → ${launcher.name}: engagement order ${order}` : ''}: ${ok ? 'engaged' : 'missed'}.`, 'red');
+  }
+  s.actor = undefined;
+}
+
 // Win, lose, draw.
 function resolve(s: MissionState) {
   const fixes = realFixes(s);
+  // A scenario played to the end resolves only at the limit (fox hunts still end when the fox is found).
+  const early = !s.playToEnd || s.mission === 'fox';
   if (s.mission === 'find') {
-    if (fixes >= R.fixesToWin) end(s, 'won');
+    if (early && fixes >= R.fixesToWin) end(s, 'won');
     else if (s.minute >= s.limitMin) end(s, 'lost');
+    return;
+  }
+  if (s.mission === 'fox') {
+    if (s.found) {
+      s.winner = 'blue';
+      end(s, 'won');
+    } else if (s.minute >= s.limitMin) {
+      s.winner = 'red';
+      end(s, 'lost');
+    }
+    return;
+  }
+  if (s.mission === 'iads' && s.iads) {
+    const denied = s.iads.engagements.filter((e) => !e.ok).length;
+    const done = s.iads.engagements.filter((e) => e.ok).length;
+    if (early && denied >= IADS.denyToWin) {
+      s.winner = 'blue';
+      end(s, 'won');
+    } else if (s.minute >= s.limitMin) {
+      s.winner = denied >= IADS.denyToWin ? 'blue' : done >= IADS.completeToWin ? 'red' : 'draw';
+      end(s, s.winner === 'red' ? 'lost' : 'draw');
+    }
     return;
   }
   if (s.mission === 'hunt') {
@@ -1114,7 +1223,7 @@ function resolve(s: MissionState) {
   if (s.mission === 'uav') {
     // Blue wins on fixes; Red wins when the route is flown with its reports delivered; the clock makes a draw.
     const done = s.uav?.doneMin !== undefined;
-    if (uavFixes(s) >= U.fixesToWin) {
+    if (early && uavFixes(s) >= U.fixesToWin) {
       s.winner = 'blue';
       end(s, 'won');
     } else if (done || s.minute >= s.limitMin) {
@@ -1125,17 +1234,17 @@ function resolve(s: MissionState) {
   }
   if (s.mission === 'duel') {
     // Status is from Blue's seat (the primary console); the winner field is what the panel shows.
-    if (fixes >= R.fixesToWin) {
+    if (early && fixes >= R.fixesToWin) {
       s.winner = 'blue';
       end(s, 'won');
     } else if (s.minute >= s.limitMin) {
-      s.winner = deliveredOrders(s) >= R.redOrdersToWin ? 'red' : 'draw';
+      s.winner = fixes >= R.fixesToWin ? 'blue' : deliveredOrders(s) >= R.redOrdersToWin ? 'red' : 'draw';
       end(s, s.winner === 'red' ? 'lost' : 'draw');
     }
     return;
   }
-  if (fixes >= R.fixesToWin) end(s, 'lost');
-  else if (s.minute >= s.limitMin) end(s, deliveredOrders(s) >= R.redOrdersToWin ? 'won' : 'draw');
+  if (early && fixes >= R.fixesToWin) end(s, 'lost');
+  else if (s.minute >= s.limitMin) end(s, fixes >= R.fixesToWin ? 'lost' : deliveredOrders(s) >= R.redOrdersToWin ? 'won' : 'draw');
 }
 
 // Blue fixes under the CEP limit on real Red C2 emitters. A fix on the decoy does not count.
@@ -1254,13 +1363,15 @@ function file(s: MissionState, via: Unit, report: Report, what: string, links: L
     log(s, 'report', `${who}: ${what}. Nothing heard.`, undefined, ownerId);
     return;
   }
+  // A fox hunter keeps its own picture: no report goes over the air and none is held.
+  const own = s.mission === 'fox';
   const hub = s.world.nets.find((n) => n.side === via.side && n.topology === 'hub');
-  if (hub && via.id !== hub.hubId) s.bursts.push({ minute: at, unitId: via.id, netId: hub.id, what: 'DF report' });
-  const delivered = routeToHq(s, via.id, links).ok;
+  if (!own && hub && via.id !== hub.hubId) s.bursts.push({ minute: at, unitId: via.id, netId: hub.id, what: 'DF report' });
+  const delivered = own || routeToHq(s, via.id, links).ok;
   s.events.push({ kind: 'report', minute: at, unitId: via.id, side: via.side as PlayerSide, bearings: report.bearings.length, delivered });
   if (delivered) {
     log(s, 'report', `${who}: ${what}. ${summary}. Reported to HQ.`, undefined, ownerId);
-    if (hub?.hubId) s.bursts.push({ minute: at, unitId: hub.hubId, netId: hub.id, what: 'report acknowledged' });
+    if (!own && hub?.hubId) s.bursts.push({ minute: at, unitId: hub.hubId, netId: hub.id, what: 'report acknowledged' });
     merge(s, report);
   } else {
     s.held = [...s.held, report];
@@ -1400,6 +1511,33 @@ function end(s: MissionState, status: 'won' | 'lost' | 'draw' | 'ended') {
         : status === 'lost'
           ? `Time is up at T+${s.minute}: ${fixes} of ${R.fixesToWin} emitters fixed.`
           : `Mission ended at T+${s.minute} for the debrief: ${fixes} of ${R.fixesToWin} emitters fixed.`,
+      'both',
+    );
+  } else if (s.mission === 'fox') {
+    const f = s.found;
+    log(
+      s,
+      'hq',
+      status === 'ended'
+        ? `Hunt ended at T+${s.minute} for the debrief: the fox was not found.`
+        : f
+          ? `Found at T+${f.minute}: ${unitById(s.world, f.sensorId)?.name ?? 'the hunter'} within ${f.km.toFixed(1)} km of the fox.`
+          : `Time is up at T+${s.minute}: the fox was not found.`,
+      'both',
+    );
+  } else if (s.mission === 'iads' && s.iads) {
+    const denied = s.iads.engagements.filter((e) => !e.ok).length;
+    const done = s.iads.engagements.filter((e) => e.ok).length;
+    log(
+      s,
+      'hq',
+      status === 'ended'
+        ? `Mission ended at T+${s.minute} for the debrief: ${done} engagements completed, ${denied} denied.`
+        : s.winner === 'blue'
+          ? `Blue wins at T+${s.minute}: ${denied} engagements denied (${done} completed).`
+          : s.winner === 'red'
+            ? `Red wins at T+${s.minute}: ${done} engagements completed, ${denied} denied.`
+            : `Draw at T+${s.minute}: ${done} engagements completed (${IADS.completeToWin} to win), ${denied} denied (${IADS.denyToWin} to deny).`,
       'both',
     );
   } else if (s.mission === 'hunt') {
@@ -1673,6 +1811,21 @@ export function statusLines(s: MissionState, side: PlayerSide = s.side): string[
       const flown = uav.doneMin !== undefined ? `route complete at T+${uav.doneMin}` : uav.launchedMin === undefined ? 'UAV on the ground: uav: launch' : `airborne since T+${uav.launchedMin}, waypoint ${uav.nextWp}/${uav.route.length}${uav.holding ? ', holding' : ''}`;
       const due = uav.launchedMin === undefined || uav.doneMin !== undefined ? '' : ` Next forced report T+${(uav.lastBurstMin ?? uav.launchedMin) + U.reportEveryMin}.`;
       lines.push(`T+${s.minute} of ${s.limitMin} min. ${flown}. Reports: ${uav.telemetry.filter((x) => x.delivered).length} received, ${uavGaps(s)} lost (${U.maxGaps} allowed).${due} Tracks on Blue: ${s.redTracks.length}.`);
+      for (const net of s.world.nets.filter((n) => n.side === 'red')) {
+        const w = net.waveform;
+        lines.push(`net ${netAliasOf(net.id).padEnd(7)} ${net.name.padEnd(16)} ${net.freqMHz} MHz · ${w.kind === 'fixed' ? 'fixed' : w.kind === 'fh' ? `hopping ${w.hopsPerSec}/s` : `DSSS ${w.chipRateMcps} Mcps`} · chatter ${Math.round(dutyOf(s, net) * 100)}%`);
+      }
+    }
+  } else if (s.mission === 'fox') {
+    const f = s.found;
+    lines.push(side === 'blue'
+      ? `T+${s.minute} of ${s.limitMin} min. Tracks: ${s.tracks.length}. ${f ? `Found at T+${f.minute}.` : `Not found yet: get within ${FOX.foundKm} km.`}`
+      : `T+${s.minute} of ${s.limitMin} min. ${f ? 'The hunter found you.' : 'Not found yet.'} Tracks on Blue: ${s.redTracks.length}.`);
+  } else if (s.mission === 'iads' && s.iads) {
+    const denied = s.iads.engagements.filter((e) => !e.ok).length;
+    const done = s.iads.engagements.filter((e) => e.ok).length;
+    lines.push(`T+${s.minute} of ${s.limitMin} min. Engagements: ${done} completed, ${denied} denied (Blue needs ${IADS.denyToWin}, Red ${IADS.completeToWin}). Tracks: ${pictureOf(s, side).length}.`);
+    if (side === 'red') {
       for (const net of s.world.nets.filter((n) => n.side === 'red')) {
         const w = net.waveform;
         lines.push(`net ${netAliasOf(net.id).padEnd(7)} ${net.name.padEnd(16)} ${net.freqMHz} MHz · ${w.kind === 'fixed' ? 'fixed' : w.kind === 'fh' ? `hopping ${w.hopsPerSec}/s` : `DSSS ${w.chipRateMcps} Mcps`} · chatter ${Math.round(dutyOf(s, net) * 100)}%`);

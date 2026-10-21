@@ -20,7 +20,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { analyseCoverage, analyseDetect, analyseExposure, analyseFix, analyseJs, analyseLink, analysePath, analysePredict, type HypothesisParams, type Pos } from '../src/engine/mission/analyse';
 import { analysisCounts } from '../src/engine/mission/c2stats';
-import { HELP, UNIT_ALIASES, parseCommand } from '../src/engine/mission/commands';
+import { HELP, UNIT_ALIASES, knownIdsOf, parseCommand } from '../src/engine/mission/commands';
 import { createMission, enableC2, inbox, issue, pictureLines, reportNow, statusLines, unitStatusLines, visibleLog, visibleLogFor } from '../src/engine/mission/mission';
 import type { JammerMode, UnitKind } from '../src/engine/units';
 import type { LogEntry, MissionKind, MissionState, OrderMessage, PlayerSide } from '../src/engine/mission/types';
@@ -250,7 +250,7 @@ function post(g: Game, side: PlayerSide, text: string): { accepted: string[]; re
       rejected.push(`${line}: the mission is over`);
       continue;
     }
-    const p = parseCommand(line, side);
+    const p = parseCommand(line, side, knownIdsOf(g.state.world));
     if (!p.ok) {
       rejected.push(`${line}: ${p.error}`);
       g.state = { ...g.state, log: [...g.state.log, { minute: g.state.minute, kind: 'error', text: p.error, side }] };
@@ -359,7 +359,7 @@ function postUnit(g: Game, side: PlayerSide, alias: string, text: string): { acc
       rejected.push(`${line}: a unit may use ${[...UNIT_VERBS].join(' ')} report status help`);
       continue;
     }
-    const p = parseCommand(`${alias}: ${line}`, side);
+    const p = parseCommand(`${alias}: ${line}`, side, knownIdsOf(g.state.world));
     if (!p.ok) {
       rejected.push(`${line}: ${p.error}`);
       g.state = { ...g.state, log: [...g.state.log, { minute: g.state.minute, kind: 'error', text: p.error, side, unitId }] };

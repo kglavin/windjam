@@ -1,0 +1,11 @@
+# Scenario s02, the weak bearing. Red HQ turns down to 5 W. Squad 1 and the UAV are 15 km from it, squad 2 is 25 km.
+# Inspector, Fix tab: each bearing's SNR and σ; the far squad's wide wedge adds little.
+scenario s02
+expect ended
+red> hq: power 5
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> uav: df e 10
+wait 11
+blue> picture
+reveal

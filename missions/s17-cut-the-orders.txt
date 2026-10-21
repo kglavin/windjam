@@ -1,0 +1,24 @@
+# Scenario s17, cut the orders. Blue's EW team moves forward and jams the fire-order net from T+20. At T+30 Red
+# moves Launcher 2 away from the jammer.
+# Inspector, Link tab on Red Fire Control to each launcher: the path losses that decide which the jammer reaches.
+scenario s17
+blue> ew: move 136,82
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+wait 10
+blue> picture
+blue> sq1: df se 10
+blue> sq2: df e 10
+blue> sq3: df ne 10
+wait 10
+blue> picture
+blue> ew: jam fire
+wait 10
+red> status
+red> l2: move 154,92
+wait 20
+blue> ew: jam fire pulse
+wait 10
+reveal

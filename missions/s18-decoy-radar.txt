@@ -1,0 +1,25 @@
+# Scenario s18, decoy radar. Red's EW team transmits the track net's signature from 6 km west of the fire control
+# node. Blue's tightest 47 MHz fix is the decoy. Blue's EW team moves up and jams the track net from T+30.
+# Inspector, Fix tab: the decoy's track, "the EW team transmitting a decoy"; Link tab on a report leg under jamming.
+scenario s18
+red> ew: decoy track
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+wait 10
+blue> picture
+blue> ew: move 134,80
+blue> sq1: df se 10
+blue> sq2: df e 10
+blue> sq3: df ne 10
+wait 10
+blue> picture
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+wait 10
+blue> picture
+blue> ew: jam track
+wait 30
+reveal

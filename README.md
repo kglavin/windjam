@@ -73,7 +73,7 @@ Level 0 and the first part of level 12 are lessons only. Every other level is sc
 
 Two sides, Blue and Red, each with an HQ, squads, a relay and an EW team on a seeded terrain map. Links are analysed over the terrain profile with two-ray loss and knife-edge diffraction. Nets can be fixed-frequency, hopping or direct sequence. Jammers can be spot, barrage, partial-band, multitone, pulse, swept, follower or sync. Squads and a drone detect emitters and take bearings that become fixes with error ellipses. Orders are scored on whether they arrive in time.
 
-Five missions build on it, from finding a hidden enemy to a UAV hunt between two AI agents over HTTP. A replay with an inspector shows how each fix and each denied link came to be, minute by minute, with links to the lesson that teaches the sum. The full reference, from propagation to the game server, is in **[docs/sandbox.md](docs/sandbox.md)**.
+Five missions build on it, from finding a hidden enemy to a UAV hunt between two AI agents over HTTP. A replay with an inspector shows how each fix and each denied link came to be, minute by minute, with links to the lesson that teaches the sum. Eighteen scenarios, from a one-person fox hunt to taking down an air-defence net's links, play themselves to the end for the inspector. The full reference, from propagation to the game server, is in **[docs/sandbox.md](docs/sandbox.md)**.
 
 ## Run it
 

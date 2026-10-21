@@ -973,6 +973,9 @@ select {
   padding: 24px 16px;
 }
 
+.scenario-list { display: flex; flex-direction: column; gap: 6px; width: 100%; font-size: 12px; }
+.scenario-row { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; padding: 4px 0; border-top: 1px solid var(--border); }
+.scenario-buttons { display: flex; gap: 4px; flex-shrink: 0; }
 .mission-picker {
   display: flex;
   flex-direction: column;

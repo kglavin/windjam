@@ -43,3 +43,17 @@ describe('playing a script a turn at a time', () => {
     }
   });
 });
+
+describe('scenarios', () => {
+  it('every scenario has one script that names it, and every scenario script names a scenario that exists', async () => {
+    const { SCENARIOS } = await import('./scenarios');
+    const byScenario = new Map<string, string[]>();
+    for (const file of files) {
+      const sc = parseScript(scripts[file]).scenario;
+      if (sc) byScenario.set(sc, [...(byScenario.get(sc) ?? []), file]);
+    }
+    for (const s of SCENARIOS) expect(byScenario.get(s.id), s.id).toHaveLength(1);
+    for (const id of byScenario.keys()) expect(SCENARIOS.some((s) => s.id === id), id).toBe(true);
+    expect(SCENARIOS.length).toBe(18);
+  });
+});

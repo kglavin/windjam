@@ -1,0 +1,39 @@
+# Scenario s10, the HQ that moves. Red HQ relocates a kilometre at T+10 and again at T+30, chattering before and after and
+# sending its orders between moves. Blue keeps taking bearings, and its old ones no longer point at it.
+# Inspector, Fix tab on Blue's track of Red HQ: the ellipse grows with the later bearings; the true miss shows the lag.
+scenario s10
+red> emcon cmd 20
+red> send
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+wait 10
+blue> picture
+red> send
+red> hq: move 153,82
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+wait 10
+blue> picture
+red> send
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+wait 10
+blue> picture
+red> send
+red> hq: move 155,80
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+wait 10
+blue> picture
+red> send
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+wait 10
+blue> picture
+reveal

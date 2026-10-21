@@ -6,7 +6,7 @@ import { type GridArea, type World, highestFreeHex, nearestFreeHex } from './wor
 import { linkBudget } from './budget';
 import { orderDelivery } from './timeliness';
 
-interface UnitSpec {
+export interface UnitSpec {
   id: string;
   name: string;
   side: Side;
@@ -24,7 +24,7 @@ interface UnitSpec {
 export const SQUAD_QUAD = { speedKmh: 40, enduranceMin: 30 } as const;
 
 // Blue holds the west, Red the east, civilian emitters sit between them.
-const UNIT_SPECS: UnitSpec[] = [
+export const UNIT_SPECS: UnitSpec[] = [
   { id: 'b-hq', name: 'Blue HQ', side: 'blue', kind: 'hq', col: 3, row: 10 },
   { id: 'b-relay', name: 'Blue Relay', side: 'blue', kind: 'relay', col: 6, row: 10, highGround: true },
   { id: 'b-sq1', name: 'Blue Squad 1', side: 'blue', kind: 'squad', col: 9, row: 4 },
@@ -42,7 +42,7 @@ const UNIT_SPECS: UnitSpec[] = [
   { id: 'n-fm', name: 'FM Broadcast', side: 'neutral', kind: 'civil', col: 15, row: 17 },
 ];
 
-const NETS: Net[] = [
+export const NETS: Net[] = [
   {
     id: 'blue-cmd',
     name: 'Blue Command Net',
@@ -120,10 +120,17 @@ const HOME: GridArea = { col0: (COLS - AREA.cols) / 2, row0: (ROWS - AREA.rows) 
 // Starting positions avoid mountains so the player discovers mountaintop sites themselves.
 const openGround = (t: TerrainType) => TERRAIN[t].access === 'all';
 
-export function createScenario(seed: number): World {
+// The forces a world is built from: the standard set, or a scenario's own (docs/design-scenarios.md).
+export interface Forces {
+  units: UnitSpec[];
+  nets: Net[];
+}
+export const STANDARD_FORCES: Forces = { units: UNIT_SPECS, nets: NETS };
+
+export function createScenario(seed: number, forces: Forces = STANDARD_FORCES): World {
   const map = generateMap(seed, COLS, ROWS, HEX_SIZE_KM);
   const occupied = new Set<string>();
-  const units: Unit[] = UNIT_SPECS.map((spec) => {
+  const units: Unit[] = forces.units.map((spec) => {
     const target: Hex = offsetToAxial(HOME.col0 + Math.round(spec.col * SCALE), HOME.row0 + Math.round(spec.row * SCALE));
     const pos = spec.highGround
       ? highestFreeHex(map, occupied, target, openGround, Math.round(3 * SCALE))
@@ -147,7 +154,7 @@ export function createScenario(seed: number): World {
     esPfa: { blue: 1e-3, red: 1e-3 },
     esLimiter: { blue: false, red: false },
     units,
-    nets: NETS.map((n) => ({ ...n, memberIds: [...n.memberIds] })),
+    nets: forces.nets.map((n) => ({ ...n, memberIds: [...n.memberIds] })),
   };
   return ensureLinks(world);
 }

@@ -39,7 +39,9 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
   const uavLost = uav?.telemetry.filter((t) => !t.delivered).length ?? 0;
   const current = m.redOrders.find((o) => o.status === 'pending' && o.windowStart <= m.minute && m.minute < o.windowEnd);
   const over = m.status !== 'running';
-  const title = hunt ? 'UAV hunt' : uavMission ? 'Track the UAV' : duel ? 'Duel' : red ? 'Stay hidden' : 'Find the enemy';
+  const fox = m.mission === 'fox';
+  const iads = m.mission === 'iads';
+  const title = fox ? 'Fox hunt' : iads ? 'Air defence' : hunt ? 'UAV hunt' : uavMission ? 'Track the UAV' : duel ? 'Duel' : red ? 'Stay hidden' : 'Find the enemy';
   const result = duel
     ? m.status === 'ended'
       ? 'Mission ended for the debrief.'
@@ -68,7 +70,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
   return (
     <aside className="panel">
       <header>
-        <h1>Windjam · Mission {hunt ? 5 : uavMission ? 4 : duel ? 3 : red ? 2 : 1}</h1>
+        <h1>Windjam · {m.scenario ? `Scenario ${m.scenario}` : `Mission ${hunt ? 5 : uavMission ? 4 : duel ? 3 : red ? 2 : 1}`}</h1>
         <div className="sub">
           {title} · seed {m.seed} <button onClick={onNewMission}>New mission</button> <button onClick={onExit}>Sandbox</button>
         </div>
@@ -105,7 +107,11 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
 
       <section>
         <h2>Objective</h2>
-        {hunt ? (
+        {fox ? (
+          <p className="help">A hunter on foot against a transmitter. Listen, read the bearing, walk along it, listen again. Found when within 1 km.</p>
+        ) : iads ? (
+          <p className="help">Every 5 minutes each Red radar reports a track to the fire control node, which orders a launcher. An engagement counts when both legs arrive on time. Blue denies them by finding and jamming the links.</p>
+        ) : hunt ? (
           <p className="help">
             Each side has an HQ and a UAV. A UAV must report to its HQ every {HR.reportEveryMin} min; every report is a burst the other side can hear. HQ and the UAV listen all round;
             the UAV's bearings reach HQ with its next report. The first UAV to hear the other's report from within {HR.interceptKm} km finds it and wins. Draw at T+{HR.limitMin}.

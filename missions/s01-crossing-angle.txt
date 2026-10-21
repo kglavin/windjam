@@ -1,0 +1,14 @@
+# Scenario s01, crossing angle. Squads 1 and 2 stand a kilometre apart and take bearings on Red HQ 17 km east:
+# their lines cross at a few degrees and the ellipse is long. Squad 3, 8 km north, adds a steep crossing.
+# Inspector, Fix tab on E1: slide from 2 bearings to 3.
+scenario s01
+expect ended
+sq1: df e 6
+sq2: df e 6
+wait 7
+picture
+sq3: df se 6
+sq1: df e 6
+wait 7
+picture
+reveal

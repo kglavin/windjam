@@ -1,0 +1,20 @@
+# Scenario s09, find the hub. Nine Red radios chatter on two nets. Blue listens with two squads and the UAV and goes
+# for the hub, which sends most.
+# Inspector, Minute tab: nine emitters a minute; Fix tab per track: the hub's tightens first.
+scenario s09
+sq1: df e 10
+sq3: df e 10
+uav: df e 10
+wait 10
+picture
+sq1: df se 10
+sq3: df ne 10
+uav: df e 10
+wait 10
+picture
+sq1: df e 10
+sq3: df e 10
+uav: df e 10
+wait 10
+picture
+reveal

@@ -20,4 +20,11 @@ Mission 2 scripts start with `mission hide` and use the Red grammar (`send`, `em
 
 Mission 3 scripts start with `mission duel` and prefix every console line with `blue> ` or `red> `. `expect blue|red|draw` checks the winner. See `08-duel-hot-seat.txt`. Pasted into either in-app console, a prefixed line runs on the console it names, and the `mission`, `expect` and `rejects` directives are skipped.
 
+Scenario scripts (`sNN-<name>.txt`) start with `scenario <id>`, which builds the mission from the scenario's own
+forces, rules, seed and consoles (`src/engine/mission/scenarios.ts`, docs/design-scenarios.md). The rest of the file
+is a two-side script with `blue> ` and `red> ` prefixes. The mission picker's Scenarios list plays each one to the end
+and opens the replay; Step loads it for the script bar instead. Fox hunts (`mission fox`) end when a Blue squad is
+within 1 km of a Red transmitter; air defence (`mission iads`) scores Red's engagement cycle, and `expect blue|red|draw`
+checks the winner. `ew: jam <net> [spot|barrage|partial|pulse|follower|sync]` picks the jammer mode.
+
 Mission 4 scripts start with `mission uav` and use the same `blue> ` / `red> ` prefixes as a duel. Red's extra orders are `uav: launch`, `uav: burst`, `uav: hold`, `uav: resume`, `uav: power <W>`, `uavlink: waveform ...` and `uav: antenna toward hq`; Blue can `ew: jam uavlink`. See `09-uav-track.txt`.

@@ -1,0 +1,20 @@
+# Scenario s11, plain fox hunt. One hunter on foot, a fox that talks nine minutes in ten. Listen, walk along the
+# bearing, listen again. Found when within 1 km.
+# Inspector, Fix tab on E1: bearings from successive places on one platform.
+scenario s11
+expect blue
+blue> sq1: df e 4
+wait 4
+blue> picture
+blue> sq1: move 122,80
+wait 16
+blue> sq1: df e 3
+wait 3
+blue> picture
+blue> sq1: move 130,79
+wait 13
+blue> sq1: df e 3
+wait 3
+blue> picture
+blue> sq1: move 135,78
+wait 20

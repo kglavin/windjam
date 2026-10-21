@@ -1,0 +1,20 @@
+# Scenario s14, two foxes. Two transmitters on 50 and 53 MHz, one 11 km away, one 13 km. The hunter closes on the
+# nearer one.
+# Inspector, Minute tab: two emitters each minute; Fix tab per track: the nearer tightens faster.
+scenario s14
+expect blue
+blue> sq1: df e 4
+wait 4
+blue> picture
+blue> sq1: move 122,76
+wait 16
+blue> sq1: df e 3
+wait 3
+blue> picture
+blue> sq1: move 129,74
+wait 12
+blue> sq1: df e 3
+wait 3
+blue> picture
+blue> sq1: move 133,72
+wait 20

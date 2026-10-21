@@ -1,0 +1,41 @@
+# Scenario s04, power discipline. Blue hunts on a steady plan. Red steps its HQ down at T+10 (10 W), T+20 (antenna
+# toward the relay) and T+30 (DSSS), and keeps passing its orders.
+# Inspector, Link tab on Red HQ to Red Relay: the orders listed above the budget; Fix tab on Blue's track of Red HQ.
+scenario s04
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+red> send
+wait 10
+blue> picture
+red> hq: power 10
+red> send
+blue> sq1: df se 10
+blue> sq2: df e 10
+blue> sq3: df ne 10
+wait 10
+blue> picture
+red> hq: antenna toward relay
+red> send
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+wait 10
+blue> picture
+red> cmd: waveform dsss
+red> send
+blue> sq1: df se 10
+blue> sq2: df e 10
+blue> sq3: df ne 10
+wait 10
+blue> picture
+red> send
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+wait 10
+red> send
+wait 10
+reveal

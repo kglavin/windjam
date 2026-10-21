@@ -125,6 +125,8 @@ function FixTab(p: InspectorProps) {
   const truthAt = truth && (m.history[Math.min(p.minute, m.history.length - 1)]?.positions[track.emitterId] ?? truth);
   const b = moving ? movingFix(world.map, track, minutes[k - 1], truthAt) : fixBuildUp(world.map, track, k, truthAt);
   const pick = (id: string) => onChange({ ...inspection, trackId: id, k: undefined });
+  const emitter = m.world.units.find((u) => u.id === track.emitterId);
+  const decoy = emitter?.kind === 'jammer';
   return (
     <div>
       <div className="inspector-row">
@@ -140,6 +142,7 @@ function FixTab(p: InspectorProps) {
           {moving ? `T+${minutes[k - 1]}` : `${k} of ${n}`}
         </label>
       </div>
+      {emitter && <p className="muted">The truth: {track.id} is {emitter.name}{decoy ? ', the EW team transmitting a decoy, not the net it imitates' : ''}.</p>}
       <div className="inspector-block">
         <h3>{moving ? `Bearings at T+${minutes[k - 1]}` : `The first ${k} bearing${k === 1 ? '' : 's'}`}</h3>
         {b.used.map((x, i) => {

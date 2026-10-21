@@ -1,0 +1,10 @@
+# Scenario s08, sortie geometry. The UAV flies two legs 8 km apart, listens on each, and hands both legs' bearings
+# to its squad on return: a fix from one platform.
+# Inspector, Fix tab on E1: the two legs' bearings; the map shows the trail.
+scenario s08
+expect ended
+uav: sortie 124,75 e 3; 124,85 e 3
+sq2: df e 10
+wait 26
+picture
+reveal

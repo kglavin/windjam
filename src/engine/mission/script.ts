@@ -3,6 +3,7 @@
 //
 //   # comment
 //   mission hide         optional: play Red in mission 2 (default: find, playing Blue); mission duel plays both
+//   scenario s11         optional: build the mission from a scenario (scenarios.ts): its forces, rules, seed, consoles
 //   blue> sq1: df e 5    in a duel, prefix each line with the console it is typed into (blue> or red>)
 //   seed 1234            optional, first command: fixes the Red schedule and bearing errors
 //   expect won           optional: the test suite checks the final status (won | lost | running | ended | draw);
@@ -11,13 +12,15 @@
 //   sq1: df e 5
 //   wait 5
 
-import { parseCommand } from './commands';
-import { createMission, issue } from './mission';
+import { knownIdsOf, parseCommand } from './commands';
+import { type MissionOptions, createMission, issue } from './mission';
+import { scenarioById } from './scenarios';
 import type { MissionKind, MissionState, MissionStatus, PlayerSide } from './types';
 
 export interface Script {
   seed?: number;
   mission?: MissionKind; // find (Blue, default), hide (Red) or duel (both)
+  scenario?: string; // a scenario id: its forces, rules and seed, unless the script says otherwise
   expect?: MissionStatus | PlayerSide; // blue/red: the duel's winner
   rejects?: number; // optional: how many lines the console is expected to reject
   commands: string[]; // console lines, comments and directives removed
@@ -28,7 +31,12 @@ export function parseScript(text: string): Script {
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.replace(/#.*$/, '').trim();
     if (!line) continue;
-    const mission = /^mission\s+(find|hide|duel|uav|hunt)$/i.exec(line);
+    const sc = /^scenario\s+(\S+)$/i.exec(line);
+    if (sc) {
+      script.scenario = sc[1].toLowerCase();
+      continue;
+    }
+    const mission = /^mission\s+(find|hide|duel|uav|hunt|fox|iads)$/i.exec(line);
     if (mission) {
       script.mission = mission[1].toLowerCase() as MissionKind;
       continue;
@@ -65,16 +73,24 @@ export interface ScriptRun {
 }
 
 // Run a script from a fresh mission. Parse errors are logged in the console style and collected.
+// The mission a script starts from: its scenario's, with the script's own seed and mission overriding.
+export function missionFromScript(script: Script, defaultSeed: number) {
+  const sc = script.scenario ? scenarioById(script.scenario) : undefined;
+  if (script.scenario && !sc) throw new Error(`unknown scenario ${script.scenario}`);
+  const opts: MissionOptions = sc ? { forces: sc.forces, humans: sc.humans, emcon: sc.emcon, scenario: sc.id, playToEnd: sc.playToEnd } : {};
+  return createMission(script.seed ?? sc?.seed ?? defaultSeed, script.mission ?? sc?.mission ?? 'find', opts);
+}
+
 export function runScript(text: string, defaultSeed = 1): ScriptRun {
   const script = parseScript(text);
-  let state = createMission(script.seed ?? defaultSeed, script.mission ?? 'find');
+  let state = missionFromScript(script, defaultSeed);
   const parseErrors: string[] = [];
   for (const line of script.commands) {
     // In a duel each line names its console: 'blue> ' or 'red> '. Unprefixed lines go to the primary side.
     const pre = /^(blue|red)>\s*/i.exec(line);
     const as = pre ? (pre[1].toLowerCase() as PlayerSide) : state.side;
     const body = pre ? line.slice(pre[0].length) : line;
-    const p = parseCommand(body, as);
+    const p = parseCommand(body, as, knownIdsOf(state.world));
     if (!p.ok) {
       parseErrors.push(`${line}: ${p.error}`);
       state = { ...state, log: [...state.log, { minute: state.minute, kind: 'error', text: `${line} -> ${p.error}` }] };

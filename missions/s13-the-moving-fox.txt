@@ -1,0 +1,22 @@
+# Scenario s13, the moving fox. The fox walks a kilometre or two between the hunter's stops. The hunter's older
+# bearings point at where it was.
+# Inspector, Fix tab on E1: the fix lags the fox; the true miss shows it.
+scenario s13
+expect blue
+blue> sq1: df e 3
+wait 3
+blue> picture
+blue> sq1: move 124,80
+red> fox: move 138,78
+wait 14
+blue> sq1: df e 3
+wait 3
+blue> picture
+blue> sq1: move 132,78
+red> fox: move 141,78
+wait 12
+blue> sq1: df e 3
+wait 3
+blue> picture
+blue> sq1: move 140,78
+wait 20

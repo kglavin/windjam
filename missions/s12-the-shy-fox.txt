@@ -1,0 +1,19 @@
+# Scenario s12, the shy fox. The fox transmits one minute in five, so each stop must listen longer.
+# Inspector, Minute tab: minutes with nothing heard; Fix tab: bearing origin from one or two captures.
+scenario s12
+expect blue
+blue> sq1: df e 6
+wait 6
+blue> picture
+blue> sq1: move 124,80
+wait 14
+blue> sq1: df e 6
+wait 6
+blue> picture
+blue> sq1: move 132,79
+wait 12
+blue> sq1: df e 5
+wait 5
+blue> picture
+blue> sq1: move 135,78
+wait 20

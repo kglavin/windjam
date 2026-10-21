@@ -1,0 +1,24 @@
+# Scenario s16, cut the reports. Blue's EW team moves forward while the squads fix the fire control node, then jams
+# the track-report net from T+20. At T+35 Red points the fire control node's antenna at its radars.
+# Inspector, Link tab on Red Radar 1 to Red Fire Control: the report leg late, then lost; the antenna order beside it.
+scenario s16
+blue> ew: move 134,80
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+wait 10
+blue> picture
+blue> sq1: df se 10
+blue> sq2: df e 10
+blue> sq3: df ne 10
+wait 10
+blue> picture
+blue> ew: jam track
+wait 15
+red> status
+red> fc: antenna toward radar2
+wait 15
+blue> ew: jam track barrage
+wait 10
+reveal

@@ -18,12 +18,12 @@ import { manMadeNoiseFigureDb, noiseFloorDbm } from './engine/rf';
 import { type MissionKind, type MissionState, type PlayerSide } from './engine/mission/types';
 import { createMission, issue as issueMission, jumpReplay, viewOf, visibleLog } from './engine/mission/mission';
 import { SequenceChart } from './ui/SequenceChart';
-import { parseCommand } from './engine/mission/commands';
+import { knownIdsOf, parseCommand } from './engine/mission/commands';
 import { Console } from './ui/Console';
 import { type LoadedScript, ScriptBar } from './ui/ScriptBar';
 import { type Inspection, Inspector } from './ui/Inspector';
 import { fixBuildUp, lessonUrl, movingFix, movingMinutes } from './engine/mission/inspect';
-import { parseScript } from './engine/mission/script';
+import { missionFromScript, parseScript } from './engine/mission/script';
 import { MissionPicker } from './ui/MissionPicker';
 import { MissionPanel } from './ui/MissionPanel';
 import { REPLAY_SPEEDS, ReplayBar, type ReplayMove } from './ui/ReplayBar';
@@ -317,7 +317,7 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
       const body = pre ? line.trim().slice(pre[0].length) : line;
       if (/^(mission|expect|rejects)\s+\S+$/i.test(body.trim())) return prev;
       const side = named && prev.humans.includes(named) ? named : (as ?? prev.side);
-      const p = parseCommand(body, side);
+      const p = parseCommand(body, side, knownIdsOf(prev.world));
       return p.ok ? issueMission(prev, p.command, side) : { ...prev, log: [...prev.log, { minute: prev.minute, kind: 'error', text: p.error, side }] };
     });
   };
@@ -326,14 +326,28 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
   const [script, setScript] = useState<LoadedScript>();
   const loadScript = (name: string, text: string) => {
     const parsed = parseScript(text);
-    const kind = parsed.mission ?? 'find';
-    const next = createMission(parsed.seed ?? Math.floor(Math.random() * 1_000_000), kind);
+    const next = missionFromScript(parsed, Math.floor(Math.random() * 1_000_000));
+    const kind = next.mission;
     setMission({ ...next, log: [...next.log, { minute: 0, kind: 'info', text: `Loaded ${name}: ${parsed.commands.length} lines${parsed.seed !== undefined ? `, seed ${parsed.seed}` : ''}. Step, Turn or Run all in the script bar.` }] });
     setScript({ name, commands: parsed.commands, cursor: 0 });
     setSeat(kind === 'hide' ? 'red' : 'blue');
     setReplayPlaying(false);
     onChapter('missions');
     setTool('select');
+  };
+  // Play a scenario: load its script, run every line, and open the replay.
+  const playScript = (name: string, text: string) => {
+    const parsed = parseScript(text);
+    const next = missionFromScript(parsed, Math.floor(Math.random() * 1_000_000));
+    setMission({ ...next, log: [...next.log, { minute: 0, kind: 'info', text: `Playing ${name}: ${parsed.commands.length} lines.` }] });
+    setSeat(next.humans.length > 1 ? 'umpire' : next.mission === 'hide' ? 'red' : 'blue');
+    setReplayPlaying(false);
+    setInspection({ tab: 'minute' });
+    onChapter('missions');
+    setTool('select');
+    for (const line of parsed.commands) onConsole(line);
+    if (!/^(?:(?:blue|red)>\s*)?reveal$/i.test(parsed.commands[parsed.commands.length - 1] ?? '')) onConsole('reveal');
+    setScript({ name, commands: parsed.commands, cursor: parsed.commands.length });
   };
   const runScriptTo = (end: number) => {
     if (!script) return;
@@ -500,7 +514,7 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
           onInspectTrack={inspecting ? (trackId) => setInspection({ tab: 'fix', trackId, k: undefined }) : undefined}
         />
       ) : chapter === 'missions' ? (
-        <MissionPicker onStart={startMission} onLoadScript={loadScript} />
+        <MissionPicker onStart={startMission} onLoadScript={loadScript} onPlayScript={playScript} />
       ) : (
       <SidePanel
         world={world}

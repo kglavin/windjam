@@ -1,0 +1,30 @@
+# Scenario s05, the decoy. From T+2 Red's EW team transmits the command net's signature from 12 km west of Red HQ,
+# while Red HQ goes quiet. Blue's best fix lands on the decoy.
+# Inspector, Fix tab on Blue's tightest track: "actually ... km off"; Minute tab: the emits say decoy.
+scenario s05
+red> emcon cmd 0
+red> emcon retrans 0
+red> emcon squad 5
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+wait 2
+red> ew: decoy cmd
+red> send
+wait 8
+blue> picture
+blue> sq1: df se 10
+blue> sq2: df e 10
+blue> sq3: df ne 10
+blue> uav: df e 10
+red> send
+wait 10
+blue> picture
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+red> send
+wait 10
+blue> picture
+reveal

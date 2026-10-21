@@ -1,0 +1,23 @@
+# Scenario s15, map the net. Every 5 minutes each Red radar reports a track to the fire control node, which orders a
+# launcher. Blue listens and fixes the nodes.
+# Inspector, Minute tab at T+5, T+10: the reporting rhythm; the fire control node transmits most; Fix tab per node.
+scenario s15
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+wait 10
+blue> picture
+blue> sq1: df se 10
+blue> sq2: df e 10
+blue> sq3: df ne 10
+blue> uav: df e 10
+wait 10
+blue> picture
+blue> sq1: df e 10
+blue> sq2: df e 10
+blue> sq3: df e 10
+blue> uav: df e 10
+wait 10
+blue> picture
+reveal
