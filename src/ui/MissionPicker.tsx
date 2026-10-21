@@ -1,4 +1,5 @@
-import type { MissionKind } from '../engine/mission/types';
+import { useState } from 'react';
+import type { MissionKind, PlayerSide } from '../engine/mission/types';
 import { ScriptLoader } from './ScriptBar';
 import { SCENARIOS } from '../engine/mission/scenarios';
 import { BUNDLED_SCRIPTS } from './scripts';
@@ -15,12 +16,25 @@ const MISSIONS: { kind: MissionKind; label: string }[] = [
 // The script that plays each scenario: the bundled script whose directive names it.
 const scriptFor = (id: string) => BUNDLED_SCRIPTS.find((s) => parseScript(s.text).scenario === id);
 
-export function MissionPicker({ onStart, onLoadScript, onPlayScript }: { onStart: (kind: MissionKind) => void; onLoadScript: (name: string, text: string) => void; onPlayScript: (name: string, text: string) => void }) {
+export function MissionPicker({ onStart, onLoadScript, onPlayScript }: {
+  onStart: (kind: MissionKind, computer: PlayerSide[]) => void;
+  onLoadScript: (name: string, text: string, computer: PlayerSide[]) => void;
+  onPlayScript: (name: string, text: string, computer: PlayerSide[]) => void;
+}) {
+  // Sides the engine plays (docs/design-computer-player.md), for the missions and the scenarios alike.
+  const [computer, setComputer] = useState<PlayerSide[]>([]);
+  const toggle = (side: PlayerSide) => setComputer((c) => (c.includes(side) ? c.filter((x) => x !== side) : [...c, side]));
   return (
     <aside className="panel mission-picker">
       <h2>Missions</h2>
+      <div className="computer-pick">
+        <span className="muted">Computer plays:</span>
+        {(['blue', 'red'] as PlayerSide[]).map((side) => (
+          <label key={side}><input type="checkbox" checked={computer.includes(side)} onChange={() => toggle(side)} /> {side === 'blue' ? 'Blue' : 'Red'}</label>
+        ))}
+      </div>
       {MISSIONS.map((m) => (
-        <button key={m.kind} onClick={() => onStart(m.kind)}>
+        <button key={m.kind} onClick={() => onStart(m.kind, computer)}>
           {m.label}
         </button>
       ))}
@@ -36,8 +50,8 @@ export function MissionPicker({ onStart, onLoadScript, onPlayScript }: { onStart
                 <div className="muted">Watch: {sc.watch}</div>
               </div>
               <div className="scenario-buttons">
-                <button type="button" disabled={!script} onClick={() => script && onPlayScript(script.name, script.text)}>Play</button>
-                <button type="button" disabled={!script} onClick={() => script && onLoadScript(script.name, script.text)} title="Load it and step through">Step</button>
+                <button type="button" disabled={!script} onClick={() => script && onPlayScript(script.name, script.text, computer)}>Play</button>
+                <button type="button" disabled={!script} onClick={() => script && onLoadScript(script.name, script.text, computer)} title="Load it and step through">Step</button>
               </div>
             </div>
           );
@@ -45,7 +59,7 @@ export function MissionPicker({ onStart, onLoadScript, onPlayScript }: { onStart
       </div>
       <h3>Or play a script</h3>
       <p className="muted">A mission script from missions/ starts its mission on its seed; step through it a line or a turn at a time.</p>
-      <ScriptLoader onLoad={onLoadScript} />
+      <ScriptLoader onLoad={(name, text) => onLoadScript(name, text, computer)} />
     </aside>
   );
 }

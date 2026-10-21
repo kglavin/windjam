@@ -25,6 +25,8 @@ forces, rules, seed and consoles (`src/engine/mission/scenarios.ts`, docs/design
 is a two-side script with `blue> ` and `red> ` prefixes. The mission picker's Scenarios list plays each one to the end
 and opens the replay; Step loads it for the script bar instead. Fox hunts (`mission fox`) end when a Blue squad is
 within 1 km of a Red transmitter; air defence (`mission iads`) scores Red's engagement cycle, and `expect blue|red|draw`
-checks the winner. `ew: jam <net> [spot|barrage|partial|pulse|follower|sync]` picks the jammer mode.
+checks the winner. `ew: jam <net> [spot|barrage|partial|pulse|follower|sync]` picks the jammer mode. `computer red` (or `blue`, `both`)
+hands a side to the engine's own player (docs/design-computer-player.md); that side's lines in the script are then
+skipped, while `wait`, `status`, `picture` and `reveal` still run.
 
 Mission 4 scripts start with `mission uav` and use the same `blue> ` / `red> ` prefixes as a duel. Red's extra orders are `uav: launch`, `uav: burst`, `uav: hold`, `uav: resume`, `uav: power <W>`, `uavlink: waveform ...` and `uav: antenna toward hq`; Blue can `ew: jam uavlink`. See `09-uav-track.txt`.

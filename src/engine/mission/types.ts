@@ -3,6 +3,7 @@ import type { Hex } from '../hex';
 import type { JammerMode, Side, Unit, Waveform } from '../units';
 import type { OrderStatus } from '../timeliness';
 import type { World } from '../world';
+import type { ComputerSide } from './computer';
 
 export type PlayerSide = 'blue' | 'red';
 // duel: both sides human, hide-mission rules. uav: both sides human; Red flies a UAV that must report, Blue tracks it.
@@ -226,6 +227,7 @@ export interface MissionState {
   found?: { by: PlayerSide; minute: number; km: number; sensorId: string; mutual?: boolean }; // mission 5: who heard the other UAV from close by, first (mutual: both in the same minute, a draw); fox: the hunter within reach
   scenario?: string; // the scenario this mission was built from, if any
   playToEnd?: boolean; // scenarios: no early win; the result is read at the time limit
+  computer?: Partial<Record<PlayerSide, ComputerSide>>; // sides the engine plays (docs/design-computer-player.md)
   iads?: IadsState;
   actor?: PlayerSide; // transient: which side's console current log lines belong to
 }

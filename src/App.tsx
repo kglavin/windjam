@@ -23,7 +23,7 @@ import { Console } from './ui/Console';
 import { type LoadedScript, ScriptBar } from './ui/ScriptBar';
 import { type Inspection, Inspector } from './ui/Inspector';
 import { fixBuildUp, lessonUrl, movingFix, movingMinutes } from './engine/mission/inspect';
-import { missionFromScript, parseScript } from './engine/mission/script';
+import { missionFromScript, parseScript, sharedCommand } from './engine/mission/script';
 import { MissionPicker } from './ui/MissionPicker';
 import { MissionPanel } from './ui/MissionPanel';
 import { REPLAY_SPEEDS, ReplayBar, type ReplayMove } from './ui/ReplayBar';
@@ -324,9 +324,9 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
   // A mission script loaded from the bar (missions/*.txt): its lines run through onConsole, a line, a turn or all at
   // a press, so the log and the map show each step.
   const [script, setScript] = useState<LoadedScript>();
-  const loadScript = (name: string, text: string) => {
+  const loadScript = (name: string, text: string, computer: PlayerSide[] = []) => {
     const parsed = parseScript(text);
-    const next = missionFromScript(parsed, Math.floor(Math.random() * 1_000_000));
+    const next = missionFromScript(parsed, Math.floor(Math.random() * 1_000_000), [...new Set([...(parsed.computer ?? []), ...computer])]);
     const kind = next.mission;
     setMission({ ...next, log: [...next.log, { minute: 0, kind: 'info', text: `Loaded ${name}: ${parsed.commands.length} lines${parsed.seed !== undefined ? `, seed ${parsed.seed}` : ''}. Step, Turn or Run all in the script bar.` }] });
     setScript({ name, commands: parsed.commands, cursor: 0 });
@@ -336,23 +336,30 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
     setTool('select');
   };
   // Play a scenario: load its script, run every line, and open the replay.
-  const playScript = (name: string, text: string) => {
+  const playScript = (name: string, text: string, computer: PlayerSide[] = []) => {
     const parsed = parseScript(text);
-    const next = missionFromScript(parsed, Math.floor(Math.random() * 1_000_000));
+    const next = missionFromScript(parsed, Math.floor(Math.random() * 1_000_000), [...new Set([...(parsed.computer ?? []), ...computer])]);
     setMission({ ...next, log: [...next.log, { minute: 0, kind: 'info', text: `Playing ${name}: ${parsed.commands.length} lines.` }] });
     setSeat(next.humans.length > 1 ? 'umpire' : next.mission === 'hide' ? 'red' : 'blue');
     setReplayPlaying(false);
     setInspection({ tab: 'minute' });
     onChapter('missions');
     setTool('select');
-    for (const line of parsed.commands) onConsole(line);
+    const skip = (line: string) => { const pre = /^(blue|red)>\s*/i.exec(line); const side = pre ? (pre[1].toLowerCase() as PlayerSide) : next.side; const p = parseCommand(pre ? line.slice(pre[0].length) : line, side, knownIdsOf(next.world)); return !!next.computer?.[side] && p.ok && !sharedCommand(p.command.type); };
+    for (const line of parsed.commands) if (!skip(line)) onConsole(line);
     if (!/^(?:(?:blue|red)>\s*)?reveal$/i.test(parsed.commands[parsed.commands.length - 1] ?? '')) onConsole('reveal');
     setScript({ name, commands: parsed.commands, cursor: parsed.commands.length });
   };
   const runScriptTo = (end: number) => {
     if (!script) return;
     for (const line of script.commands.slice(script.cursor, end)) {
-      // Echo the line on the console it runs on, then run it as if typed there.
+      // A line for a side the computer plays is skipped. Echo the rest on the console it runs on, then run it.
+      const pre0 = /^(blue|red)>\s*/i.exec(line);
+      const for0 = pre0 ? (pre0[1].toLowerCase() as PlayerSide) : mission?.side;
+      if (for0 && mission?.computer?.[for0]) {
+        const p0 = parseCommand(pre0 ? line.slice(pre0[0].length) : line, for0, knownIdsOf(mission.world));
+        if (p0.ok && !sharedCommand(p0.command.type)) continue;
+      }
       setMission((prev) => {
         if (!prev) return prev;
         const pre = /^(blue|red)>\s*/i.exec(line);
@@ -364,10 +371,13 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
     }
     setScript({ ...script, cursor: Math.min(end, script.commands.length) });
   };
-  const startMission = (kind: MissionKind = 'find') => {
+  const startMission = (kind: MissionKind = 'find', computer: PlayerSide[] = []) => {
     setScript(undefined);
-    setMission(createMission(Math.floor(Math.random() * 1_000_000), kind));
-    setSeat(kind === 'hide' ? 'red' : 'blue');
+    const base: PlayerSide[] = kind === 'duel' || kind === 'uav' || kind === 'hunt' || kind === 'iads' ? ['blue', 'red'] : kind === 'hide' ? ['red'] : ['blue'];
+    const humans = computer.length ? [...new Set([...base, ...computer])] : undefined;
+    setMission(createMission(Math.floor(Math.random() * 1_000_000), kind, computer.length ? { humans, computer: Object.fromEntries(computer.map((c) => [c, true as const])) } : {}));
+    const human = base.find((b) => !computer.includes(b));
+    setSeat(computer.length && humans!.length > 1 && !human ? 'umpire' : (human ?? (kind === 'hide' ? 'red' : 'blue')));
     setReplayPlaying(false);
     onChapter('missions');
     setTool('select');
@@ -509,7 +519,7 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
           oneConsole={oneConsole}
           onOneConsole={setOneConsole}
           server={server ? { url: server, ...(serverInfo ?? { turn: 0, turnMin: 0, waitingFor: [], status: 'connecting' }) } : undefined}
-          onNewMission={() => startMission(mission.mission)}
+          onNewMission={() => startMission(mission.mission, mission.computer ? (Object.keys(mission.computer) as PlayerSide[]) : [])}
           onExit={() => onChapter('sandbox')}
           onInspectTrack={inspecting ? (trackId) => setInspection({ tab: 'fix', trackId, k: undefined }) : undefined}
         />

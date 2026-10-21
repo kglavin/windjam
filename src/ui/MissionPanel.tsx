@@ -72,7 +72,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
       <header>
         <h1>Windjam · {m.scenario ? `Scenario ${m.scenario}` : `Mission ${hunt ? 5 : uavMission ? 4 : duel ? 3 : red ? 2 : 1}`}</h1>
         <div className="sub">
-          {title} · seed {m.seed} <button onClick={onNewMission}>New mission</button> <button onClick={onExit}>Sandbox</button>
+          {title} · seed {m.seed}{m.computer && Object.keys(m.computer).length > 0 && ` · computer plays ${Object.entries(m.computer).map(([k, c]) => `${k} (${c?.behaviour})`).join(', ')}`} <button onClick={onNewMission}>New mission</button> <button onClick={onExit}>Sandbox</button>
         </div>
         {server && (
           <div className="sub">

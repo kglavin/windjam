@@ -18,6 +18,7 @@ import { getTile } from '../map';
 import { TERRAIN, accessLabel, canEnter } from '../terrain';
 import { HELP, UNIT_ALIASES, aliasOf, knownIdsOf, netAliasOf, parseCommand } from './commands';
 import { PLAYBOOKS } from './playbooks';
+import { type Behaviour, computerSide, computerTurn, defaultBehaviour } from './computer';
 import {
   MISSION_RULES as R,
   enemyOf,
@@ -50,6 +51,7 @@ export interface MissionOptions {
   emcon?: Record<string, number>; // net id to chatter duty, applied at the start
   scenario?: string;
   playToEnd?: boolean; // no early win: a teaching replay should show every step
+  computer?: Partial<Record<PlayerSide, Behaviour | true>>; // sides the engine plays; true picks the mission's default behaviour
 }
 
 export function createMission(seed: number, mission: MissionKind = 'find', opts: MissionOptions = {}): MissionState {
@@ -83,6 +85,13 @@ export function createMission(seed: number, mission: MissionKind = 'find', opts:
     scenario: opts.scenario,
     playToEnd: opts.playToEnd,
   };
+  if (opts.computer) {
+    state.computer = {};
+    for (const side of ['blue', 'red'] as const) {
+      const b = opts.computer[side];
+      if (b) state.computer[side] = computerSide(b === true ? defaultBehaviour(mission, side) : b);
+    }
+  }
   if (opts.emcon) state.emcon = { ...opts.emcon };
   if (mission === 'fox') {
     log(state, 'info', `Mission: fox hunt. Get a squad within ${FOX.foundKm} km of a Red transmitter within ${FOX.limitMin} minutes.`, 'both');
@@ -291,6 +300,7 @@ function clone(s: MissionState): MissionState {
     redOrders: s.redOrders.map((o) => ({ ...o })),
     messages: s.messages.map((o) => ({ ...o })),
     ...(s.c2 ? { c2: { ...s.c2 } } : {}),
+    ...(s.computer ? { computer: Object.fromEntries(Object.entries(s.computer).map(([k, c]) => [k, c && { ...c, memory: structuredClone(c.memory) }])) } : {}),
     uav: cloneUav(s.uav),
     blueUav: cloneUav(s.blueUav),
     actor: undefined,
@@ -945,6 +955,8 @@ function tick(s: MissionState): MissionState {
     }
     s.actor = undefined;
   }
+  // The computer's sides speak next, at the start of their turn, through the console like anyone else.
+  s = computerPlay(s, m);
   s.minute = m + 1;
   const rng = createRng((s.seed * 1000003 + m * 7919) >>> 0);
   refreshAntennas(s);
@@ -1138,6 +1150,28 @@ function tick(s: MissionState): MissionState {
 
   s.history = [...s.history, snapshot(s)];
   resolve(s);
+  return s;
+}
+
+// A computer side's turn: its lines are echoed on its console and issued as if typed there.
+function computerPlay(s: MissionState, m: number): MissionState {
+  if (!s.computer) return s;
+  for (const side of ['blue', 'red'] as const) {
+    const c = s.computer?.[side];
+    if (!c || m % c.turnMin !== 0) continue;
+    for (const line of computerTurn(s, side)) {
+      s.log = [...s.log, { minute: s.minute, kind: 'info', text: `> ${line}`, side }];
+      const p = parseCommand(line, side, knownIdsOf(s.world));
+      if (!p.ok) {
+        s.log = [...s.log, { minute: s.minute, kind: 'error', text: `computer: ${line}: ${p.error}`, side }];
+        continue;
+      }
+      const next = issue(s, p.command, side);
+      // Keep the memory the behaviour just wrote: issue() clones it.
+      next.computer = s.computer;
+      s = next;
+    }
+  }
   return s;
 }
 

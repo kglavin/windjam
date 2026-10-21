@@ -10,7 +10,7 @@ npm run dev                                                        # the GUI, th
 #   http://localhost:5173/?server=http://localhost:8787
 ```
 
-`--mission` is `duel` or `uav` (two consoles). `--scenario s15` plays a scenario instead (docs/design-scenarios.md): its forces, rules and seed, with `--seed` overriding the seed; `GET /` reports `scenario`. `--turn N` is the turn length in minutes. With `--turn 0` either side may `wait` as in the hot-seat game.
+`--computer red` (or `blue`, or `blue,red`) has the engine play that side (docs/design-computer-player.md), so one agent, or a person at the GUI, plays against the computer; `GET /` lists `computer`. `--mission` is `duel` or `uav` (two consoles). `--scenario s15` plays a scenario instead (docs/design-scenarios.md): its forces, rules and seed, with `--seed` overriding the seed; `GET /` reports `scenario`. `--turn N` is the turn length in minutes. With `--turn 0` either side may `wait` as in the hot-seat game.
 
 ## Protocol
 

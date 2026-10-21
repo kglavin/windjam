@@ -33,6 +33,7 @@ interface Args {
   turn: number;
   port: number;
   c2?: C2;
+  computer?: PlayerSide[]; // sides the engine plays
 }
 
 // C2 mode per side: the unit aliases that have an agent. A side with no entry plays with one console, as before.
@@ -45,6 +46,7 @@ function parseArgs(argv: string[]): Args {
     const v = argv[i + 1];
     if (k === '--mission') a.mission = v as MissionKind;
     if (k === '--scenario') a.scenario = v;
+    if (k === '--computer') a.computer = (v ?? '').split(',').map((x) => x.trim()).filter((x): x is PlayerSide => x === 'blue' || x === 'red');
     if (k === '--seed') a.seed = Number(v);
     if (k === '--turn') a.turn = Number(v);
     if (k === '--port') a.port = Number(v);
@@ -90,15 +92,19 @@ const GAMES_DIR = join(process.cwd(), 'games');
 const args = parseArgs(process.argv.slice(2));
 // The umpire's key: /full and /history show the whole truth, so a player must not be able to call them.
 const UMPIRE_KEY = process.env.WINDJAM_UMPIRE_KEY ?? Math.random().toString(36).slice(2, 10);
-let game = newGame(args.mission, args.seed, args.turn, args.c2, args.scenario);
+let game = newGame(args.mission, args.seed, args.turn, args.c2, args.scenario, args.computer);
 
 // A game from a mission kind on the standard forces, or from a scenario (its own forces, rules and consoles; the seed
 // given here overrides the scenario's).
-function newGame(mission: MissionKind, seedArg: number | undefined, turnMin: number, c2?: C2, scenario?: string): Game {
+function newGame(mission: MissionKind, seedArg: number | undefined, turnMin: number, c2?: C2, scenario?: string, computer: PlayerSide[] = []): Game {
   const sc = scenario ? scenarioById(scenario) : undefined;
   if (scenario && !sc) throw new Error(`unknown scenario ${scenario}. Scenarios: ${SCENARIOS.map((x) => x.id).join(' ')}`);
   const seed = seedArg ?? sc?.seed ?? Math.floor(Math.random() * 1_000_000);
-  const state = sc ? createMission(seed, sc.mission, { forces: sc.forces, humans: sc.humans, emcon: sc.emcon, scenario: sc.id, playToEnd: sc.playToEnd }) : createMission(seed, mission);
+  const comp = computer.length ? Object.fromEntries(computer.map((side) => [side, true as const])) : undefined;
+  const kind = sc?.mission ?? mission;
+  const baseHumans: PlayerSide[] = sc?.humans ?? (kind === 'duel' || kind === 'uav' || kind === 'hunt' || kind === 'iads' ? ['blue', 'red'] : kind === 'hide' ? ['red'] : ['blue']);
+  const humans = computer.length ? [...new Set([...baseHumans, ...computer])] : sc?.humans;
+  const state = sc ? createMission(seed, sc.mission, { forces: sc.forces, humans, emcon: sc.emcon, scenario: sc.id, playToEnd: sc.playToEnd, computer: comp }) : createMission(seed, mission, { humans, computer: comp });
   for (const side of ['blue', 'red'] as const) {
     const entry = c2?.[side];
     if (entry) enableC2(state, side, entry.agents);
@@ -228,6 +234,7 @@ function summary(g: Game, side?: PlayerSide) {
   return {
     mission: s.mission,
     scenario: s.scenario ?? null,
+    computer: s.computer ? Object.keys(s.computer) : [],
     seed: s.seed,
     minute: s.minute,
     limitMin: s.limitMin,
@@ -620,7 +627,7 @@ const server = createServer(async (req, res) => {
       const body = await readBody(req);
       const o = body ? (JSON.parse(body) as Partial<Args>) : {};
       try {
-        game = newGame(o.mission ?? game.state.mission, o.seed, o.turn ?? game.turnMin, o.c2, o.scenario);
+        game = newGame(o.mission ?? game.state.mission, o.seed, o.turn ?? game.turnMin, o.c2, o.scenario, o.computer);
       } catch (e) {
         return send(res, 400, { error: e instanceof Error ? e.message : String(e) });
       }

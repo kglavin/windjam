@@ -185,6 +185,10 @@ The simplest two-sided mission, for long games between agents. Each side has an 
 
 When a mission is over, a bar under the map offers **Reveal and replay**, then transport controls: to start, back a minute, play/pause, forward a minute, next event, a scrubber, and a speed (3 s, 1 s or 0.3 s per mission minute). As it plays, the map and the timeline move to that minute and the console narrates what each side said and heard in it. The console commands `next`, `step`, `back` and `exit` still work.
 
+### The computer player
+
+Either side can be played by the engine ([docs/design-computer-player.md](design-computer-player.md)): tick *Computer plays Blue* or *Red* in the mission picker before starting a mission or a scenario. Five behaviours cover the rules: a Blue hunting team, a Red commander that protects its radios and passes its orders, the one-person fox hunter, and a side each for the air-defence net. The computer reads only what its side knows and issues console orders at the start of each turn, echoed on its console, so the replay inspector shows its decisions beside their effects. A script can say `computer red`; the game server takes `--computer red`.
+
 ### Scenarios
 
 The mission picker lists 18 scenarios ([docs/design-scenarios.md](design-scenarios.md)), each a script for both sides on its own forces: crossing angles, a weak bearing, a relay route under jamming, Red's power discipline, a decoy, a waveform race, jammer modes against the clock, a UAV sortie, finding a hub among nine radios, an HQ that moves, four fox hunts (one hunter on foot closing on a transmitter), and four against a distributed air-defence net (radar sites reporting to a fire control node that orders launchers, denied by jamming the links). Play runs one to the end and opens the replay; the inspector then shows what each was built to show. Scenario scripts are `missions/sNN-*.txt`, with a `scenario <id>` directive; they also run headless and in the test suite.
