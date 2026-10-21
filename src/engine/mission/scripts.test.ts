@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outcomeOf, parseScript, runScript } from './script';
+import { outcomeOf, parseScript, runScript, turnEnd } from './script';
 
 // Every script in missions/ must run clean and meet its own expect/rejects directives.
 const scripts = import.meta.glob('../../../missions/*.txt', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
@@ -18,4 +18,28 @@ describe('mission scripts', () => {
       if (!script.rejects) expect(state.log.filter((e) => e.kind === 'error').map((e) => e.text)).toEqual([]);
     });
   }
+});
+
+describe('playing a script a turn at a time', () => {
+  const cmds = ['status', 'sq1: df e 5', 'wait 5', 'picture', 'blue> sq2: df e 5', 'red> wait 3', 'picture'];
+  it('a turn ends just after the next wait, prefixed or not; the last turn runs to the end', () => {
+    expect(turnEnd(cmds, 0)).toBe(3);
+    expect(turnEnd(cmds, 3)).toBe(6);
+    expect(turnEnd(cmds, 6)).toBe(7);
+    expect(turnEnd(cmds, 7)).toBe(7);
+  });
+  it('every bundled script plays through in turns to the same end as a straight run', () => {
+    for (const file of files) {
+      const script = parseScript(scripts[file]);
+      let at = 0;
+      let turns = 0;
+      while (at < script.commands.length) {
+        const end = turnEnd(script.commands, at);
+        expect(end).toBeGreaterThan(at);
+        at = end;
+        turns++;
+      }
+      expect(turns).toBeGreaterThan(0);
+    }
+  });
 });

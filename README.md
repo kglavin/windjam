@@ -23,7 +23,7 @@ Windjam is a browser simulation with three chapters:
 |---|---|
 | **Link lab** | A guided course in 13 levels. Each level teaches one idea with a worked example and a short video, lets you practise it, then gives you an enemy link to attack, scored out of 100. |
 | **Sandbox map** | A 128 × 69 km hex world with two sides, radio nets over real terrain, nine jammer modes, detection and direction finding, and a scope. |
-| **Missions** | Five missions against a hidden enemy, played at a console, by two people at one screen, or by AI agents through a game server. |
+| **Missions** | Five missions against a hidden enemy, played at a console, from a loaded script, by two people at one screen, or by AI agents through a game server. |
 
 Everything runs in the browser. Nothing is scripted: a link turns red because its bit error rate crossed a threshold, a fix lands where the bearings cross, and a mesh splits because the jammer silenced the radios that held it together.
 

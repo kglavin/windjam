@@ -53,6 +53,12 @@ export function parseScript(text: string): Script {
   return script;
 }
 
+// Playing a script a turn at a time: a turn ends just after the next `wait` line at or past `from`, or at the end.
+export function turnEnd(commands: string[], from: number): number {
+  for (let i = from; i < commands.length; i++) if (/^(?:(?:blue|red)>\s*)?wait\b/i.test(commands[i])) return i + 1;
+  return commands.length;
+}
+
 export interface ScriptRun {
   state: MissionState;
   parseErrors: string[]; // lines the console would have rejected

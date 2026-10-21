@@ -1,4 +1,5 @@
 import type { MissionKind } from '../engine/mission/types';
+import { ScriptLoader } from './ScriptBar';
 
 const MISSIONS: { kind: MissionKind; label: string }[] = [
   { kind: 'find', label: 'Mission 1: find the enemy' },
@@ -8,7 +9,7 @@ const MISSIONS: { kind: MissionKind; label: string }[] = [
   { kind: 'hunt', label: 'Mission 5: UAV hunt' },
 ];
 
-export function MissionPicker({ onStart }: { onStart: (kind: MissionKind) => void }) {
+export function MissionPicker({ onStart, onLoadScript }: { onStart: (kind: MissionKind) => void; onLoadScript: (name: string, text: string) => void }) {
   return (
     <aside className="panel mission-picker">
       <h2>Missions</h2>
@@ -17,6 +18,9 @@ export function MissionPicker({ onStart }: { onStart: (kind: MissionKind) => voi
           {m.label}
         </button>
       ))}
+      <h3>Or play a script</h3>
+      <p className="muted">A mission script from missions/ starts its mission on its seed; step through it a line or a turn at a time.</p>
+      <ScriptLoader onLoad={onLoadScript} />
     </aside>
   );
 }

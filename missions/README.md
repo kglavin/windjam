@@ -7,11 +7,12 @@ Two directives are allowed:
 - `seed <n>` fixes the map, the Red transmission schedule and the bearing errors, so a run repeats exactly.
 - `expect won|lost|running|ended|draw` lets the test suite and the runner check the outcome (`expect blue|red|draw` in a duel checks the winner).
 
-Use a script three ways:
+Use a script four ways:
 
-1. **Paste it into the console.** Copy the whole file and paste at the `blue>` prompt. Each line runs in order. If the file starts with `seed`, the mission restarts on that seed first.
-2. **Run it headless.** `npm run mission -- missions/01-two-squads-triangulate.txt` prints the log and a summary, and exits non-zero if a line is rejected or the outcome differs from `expect`.
-3. **Test suite.** `npm test` runs every script in this folder.
+1. **Load it in the app.** In the Missions chapter choose it under *Or play a script* (or *Open file…* for a script on disk), or use the script bar above the consoles once a mission is running. The mission starts on the script's seed, and **Step**, **Turn** (through the next `wait`) and **Run all** play it, each line echoed on the console it runs on.
+2. **Paste it into the console.** Copy the whole file and paste at the `blue>` prompt. Each line runs in order. If the file starts with `seed`, the mission restarts on that seed first.
+3. **Run it headless.** `npm run mission -- missions/01-two-squads-triangulate.txt` prints the log and a summary, and exits non-zero if a line is rejected or the outcome differs from `expect`.
+4. **Test suite.** `npm test` runs every script in this folder.
 
 Grid positions below are for seed 1234 (Blue HQ 102,80; Squads at 114,68, 116,80, 114,92; UAV 120,78). Other seeds move the terrain but not the starting positions.
 

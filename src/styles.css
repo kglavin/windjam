@@ -784,6 +784,27 @@ select {
   display: flex;
   flex-shrink: 0;
 }
+.script-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+}
+.script-bar .script-name { color: #e5e7eb; }
+.script-bar .script-next {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #0b1220;
+  color: #93c5fd;
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.script-loader { display: inline-flex; gap: 6px; align-items: center; }
 .consoles .console {
   flex: 1;
   min-width: 0;

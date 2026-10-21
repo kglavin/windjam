@@ -20,6 +20,8 @@ import { createMission, issue as issueMission, jumpReplay, viewOf, visibleLog } 
 import { SequenceChart } from './ui/SequenceChart';
 import { parseCommand } from './engine/mission/commands';
 import { Console } from './ui/Console';
+import { type LoadedScript, ScriptBar } from './ui/ScriptBar';
+import { parseScript } from './engine/mission/script';
 import { MissionPicker } from './ui/MissionPicker';
 import { MissionPanel } from './ui/MissionPanel';
 import { REPLAY_SPEEDS, ReplayBar, type ReplayMove } from './ui/ReplayBar';
@@ -317,7 +319,37 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
       return p.ok ? issueMission(prev, p.command, side) : { ...prev, log: [...prev.log, { minute: prev.minute, kind: 'error', text: p.error, side }] };
     });
   };
+  // A mission script loaded from the bar (missions/*.txt): its lines run through onConsole, a line, a turn or all at
+  // a press, so the log and the map show each step.
+  const [script, setScript] = useState<LoadedScript>();
+  const loadScript = (name: string, text: string) => {
+    const parsed = parseScript(text);
+    const kind = parsed.mission ?? 'find';
+    const next = createMission(parsed.seed ?? Math.floor(Math.random() * 1_000_000), kind);
+    setMission({ ...next, log: [...next.log, { minute: 0, kind: 'info', text: `Loaded ${name}: ${parsed.commands.length} lines${parsed.seed !== undefined ? `, seed ${parsed.seed}` : ''}. Step, Turn or Run all in the script bar.` }] });
+    setScript({ name, commands: parsed.commands, cursor: 0 });
+    setSeat(kind === 'hide' ? 'red' : 'blue');
+    setReplayPlaying(false);
+    onChapter('missions');
+    setTool('select');
+  };
+  const runScriptTo = (end: number) => {
+    if (!script) return;
+    for (const line of script.commands.slice(script.cursor, end)) {
+      // Echo the line on the console it runs on, then run it as if typed there.
+      setMission((prev) => {
+        if (!prev) return prev;
+        const pre = /^(blue|red)>\s*/i.exec(line);
+        const named = pre ? (pre[1].toLowerCase() as PlayerSide) : undefined;
+        const side = named && prev.humans.includes(named) ? named : prev.side;
+        return { ...prev, log: [...prev.log, { minute: prev.minute, kind: 'info', text: `> ${pre ? line.slice(pre[0].length) : line}`, side }] };
+      });
+      onConsole(line);
+    }
+    setScript({ ...script, cursor: Math.min(end, script.commands.length) });
+  };
   const startMission = (kind: MissionKind = 'find') => {
+    setScript(undefined);
     setMission(createMission(Math.floor(Math.random() * 1_000_000), kind));
     setSeat(kind === 'hide' ? 'red' : 'blue');
     setReplayPlaying(false);
@@ -387,6 +419,7 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
             onReveal={() => setMission((prev) => (prev ? issueMission(prev, { type: 'reveal' }) : prev))}
           />
         )}
+        {missionActive && <ScriptBar script={script} onLoad={loadScript} onRunTo={runScriptTo} onUnload={() => setScript(undefined)} disabled={!!server} />}
         {missionActive && (
           <div className="consoles">
             {oneConsole && mission.humans.length > 1 ? (
@@ -427,7 +460,7 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
           onExit={() => onChapter('sandbox')}
         />
       ) : chapter === 'missions' ? (
-        <MissionPicker onStart={startMission} />
+        <MissionPicker onStart={startMission} onLoadScript={loadScript} />
       ) : (
       <SidePanel
         world={world}
