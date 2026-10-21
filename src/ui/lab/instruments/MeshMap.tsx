@@ -63,13 +63,17 @@ export function MeshMap({ mesh, title = 'Mesh map', path, gone = [], backbone = 
         </span>
       </header>
       <svg className="inst-svg df-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title}>
+        <defs>
+          <clipPath id="mesh-clip"><rect x={PAD} y={PAD} width={MESH_AREA.xMax * S} height={MESH_AREA.yMax * S} /></clipPath>
+        </defs>
         <rect x={PAD} y={PAD} width={MESH_AREA.xMax * S} height={MESH_AREA.yMax * S} className="inst-frame" />
         {onPlace && <rect x={PAD} y={PAD} width={MESH_AREA.xMax * S} height={MESH_AREA.yMax * S} fill="transparent" className="df-click" onClick={click} />}
-        {guard && <circle cx={sx(mesh.nodes[mesh.gateway].xKm)} cy={sy(mesh.nodes[mesh.gateway].yKm)} r={guard * S} className="mesh-guard" />}
-        {jammer && rings.map((r) => (
+        {/* The guard and the rings are cut to the frame; the ring labels sit under the jammer, clear of the radios. */}
+        {guard && <circle clipPath="url(#mesh-clip)" cx={sx(mesh.nodes[mesh.gateway].xKm)} cy={sy(mesh.nodes[mesh.gateway].yKm)} r={guard * S} className="mesh-guard" />}
+        {jammer && rings.map((r, i) => (
           <g key={r.label}>
-            <circle cx={sx(jammer.xKm)} cy={sy(jammer.yKm)} r={r.rKm * S} className="mesh-ring" />
-            <text x={sx(jammer.xKm) + r.rKm * S * 0.71 + 3} y={sy(jammer.yKm) - r.rKm * S * 0.71} className="inst-axis">{r.label}</text>
+            <circle clipPath="url(#mesh-clip)" cx={sx(jammer.xKm)} cy={sy(jammer.yKm)} r={r.rKm * S} className="mesh-ring" />
+            <text x={sx(jammer.xKm) + 8} y={sy(jammer.yKm) + 16 + 11 * i} className="inst-axis mesh-ring-label">{r.label}</text>
           </g>
         ))}
         {links.map(([a, b]) => {

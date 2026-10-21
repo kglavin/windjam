@@ -1413,6 +1413,7 @@ select {
   stroke-dasharray: 5 4;
 }
 .mesh-jammer { fill: #f87171; }
+.mesh-ring-label { paint-order: stroke; stroke: #0b1220; stroke-width: 3px; fill: #f87171; }
 .mesh-guard {
   fill: #94a3b8;
   fill-opacity: 0.08;
