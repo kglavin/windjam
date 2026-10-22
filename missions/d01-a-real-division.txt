@@ -1,21 +1,24 @@
 # Scenario d01, a real division. Red's division talks for three days east of the water, ramping toward an operation
-# and falling silent six hours before it (T+66). Blue's three sites listen east for a day at a time.
+# and falling silent six hours before it (T+66). Blue's three sites watch the band a day at a time: two on the lower
+# half, one tuned to the division's frequency, then all three on the upper half.
 # Inspector, Minute tab (an hour here): the daily curve and the orders at 06:00 and 18:00 going down the tree;
-# Fix tab: the nets fixed from three sites 45 km away.
+# Fix tab: the nets fixed from three sites 30 km away. intercepts 6 lists the hour's bursts without their senders.
 scenario d01
 expect draw
-blue> s1: df e 24
-blue> s2: df e 24
-blue> s3: df e 24
+blue> s1: watch 40-48 24
+blue> s2: watch 40-48 24
+blue> s3: tune 40 24
+wait 7
+blue> intercepts 6
+wait 17
+blue> picture
+blue> s1: watch 40-48 24
+blue> s2: watch 40-48 24
+blue> s3: watch 48-56 24
 wait 24
 blue> picture
-blue> s1: df e 24
-blue> s2: df e 24
-blue> s3: df e 24
-wait 24
-blue> picture
-blue> s1: df e 24
-blue> s2: df e 24
-blue> s3: df e 24
+blue> s1: sweep 24
+blue> s2: watch 40-48 24
+blue> s3: watch 48-56 24
 wait 24
 blue> picture

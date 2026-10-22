@@ -93,10 +93,13 @@ export function generateForce(seed: number, spec: ForceSpec): Force {
     units.push({ id, name, side: spec.side, kind: KIND[level], col: at.col, row: at.row, highGround: level === 'battalion' || level === 'artillery' });
     return node;
   };
-  const net = (node: OrbatNode, memberIds: string[]) => {
-    nets.push({ id: node.netId, name: `${node.name} Net`, side: spec.side, topology: 'hub', hubId: node.id, memberIds: [node.id, ...memberIds], freqMHz: r1(freq), bandwidthKHz: 25, dataRateKbps: 16, waveform: { kind: 'fixed' } });
+  // The division's net takes the first frequency; the rest step up in the order they are built.
+  const divFreq = freq;
+  freq += NET_STEP_MHZ;
+  const net = (node: OrbatNode, memberIds: string[], at?: number) => {
+    nets.push({ id: node.netId, name: `${node.name} Net`, side: spec.side, topology: 'hub', hubId: node.id, memberIds: [node.id, ...memberIds], freqMHz: r1(at ?? freq), bandwidthKHz: 25, dataRateKbps: 16, waveform: { kind: 'fixed' } });
     profiles[node.netId] = { duty: DUTY[node.level], ramp: spec.ramp, orderHours: ORDER_HOURS[node.level], silentFrom: spec.silentFrom, ...(notional ? { notional: true, notionalMembers: Math.max(0, STATIONS[node.level] - memberIds.length) } : {}) };
-    freq += NET_STEP_MHZ;
+    if (at === undefined) freq += NET_STEP_MHZ;
   };
   const p = spec.prefix;
   const div = add(`${p}-div`, `${spec.name} Division HQ`, 'division', spec.centre);
@@ -149,7 +152,7 @@ export function generateForce(seed: number, spec: ForceSpec): Force {
     net(arty, []);
     net(recce, []);
   }
-  net(div, [...brigades.map((b) => b.id), arty.id, recce.id]);
+  net(div, [...brigades.map((b) => b.id), arty.id, recce.id], divFreq);
   return { nodes, units, nets, profiles };
 }
 

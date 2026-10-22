@@ -24,6 +24,9 @@ export interface SortieLeg {
 // Orders a unit can be given from the console. Minutes are mission minutes.
 export type MissionCommand =
   | { type: 'df'; unitId: string; centreDeg: number; minutes: number }
+  // Deception: an intercept site watches a band, tunes one frequency, or sweeps the whole band, for `minutes` ticks (hours).
+  | { type: 'watch'; unitId: string; mode: 'band' | 'freq' | 'sweep'; loMHz: number; hiMHz: number; minutes: number }
+  | { type: 'intercepts'; hour?: number } // the intercept log for an hour (the last by default)
   | { type: 'move'; unitId: string; to: Hex }
   | { type: 'sortie'; unitId: string; legs: SortieLeg[] } // drone: fly the plan silent, DF on each leg, hand everything over on return
   | { type: 'stop'; unitId: string }
@@ -62,6 +65,7 @@ export interface DfAccumulator {
 
 export type Order =
   | { kind: 'df'; centreDeg: number; startMin: number; endMin: number; heard: Record<string, DfAccumulator> }
+  | { kind: 'watch'; mode: 'band' | 'freq' | 'sweep'; loMHz: number; hiMHz: number; startMin: number; endMin: number; heard: Record<string, DfAccumulator> }
   | { kind: 'move'; path: Hex[]; minutesPerHex: number; progress: number }
   | {
       kind: 'sortie';
@@ -165,7 +169,7 @@ export interface Playbook {
 // Structured record of what happened, for the sequence chart and analysis. One minute can hold many.
 export type MissionEvent =
   | { kind: 'emit'; minute: number; unitId: string; what: string; signature: string } // a transmission during the minute
-  | { kind: 'capture'; minute: number; sensorId: string; emitterId: string; what: string; snrDb: number; bearingDeg: number; sigmaDeg: number } // sensor heard emitter; the bearing it measured that minute (compass degrees)
+  | { kind: 'capture'; minute: number; sensorId: string; emitterId: string; what: string; snrDb: number; bearingDeg: number; sigmaDeg: number; freqMHz?: number; signature?: string } // sensor heard emitter; the bearing it measured that minute (compass degrees)
   | { kind: 'report'; minute: number; unitId: string; side: PlayerSide; bearings: number; delivered: boolean } // DF report sent (or held)
   | { kind: 'release'; minute: number; unitId: string; side: PlayerSide } // a held report finally reached HQ
   | { kind: 'track'; minute: number; side: PlayerSide; trackId: string; emitterId: string; cepKm?: number; first: boolean } // picture changed
@@ -314,6 +318,12 @@ export const DECEPTION_RULES = {
   sweepsPerTick: 1500, // an hour of 2.3 s sweeps
   hqTicksPerHex: 0.1, // an HQ packs up and moves at about 5 km/h
   ticksPerHex: 0.05, // 10 km/h for the rest
+  // Collection (docs/design-deception.md section 4): a site's operators watch at most this much band at once; tuned to
+  // one frequency they catch every burst; a sweep of the whole band catches a tenth of them.
+  watchMHz: 8,
+  tuneSweepFactor: 2,
+  sweepShare: 0.1,
+  bandMHz: [30, 88] as [number, number],
 } as const;
 
 export const FOX_RULES = {

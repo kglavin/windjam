@@ -89,6 +89,7 @@ const COMMON_HELP = [
 export const HELP: Record<PlayerSide, string[]> = {
   blue: [
     '<unit>: df <direction> <minutes>   bearing sweep over a 90° sector; direction n ne e se s sw w nw, or degrees 0-359',
+    '<site>: watch 40-48 24  ·  <site>: tune 42.4 24  ·  <site>: sweep 24   deception: intercept a band (8 MHz at most), one frequency, or sweep everything, for hours; intercepts [hour] lists what was heard',
     'uav: sortie <col>,<row> <dir> <min>; ...   silent sortie: fly each leg, DF there, then home; all legs reported on return',
     "ew: jam <net> [mode]  ·  ew: jam off   jam an enemy net: spot (default), barrage, partial, pulse, follower or sync (the jammer itself is loud)",
     'uav: launch  ·  uav: route <col>,<row>; ...  ·  uav: hold  ·  uav: resume  ·  uav: burst   mission 5: fly, re-route, pause, report now',
@@ -132,6 +133,10 @@ export function parseCommand(input: string, side: PlayerSide = 'blue', known?: K
   if (first === 'help') return { ok: true, command: { type: 'help' } };
   if (first === 'status') return { ok: true, command: { type: 'status' } };
   if (first === 'picture') return { ok: true, command: { type: 'picture' } };
+  if (first === 'intercepts') {
+    if (rest[0] !== undefined && !/^\d+$/.test(rest[0])) return { ok: false, error: 'intercepts takes an hour, e.g. intercepts 6, or nothing for the last hour' };
+    return { ok: true, command: { type: 'intercepts', hour: rest[0] !== undefined ? Number(rest[0]) : undefined } };
+  }
   if (first === 'reveal') return { ok: true, command: { type: 'reveal' } };
   if (first === 'next' || first === 'step' || first === 'back' || first === 'exit') return { ok: true, command: { type: 'replay', move: first } };
   if (first === 'wait') {
@@ -172,6 +177,23 @@ export function parseCommand(input: string, side: PlayerSide = 'blue', known?: K
     if (centreDeg === undefined) return { ok: false, error: `Unknown direction "${dir}". Use n ne e se s sw w nw or degrees 0-359` };
     if (!(minutes > 0) || !Number.isInteger(minutes)) return { ok: false, error: 'df needs a whole number of minutes, e.g. sq1: df e 5' };
     return { ok: true, command: { type: 'df', unitId, centreDeg, minutes } };
+  }
+  // Deception: an intercept site's tasks, in hours.
+  if (verb === 'watch' || verb === 'tune' || verb === 'sweep') {
+    const hours = Number(rest[verb === 'sweep' ? 1 : 2]);
+    if (!(hours > 0) || !Number.isInteger(hours)) return { ok: false, error: `${verb} needs whole hours, e.g. s1: ${verb === 'watch' ? 'watch 40-48 24' : verb === 'tune' ? 'tune 42.4 24' : 'sweep 24'}` };
+    if (verb === 'sweep') return { ok: true, command: { type: 'watch', unitId, mode: 'sweep', loMHz: 0, hiMHz: Infinity, minutes: hours } };
+    if (verb === 'tune') {
+      const f = Number(rest[1]);
+      if (!(f > 0)) return { ok: false, error: 'tune needs a frequency in MHz, e.g. s1: tune 42.4 24' };
+      return { ok: true, command: { type: 'watch', unitId, mode: 'freq', loMHz: f - 0.05, hiMHz: f + 0.05, minutes: hours } };
+    }
+    const band = /^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/.exec(rest[1] ?? '');
+    if (!band) return { ok: false, error: 'watch needs a band lo-hi in MHz, e.g. s1: watch 40-48 24' };
+    const lo = Number(band[1]);
+    const hi = Number(band[2]);
+    if (!(hi > lo)) return { ok: false, error: 'watch: the band must run low to high, e.g. 40-48' };
+    return { ok: true, command: { type: 'watch', unitId, mode: 'band', loMHz: lo, hiMHz: hi, minutes: hours } };
   }
   if (verb === 'move') {
     const m = /^(\d+)\s*,\s*(\d+)$/.exec(rest.slice(1).join(''));

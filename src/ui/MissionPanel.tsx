@@ -342,7 +342,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
                   <span className="swatch" style={{ background: toCss(SIDE_COLORS[side]) }} /> <b>{aliasOf(u.id)}</b> {short(u.name)} · {col},{row}
                 </span>
                 <span className="v muted">
-                  {!o ? 'idle' : o.kind === 'df' ? `DF until T+${o.endMin}` : o.kind === 'move' ? `moving (${o.path.length})` : `sortie: ${o.phase === 'df' ? `DF until T+${o.dfEndMin}` : o.phase} · silent`} ·{' '}
+                  {!o ? 'idle' : o.kind === 'df' ? `DF until T+${o.endMin}` : o.kind === 'watch' ? `${o.mode === 'sweep' ? 'sweep' : o.mode === 'freq' ? `tuned ${((o.loMHz + o.hiMHz) / 2).toFixed(1)}` : `${o.loMHz}-${o.hiMHz} MHz`} until T+${o.endMin}` : o.kind === 'move' ? `moving (${o.path.length})` : `sortie: ${o.phase === 'df' ? `DF until T+${o.dfEndMin}` : o.phase} · silent`} ·{' '}
                   <span style={{ color: route.ok || noNet ? undefined : '#f87171' }}>{noNet ? 'no radio net' : route.ok ? 'link ok' : 'link LOST'}</span>
                   {held ? ` · ${held} held` : ''}
                   {ep.map((x) => ` · ${x}`).join('')}

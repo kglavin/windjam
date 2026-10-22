@@ -339,6 +339,10 @@ export function issue(state: MissionState, cmd: MissionCommand, as: PlayerSide =
     for (const line of pictureLines(s, as)) log(s, 'info', line);
     return s;
   }
+  if (cmd.type === 'intercepts') {
+    for (const line of interceptLines(s, as, cmd.hour)) log(s, 'info', line);
+    return s;
+  }
   if (cmd.type === 'reveal' || cmd.type === 'replay') {
     replayCommand(s, cmd);
     return s;
@@ -613,7 +617,7 @@ export const uavFixes = (s: MissionState): number => {
 export const uavGaps = (s: MissionState): number => s.uav?.telemetry.filter((t) => !t.delivered).length ?? 0;
 
 // Orders shared by both sides: df, move, sortie, stop. The caller has checked ownership.
-function unitCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 'df' | 'move' | 'sortie' | 'stop' }>, unit: Unit) {
+function unitCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 'df' | 'move' | 'sortie' | 'stop' | 'watch' }>, unit: Unit) {
   const name = unit.name;
   if (cmd.type === 'stop') {
     if (s.orders[unit.id]?.kind === 'sortie') {
@@ -677,6 +681,22 @@ function unitCommand(s: MissionState, cmd: Extract<MissionCommand, { type: 'df' 
       })
       .join('; ');
     log(s, 'order', `${name}: silent sortie, ${cmd.legs.length} leg${cmd.legs.length === 1 ? '' : 's'}: ${plan}; then home. About ${flightMin + stationMin} min, radio silent until it returns.`);
+    return;
+  }
+  if (cmd.type === 'watch') {
+    if (!canDf(unit)) {
+      log(s, 'error', `${name} has no intercept receiver.`);
+      return;
+    }
+    if (cmd.mode === 'band' && cmd.hiMHz - cmd.loMHz > DEC.watchMHz + 1e-9) {
+      log(s, 'error', `${name}: its operators can watch ${DEC.watchMHz} MHz at once; ${cmd.loMHz}-${cmd.hiMHz} is ${(cmd.hiMHz - cmd.loMHz).toFixed(1)} MHz. Narrow the band, or sweep.`);
+      return;
+    }
+    const lo = cmd.mode === 'sweep' ? DEC.bandMHz[0] : cmd.loMHz;
+    const hi = cmd.mode === 'sweep' ? DEC.bandMHz[1] : cmd.hiMHz;
+    s.orders[unit.id] = { kind: 'watch', mode: cmd.mode, loMHz: lo, hiMHz: hi, startMin: s.minute, endMin: s.minute + cmd.minutes, heard: {} };
+    const what = cmd.mode === 'sweep' ? `sweeping ${lo}-${hi} MHz` : cmd.mode === 'freq' ? `tuned to ${((lo + hi) / 2).toFixed(1)} MHz` : `watching ${lo}-${hi} MHz`;
+    log(s, 'order', `${name}: ${what} for ${cmd.minutes} h, bearings on every burst heard.`);
     return;
   }
   if (cmd.type === 'df') {
@@ -967,7 +987,7 @@ function tick(s: MissionState): MissionState {
     s.actor = opp;
     for (const item of s.playbook.schedule.filter((x) => x.minute === m)) {
       const unit = unitById(s.world, item.command.type === 'wait' ? '' : (item.command as { unitId: string }).unitId);
-      if (unit && unit.side === opp && (item.command.type === 'df' || item.command.type === 'move' || item.command.type === 'sortie' || item.command.type === 'stop')) {
+      if (unit && unit.side === opp && (item.command.type === 'df' || item.command.type === 'move' || item.command.type === 'sortie' || item.command.type === 'stop' || item.command.type === 'watch')) {
         unitCommand(s, item.command, unit);
       }
     }
@@ -1015,6 +1035,17 @@ function tick(s: MissionState): MissionState {
       continue;
     }
 
+    if (order.kind === 'watch') {
+      const sweeps = order.mode === 'sweep' ? sweepsOf(s) * DEC.sweepShare : order.mode === 'freq' ? sweepsOf(s) * DEC.tuneSweepFactor : sweepsOf(s);
+      const heard = listen(s, unit, 0, 180, order.heard, m, rng, opts, { loMHz: order.loMHz, hiMHz: order.hiMHz, sweeps });
+      s.orders[unitId] = { ...order, heard };
+      if (s.minute >= order.endMin) {
+        delete s.orders[unitId];
+        const report = writeReport(s, unit, unit.pos, Object.values(heard));
+        file(s, unit, report, `${order.mode === 'sweep' ? 'sweep' : order.mode === 'freq' ? `tuned ${((order.loMHz + order.hiMHz) / 2).toFixed(1)} MHz` : `watch ${order.loMHz}-${order.hiMHz} MHz`} done`, links);
+      }
+      continue;
+    }
     if (order.kind === 'df') {
       const heard = listen(s, unit, order.centreDeg, R.sectorHalfWidthDeg, order.heard, m, rng, opts);
       s.orders[unitId] = { ...order, heard };
@@ -1138,8 +1169,8 @@ function tick(s: MissionState): MissionState {
     for (const e of emissionsAt(s, u, m)) s.events.push({ kind: 'emit', minute: m, unitId: u.id, what: e.what, signature: e.signature });
     const o = s.orders[u.id];
     if (o) {
-      const detail = o.kind === 'df' ? sectorLabel(o.centreDeg) : o.kind === 'move' ? `${o.path.length} hexes to go` : `${o.phase}${o.phase === 'df' ? ' ' + sectorLabel(o.legs[o.legIndex].centreDeg!) : ''}`;
-      s.events.push({ kind: 'busy', minute: m, unitId: u.id, task: o.kind, detail });
+      const detail = o.kind === 'df' ? sectorLabel(o.centreDeg) : o.kind === 'watch' ? `${o.mode} ${o.loMHz}-${o.hiMHz} MHz` : o.kind === 'move' ? `${o.path.length} hexes to go` : `${o.phase}${o.phase === 'df' ? ' ' + sectorLabel(o.legs[o.legIndex].centreDeg!) : ''}`;
+      s.events.push({ kind: 'busy', minute: m, unitId: u.id, task: o.kind === 'watch' ? 'df' : o.kind, detail });
     }
   }
 
@@ -1377,13 +1408,15 @@ export function siteErrorDeg(seed: number, sensorId: string, emitterId: string):
 }
 
 // One minute of listening over a sector from where the sensor stands now, for enemy emitters transmitting this minute.
-function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: number, prevHeard: Record<string, DfAccumulator>, m: number, rng: () => number, opts: DetectOptions) {
+function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: number, prevHeard: Record<string, DfAccumulator>, m: number, rng: () => number, opts: DetectOptions, band?: { loMHz: number; hiMHz: number; sweeps: number }) {
   const heard = { ...prevHeard };
   const enemy = enemyOf(sensor.side);
   for (const emitter of s.world.units.filter((u) => u.side === enemy)) {
     const trueDeg = bearingDeg(s.world.map, sensor.pos, emitter.pos);
     if (halfWidthDeg < 180 && Math.abs(angleDiff(trueDeg, centreDeg)) > halfWidthDeg) continue;
-    for (const { em, signature, what, sweeps = R.sweepsPerMinute } of emissionsAt(s, emitter, m)) {
+    for (const { em, signature, what, sweeps: emSweeps = R.sweepsPerMinute } of emissionsAt(s, emitter, m)) {
+      if (band && (em.freqMHz < band.loMHz || em.freqMHz > band.hiMHz)) continue;
+      const sweeps = band ? band.sweeps : emSweeps;
       const look = sensorLook(s.world.map, emitter, sensor, em, opts);
       if (look.pd < R.minPd) continue; // too weak for a usable bearing
       const heardProb = 1 - (1 - look.pd) ** sweeps;
@@ -1393,7 +1426,7 @@ function listen(s: MissionState, sensor: Unit, centreDeg: number, halfWidthDeg: 
       // This minute's measurement: n sweeps averaged, plus the fixed site error for this sensor and emitter.
       const measSigma = sigma / Math.sqrt(n);
       const measured = (trueDeg + siteErrorDeg(s.seed, sensor.id, emitter.id) + measSigma * gaussian(rng) + 360) % 360;
-      s.events.push({ kind: 'capture', minute: m, sensorId: sensor.id, emitterId: emitter.id, what, snrDb: look.snrDb, bearingDeg: measured, sigmaDeg: measSigma });
+      s.events.push({ kind: 'capture', minute: m, sensorId: sensor.id, emitterId: emitter.id, what, snrDb: look.snrDb, bearingDeg: measured, sigmaDeg: measSigma, freqMHz: em.freqMHz, signature });
       const w = n / (sigma * sigma);
       const rad = (measured * Math.PI) / 180;
       // A moving emitter gets one accumulator per minute: averaging across minutes would smear its track.
@@ -1833,6 +1866,8 @@ function unitLine(s: MissionState, u: Unit, links: LinkView[]): string {
     ? 'idle'
     : o.kind === 'df'
       ? `DF ${sectorLabel(o.centreDeg)} until T+${o.endMin}`
+      : o.kind === 'watch'
+        ? `${o.mode === 'sweep' ? 'sweeping' : o.mode === 'freq' ? `tuned ${((o.loMHz + o.hiMHz) / 2).toFixed(1)} MHz` : `watching ${o.loMHz}-${o.hiMHz} MHz`} until T+${o.endMin}`
       : o.kind === 'move'
         ? `moving, ${o.path.length} hexes to go`
         : `sortie leg ${Math.min(o.legIndex + 1, o.legs.length)}/${o.legs.length}, ${o.phase === 'out' ? `flying (${o.path.length} hexes)` : o.phase === 'df' ? `DF ${sectorLabel(o.legs[o.legIndex].centreDeg!)} until T+${o.dfEndMin}` : `returning (${o.path.length} hexes)`}, radio silent`;
@@ -1934,6 +1969,21 @@ export function statusLines(s: MissionState, side: PlayerSide = s.side): string[
   }
   for (const u of s.world.units.filter((x) => x.side === side)) lines.push(unitLine(s, u, links));
   return lines;
+}
+
+// The intercept log (docs/design-deception.md section 4): every burst a side's sensors heard in an hour, with the
+// frequency, waveform, site, bearing and rhythm. The emitter's identity is not in it: that is the analyst's work.
+export function interceptLines(s: MissionState, side: PlayerSide = s.side, hour?: number): string[] {
+  const at = hour ?? Math.max(0, s.minute - 1);
+  const mine = new Set(s.world.units.filter((u) => u.side === side).map((u) => u.id));
+  const caps = s.events.filter((e): e is Extract<MissionEvent, { kind: 'capture' }> => e.kind === 'capture' && e.minute === at && mine.has(e.sensorId));
+  if (caps.length === 0) return [`T+${at}: nothing intercepted.`];
+  const lines = caps
+    .slice()
+    .sort((a, b) => (a.freqMHz ?? 0) - (b.freqMHz ?? 0) || a.sensorId.localeCompare(b.sensorId))
+    .map((c) => `T+${String(at).padStart(2, '0')} ${aliasOf(c.sensorId).padEnd(4)} ${(c.signature ?? `${c.freqMHz} MHz`).padEnd(16)} ${String(Math.round(c.bearingDeg)).padStart(3, '0')}° ± ${c.sigmaDeg.toFixed(1)}°  SNR ${c.snrDb.toFixed(0).padStart(3)} dB  ${c.what}`);
+  const cap = 60;
+  return [`T+${at}: ${caps.length} intercept${caps.length === 1 ? '' : 's'}${caps.length > cap ? `, first ${cap}` : ''}:`, ...lines.slice(0, cap)];
 }
 
 export function pictureLines(s: MissionState, side: PlayerSide = s.side): string[] {
