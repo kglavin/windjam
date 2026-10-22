@@ -18,7 +18,29 @@ describe('the computer player', () => {
     expect(defaultBehaviour('fox', 'blue')).toBe('fox');
     expect(defaultBehaviour('iads', 'blue')).toBe('iads-blue');
     expect(defaultBehaviour('iads', 'red')).toBe('iads-red');
+    expect(defaultBehaviour('deception', 'blue')).toBe('analyst');
+    expect(defaultBehaviour('deception', 'red')).toBe('deceiver');
   });
+
+  it('deceiver and analyst: d02 runs clean with both sides played, the deceiver turns the ruse up and the analyst assesses the south; d04 goes to the deceiver', () => {
+    const d02 = runScript(text('d02-the-ruse-in-the-north.txt')).state;
+    expect(errors(d02)).toEqual([]);
+    const red = computerLines(d02, 'red').map((e) => e.text);
+    expect(red.some((l) => /^> n-div: loud 12/.test(l))).toBe(true);
+    expect(red.some((l) => l === '> n-div: order')).toBe(true);
+    expect(red.some((l) => /move/.test(l))).toBe(false); // no plan to move in d02
+    const blue = computerLines(d02, 'blue').map((e) => e.text);
+    expect(blue.filter((l) => /^> s\d: (sweep|watch)/.test(l)).length).toBeGreaterThan(6);
+    expect(blue.some((l) => /^> assess net 4\d(\.\d)? \w+ at \d+,\d+/.test(l))).toBe(true);
+    expect(blue.at(-1)).toMatch(/^> assess objective south at T\+(6[6-9]|7[0-2])$/);
+    expect(d02.winner).toBe('blue');
+    const d03 = runScript(text('d03-the-hq-that-moves.txt')).state;
+    expect(errors(d03)).toEqual([]);
+    expect(computerLines(d03, 'red').filter((e) => /^> n-div: move/.test(e.text)).length).toBeGreaterThanOrEqual(2);
+    const d04 = runScript(text('d04-company-nets-bought.txt')).state;
+    expect(errors(d04)).toEqual([]);
+    expect(d04.winner).toBe('red');
+  }, 60000);
 
   it('hunt: Blue fixes three Red emitters in mission 1 within the limit, with no rejected order, on three seeds', () => {
     let won = 0;

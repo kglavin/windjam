@@ -7,9 +7,12 @@ import { orderDue } from './orbat';
 
 export function trafficTick(s: MissionState, m: number): void {
   if (!s.profiles) return;
+  // The deceiver's extra orders go out this tick, silence or not.
+  const extra = new Set(s.extraOrders ?? []);
+  s.extraOrders = [];
   for (const net of s.world.nets) {
     const profile = s.profiles[net.id];
-    if (!profile || !net.hubId || !orderDue(profile, m)) continue;
+    if (!profile || !net.hubId || (!orderDue(profile, m) && !extra.has(net.id))) continue;
     const hub = s.world.units.find((u) => u.id === net.hubId);
     if (!hub || hub.radio.powerW <= 0) continue;
     const members = net.memberIds.filter((id) => id !== net.hubId);

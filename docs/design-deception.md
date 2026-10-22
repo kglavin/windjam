@@ -119,7 +119,7 @@ at 50 and the deceiver's score is 100 minus it. `assessment` after the end print
 |---|---|
 | Hour rules: `DECEPTION_RULES` (limit 72, looks per hour, acknowledgement within the hour, movement per hour); the mission kind; status, end and reveal lines | `types.ts`, `mission.ts` |
 | Force generator: templates, placement, profiles, the real and notional forces from the seed and a scenario | `src/engine/mission/orbat.ts` |
-| Traffic: profiles, the ramp, the flow of orders and acknowledgements as bursts; the deceiver's console (`net: profile`, `net: silent`, `net: move`, `net: order`, notional add and drop) | `traffic.ts`, `commands.ts` |
+| Traffic: profiles, the ramp, the flow of orders and acknowledgements as bursts; the deceiver's console (`<net>: silent <h>`, `<net>: loud <h> [factor]`, `<net>: order`, and `<unit>: move` as elsewhere; notional add and drop left out) | `traffic.ts`, `commands.ts` |
 | Collection: sites, watch and df and sweep tasks, operator budgets, the intercept log | `collect.ts` |
 | Association from signals; nets from answering bursts; fixes and their history | `associate.ts` |
 | Assessment grammar and scoring | `deception.ts` |
@@ -138,8 +138,19 @@ at 50 and the deceiver's score is 100 minus it. `assessment` after the end print
 ## 8. Agents
 
 Two briefs: `agents/deceiver.md` and `agents/analyst.md`. The analyst's loop reads the intercept log since its last
-turn, calls `/analyse/predict` and the picture, and posts `assess` lines. The server gains `assessment` in the state
-for the analyst's side.
+turn and the picture, and posts `assess` lines. The server's `GET /state?side=blue` carries `assessment` (the lines
+`assessment` prints, with the score once the game is over).
+
+The computer plays both sides too (`computer.ts`). The deceiver runs the plan: the ruse chatters more each afternoon
+from the second day, an extra order goes down its tree on the last day, and when the scenario's plan says so its HQ
+moves at night. It hears nothing of Blue, so it reacts to the clock. The analyst sweeps for four hours, then has each
+site watch the busiest 8 MHz no other site covers, twelve hours at a time. Every twelve hours from the first day's
+end it assesses from the association: order hour to level (06 division, 07 brigade or recce, 08 battalion, 09
+company or artillery), parent from the acknowledging station, a ruse where a sector's battalions have no company nets
+while another's do, strength as nets heard times 2.4, the objective as the sector that fell silent (six hours after)
+or else the busiest. Measured on seed 1234 with both computers: d02 and d03 the collector wins at 63, d04 the
+deceiver wins at 57 because the bought company nets defeat the analyst's one tell and the single-transmitter tell does
+not survive association at 30 km.
 
 ## 9. Left out
 

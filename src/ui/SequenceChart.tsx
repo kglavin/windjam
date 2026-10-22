@@ -126,7 +126,7 @@ export function SequenceChart({ mission: m, replayMinute, onJump }: Props) {
               <rect x={0} y={y(i) - ROW_H / 2} width={width} height={ROW_H} fill={i === replayMinute ? 'rgba(165, 180, 252, 0.18)' : i % 5 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent'} />
               {i % 5 === 0 && (
                 <text x={LEFT - 6} y={y(i) + 4} textAnchor="end" className="seq-axis">
-                  T+{i}
+                  T+{i}{m.mission === 'deception' ? 'h' : ''}
                 </text>
               )}
             </g>

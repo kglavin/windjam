@@ -1,0 +1,13 @@
+# Scenario d02, the ruse in the north. A notional division talks on 50 MHz and up from the north, one transmitter per
+# net; the real division sits in the south on 40 MHz and up and goes silent at T+66. The computer plays both sides:
+# the deceiver turns the ruse up as the days pass, the analyst tasks the sites, associates and assesses every 12 h.
+# Inspector, Minute tab: the northern acknowledgements all from one place; Fix tab: one emitter per northern net.
+scenario d02
+computer both
+expect blue
+wait 24
+blue> picture
+wait 24
+blue> assessment
+wait 24
+blue> assessment

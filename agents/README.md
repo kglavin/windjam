@@ -113,6 +113,7 @@ Briefs for mission 4 (`--mission uav`), Blue side:
 - [hunt.md](hunt.md): either side in mission 5, UAV hunt (`--mission hunt`, long games: `--turn 10`).
 - [fox.md](fox.md): Blue, the hunter, in the fox-hunt scenarios (`--scenario s11` to `s14`).
 - [iads-blue.md](iads-blue.md) and [iads-red.md](iads-red.md): the air-defence scenarios (`--scenario s15` to `s18`).
+- [analyst.md](analyst.md) and [deceiver.md](deceiver.md): the deception scenarios (`--scenario d01` to `d04`, an hour a tick: `--turn 1`).
 - [staff/es-analyst.md](staff/es-analyst.md), [staff/ew-attack.md](staff/ew-attack.md), [staff/ew-protect.md](staff/ew-protect.md), [staff/ops.md](staff/ops.md): the staff at HQ (roles `es`, `ewa`, `ewp`, `ops`), for any mission with a commander; launch with the staff prompt in [player-prompt.md](player-prompt.md).
 
 Each brief is the whole context a side's agent gets: objective, what it can see, its orders, and tactics worth knowing. Write a new pair for a new mission.

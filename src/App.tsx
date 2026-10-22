@@ -521,7 +521,7 @@ export function App({ chapter, onChapter }: { chapter: 'sandbox' | 'missions'; o
           server={server ? { url: server, ...(serverInfo ?? { turn: 0, turnMin: 0, waitingFor: [], status: 'connecting' }) } : undefined}
           onNewMission={() => startMission(mission.mission, mission.computer ? (Object.keys(mission.computer) as PlayerSide[]) : [])}
           onExit={() => onChapter('sandbox')}
-          onInspectTrack={inspecting ? (trackId) => setInspection({ tab: 'fix', trackId, k: undefined }) : undefined}
+          onInspectTrack={inspecting ? (trackId) => setInspection({ tab: mission.mission === 'deception' ? 'assoc' : 'fix', trackId, k: undefined }) : undefined}
         />
       ) : chapter === 'missions' ? (
         <MissionPicker onStart={startMission} onLoadScript={loadScript} onPlayScript={playScript} />

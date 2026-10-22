@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 import { aliasOf } from '../engine/mission/commands';
+import { assocPictureOf } from '../engine/mission/mission';
+import { axialToOffset, hexRound } from '../engine/hex';
+import { hexDistanceKm } from '../engine/rf';
 import { LESSONS, type Lesson, bearingOrigin, fixBuildUp, minuteEvents, movingFix, movingMinutes, ordersAffecting } from '../engine/mission/inspect';
 import type { MissionState, PlayerSide, Track } from '../engine/mission/types';
 import { type LinkView, type World, netById, unitById } from '../engine/world';
@@ -8,7 +11,7 @@ import { LinkDetail } from './SidePanel';
 // The replay inspector (docs/design-replay-inspector.md): with the replay paused, how the minute's picture came to
 // be. Minute: cause and effect in that minute. Fix: a track's fix built up one bearing at a time (the map follows).
 // Link: a link's budget at that minute and the orders that set the state it uses.
-export type InspectTab = 'minute' | 'fix' | 'link';
+export type InspectTab = 'minute' | 'fix' | 'link' | 'assoc';
 
 export interface Inspection {
   tab: InspectTab;
@@ -102,6 +105,66 @@ function MinuteTab(p: InspectorProps) {
           {v.acks.map((a, i) => <div key={`a${i}`} className="muted">{name(world, a.unitId)} acknowledged order {a.orderN}</div>)}
         </div>
       )}
+    </div>
+  );
+}
+
+// Deception: why the intercepts up to this hour became this emitter and this net, and after the reveal where that
+// went wrong. The picture is association's (docs/design-deception.md D6), so nothing here names a true unit until the
+// mission is over.
+function AssocTab(p: InspectorProps) {
+  const { mission: m, minute, inspection, onChange } = p;
+  const picture = assocPictureOf(m, 'blue', minute);
+  const e = picture.emitters.find((x) => x.id === inspection.trackId) ?? picture.emitters[0];
+  if (!e) return <p className="muted">Nothing associated yet at this hour: the sites have no intercepts.</p>;
+  const net = picture.nets.find((n) => n.emitterIds.includes(e.id));
+  const over = m.status !== 'running';
+  const fixHex = e.fix ? hexRound(e.fix.q, e.fix.r) : undefined;
+  const at = fixHex ? axialToOffset(fixHex) : undefined;
+  const hours = [...new Set(e.orderTicks.map((t) => t % 24))].sort((a, b) => a - b).map((h) => String(h).padStart(2, '0'));
+  // The hour's intercepts on this frequency: events carry the hour they happened in, shown at the next tick.
+  const thisHour = m.events.filter((x): x is Extract<typeof x, { kind: 'capture' }> => x.kind === 'capture' && x.minute === minute - 1 && x.freqMHz !== undefined && Math.abs(x.freqMHz - e.freqMHz) < 0.05);
+  // After the reveal: the nearest true station on this frequency.
+  const onFreq = over ? m.world.units.filter((u) => u.side === 'red' && m.world.nets.some((n) => n.memberIds.includes(u.id) && Math.abs(n.freqMHz - e.freqMHz) < 0.05)) : [];
+  const nearest = fixHex && onFreq.length ? onFreq.map((u) => ({ u, km: hexDistanceKm(m.world.map, fixHex, u.pos) })).sort((a, b) => a.km - b.km)[0] : undefined;
+  const hubOf = net?.hubId ? picture.emitters.find((x) => x.id === net.hubId) : undefined;
+  const parent = net?.parentNetId ? picture.nets.find((n) => n.id === net.parentNetId) : undefined;
+  return (
+    <div>
+      <div className="inspector-row">
+        <label>
+          Emitter{' '}
+          <select value={e.id} onChange={(ev) => onChange({ ...inspection, trackId: ev.target.value })}>
+            {picture.emitters.map((x) => <option key={x.id} value={x.id}>{x.id} · {x.signature}{x.fix ? '' : ' (no fix)'}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="inspector-block">
+        <h3>{e.id}: one emitter from {e.sites.length} site{e.sites.length === 1 ? '' : 's'}</h3>
+        <p className="muted">
+          Each site's bearings on {e.signature} were grouped by direction; groups from different sites heard in the same hours, whose lines cross, are one emitter. {e.sites.length === 1 ? 'One site heard this direction and no other site matched it: a wedge, no fix.' : 'The fix is where the lines cross, weighted by each line\'s σ.'}
+        </p>
+        {e.lines.map((l, i) => <div key={i}>{aliasOf(e.sites[i])}: {l.bearingDeg.toFixed(0)}° ± {l.sigmaDeg.toFixed(1)}°</div>)}
+        <div>{e.intercepts} intercepts T+{e.firstTick}–T+{e.lastTick}: {e.orders} orders, {e.acks} acknowledgements, {e.chatter} chatter{hours.length ? ` · orders at ${hours.join(', ')}` : ''}</div>
+        {at && e.fix && <div>fix near {at.col},{at.row}, CEP {e.fix.cepKm.toFixed(1)} km</div>}
+        {over && (nearest ? <div className={nearest.km <= 3 ? '' : 'muted'}>The truth: nearest station on this frequency is {nearest.u.name}, {nearest.km.toFixed(1)} km from the fix{nearest.km > 3 ? ': the lines crossed away from any station, a pairing across sites that was wrong' : ''}.</div> : <div className="muted">The truth: {onFreq.length ? `${onFreq.length} stations on this frequency, no fix to compare` : 'no Red station on this frequency'}.</div>)}
+      </div>
+      {net && (
+        <div className="inspector-block">
+          <h3>{net.id}: the net on {net.freqMHz} MHz</h3>
+          <div>{net.emitterIds.length} station{net.emitterIds.length === 1 ? '' : 's'}: {net.emitterIds.join(', ')}</div>
+          <div>hub: {hubOf ? `${hubOf.id}, the station that sends the orders (${hubOf.orders})` : 'none heard sending orders'}</div>
+          <div>parent: {parent ? `${parent.id} (${parent.freqMHz} MHz): a station on it acknowledges from the hub's fix and its orders come earlier in the day` : 'none: no net has an acknowledging station at this hub\'s fix with earlier orders'}</div>
+          {net.singleStation && <div>tell: every acknowledgement came from the hub's own place. One transmitter playing a net, or stations too close to separate at this range.</div>}
+        </div>
+      )}
+      <div className="inspector-block">
+        <h3>Intercepts on {e.freqMHz} MHz between T+{minute - 1} and T+{minute}</h3>
+        {thisHour.length === 0 && <p className="muted">None this hour.</p>}
+        {thisHour.slice(0, 12).map((c, i) => <div key={i} className="muted">{aliasOf(c.sensorId)}: {c.bearingDeg.toFixed(0)}° ± {c.sigmaDeg.toFixed(1)}°, {c.what}</div>)}
+        {thisHour.length > 12 && <div className="muted">and {thisHour.length - 12} more</div>}
+      </div>
+      <LessonLinks keys={['bearing', 'two', 'more']} onLesson={p.onLesson} />
     </div>
   );
 }
@@ -215,10 +278,12 @@ function LinkTab(p: InspectorProps) {
 }
 
 export function Inspector(p: InspectorProps) {
+  const deception = p.mission.mission === 'deception';
   const tabs: { id: InspectTab; label: string }[] = [
-    { id: 'minute', label: `Minute T+${p.minute}` },
+    { id: 'minute', label: `${deception ? 'Hour' : 'Minute'} T+${p.minute}` },
     { id: 'fix', label: 'Fix' },
     { id: 'link', label: 'Link' },
+    ...(deception ? [{ id: 'assoc' as const, label: 'Association' }] : []),
   ];
   return (
     <div className="inspector">
@@ -232,6 +297,7 @@ export function Inspector(p: InspectorProps) {
         {p.inspection.tab === 'minute' && <MinuteTab {...p} />}
         {p.inspection.tab === 'fix' && <FixTab {...p} />}
         {p.inspection.tab === 'link' && <LinkTab {...p} />}
+        {p.inspection.tab === 'assoc' && <AssocTab {...p} />}
       </div>
     </div>
   );

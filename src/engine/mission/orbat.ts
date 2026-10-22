@@ -27,6 +27,8 @@ export interface Profile {
   silentFrom?: number; // tick from which the net sends nothing
   notional?: boolean; // one transmitter plays the whole net
   notionalMembers?: number; // how many stations beyond its real members it pretends to have
+  silentUntil?: number; // the deceiver's word: nothing until this tick
+  loud?: { until: number; factor: number }; // the deceiver's word: chatter multiplied until this tick
 }
 
 export interface Force {
@@ -61,7 +63,7 @@ const ORDER_HOURS: Record<Level, number[]> = { division: [6, 18], brigade: [7, 1
 
 export interface ForceSpec {
   side: Side;
-  prefix: string; // unit ids: `${prefix}-...`
+  prefix: string; // unit ids: `${prefix}-...`; starts with the side's letter and a dash (r, or r-n for a second Red force)
   name: string; // "Red" in unit names
   centre: { col: number; row: number }; // reference grid
   notional?: boolean; // the whole force is a ruse: nets with one transmitter each
@@ -88,7 +90,7 @@ export function generateForce(seed: number, spec: ForceSpec): Force {
     return { col: r1(c.col + km * Math.cos(a) + jitter(1)), row: r1(c.row + km * Math.sin(a) + jitter(1)) };
   };
   const add = (id: string, name: string, level: Level, at: { col: number; row: number }, parent?: string): OrbatNode => {
-    const node: OrbatNode = { id, name, level, parent, netId: `${spec.side}-${id.slice(spec.prefix.length + 1)}`, notional, col: at.col, row: at.row };
+    const node: OrbatNode = { id, name, level, parent, netId: `${spec.side}-${id.slice(2)}`, notional, col: at.col, row: at.row };
     nodes.push(node);
     units.push({ id, name, side: spec.side, kind: KIND[level], col: at.col, row: at.row, highGround: level === 'battalion' || level === 'artillery' });
     return node;
@@ -115,8 +117,12 @@ export function generateForce(seed: number, spec: ForceSpec): Force {
         const coys: OrbatNode[] = [];
         for (let c = 1; c <= 3; c++) coys.push(add(`${p}-b${b}-${n}-${c}`, `${spec.name} ${b}/${n}/${c} Company`, 'company', around(bn, SPREAD.company, c - 1, 3), bn.id));
         net(bn, coys.map((x) => x.id));
-        // A company net: its two platoon radios.
+        // A company net: its two platoon radios. A notional company is one transmitter playing both.
         for (const coy of coys) {
+          if (notional) {
+            net(coy, []);
+            continue;
+          }
           const platoons = [1, 2].map((k) => {
             const at = around(coy, 0.6, k - 1, 2);
             const id = `${coy.id}p${k}`;
@@ -159,13 +165,15 @@ export function generateForce(seed: number, spec: ForceSpec): Force {
 // The chatter duty of a net at a tick (an hour): its curve at that hour of day times the day's ramp, zero once silent.
 export function dutyAt(profile: Profile, tick: number): number {
   if (profile.silentFrom !== undefined && tick >= profile.silentFrom) return 0;
+  if (profile.silentUntil !== undefined && tick < profile.silentUntil) return 0;
   const day = Math.min(profile.ramp.length - 1, Math.floor(tick / 24));
-  return Math.min(0.95, profile.duty[tick % 24] * profile.ramp[day]);
+  const loud = profile.loud && tick < profile.loud.until ? profile.loud.factor : 1;
+  return Math.min(0.95, profile.duty[tick % 24] * profile.ramp[day] * loud);
 }
 
 // Does this net's hub send an order in this tick?
 export const orderDue = (profile: Profile, tick: number): boolean =>
-  (profile.silentFrom === undefined || tick < profile.silentFrom) && profile.orderHours.includes(tick % 24);
+  (profile.silentFrom === undefined || tick < profile.silentFrom) && (profile.silentUntil === undefined || tick >= profile.silentUntil) && profile.orderHours.includes(tick % 24);
 
 // The notional tells, for the reveal: what the ruse could not afford.
 export function tells(force: Force): string[] {

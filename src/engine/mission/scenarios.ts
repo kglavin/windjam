@@ -17,7 +17,7 @@ export interface Scenario {
   humans?: PlayerSide[]; // consoles; absent: the mission's default
   emcon?: Record<string, number>; // chatter duty per net at the start
   playToEnd?: boolean; // no early win: every scripted step happens before the result is read
-  deception?: { profiles: Force['profiles']; orbat: Force['nodes']; sectors: Sector[]; objective?: { sector: string; tick: number } }; // the deception mission's traffic, true tree, sectors and real operation
+  deception?: { profiles: Force['profiles']; orbat: Force['nodes']; sectors: Sector[]; objective?: { sector: string; tick: number }; plan?: { moveHqKm?: number } }; // the deception mission's traffic, true tree, sectors, real operation and the deceiver's plan
 }
 
 // The standard forces cut down to the units named (nets keep the members that remain).
@@ -98,7 +98,7 @@ export const SECTORS: Sector[] = [
   { id: 'centre', rowLo: 60, rowHi: 100 },
   { id: 'south', rowLo: 100, rowHi: 1000 },
 ];
-const deceptionScenario = (id: string, title: string, blurb: string, watch: string, forces: Force[], objective?: { sector: string; tick: number }): Scenario => ({
+const deceptionScenario = (id: string, title: string, blurb: string, watch: string, forces: Force[], objective?: { sector: string; tick: number }, plan?: { moveHqKm?: number }): Scenario => ({
   id,
   title,
   blurb,
@@ -106,9 +106,13 @@ const deceptionScenario = (id: string, title: string, blurb: string, watch: stri
   mission: 'deception',
   seed: 1234,
   forces: { units: [...COLLECTOR.units, ...forces.flatMap((f) => f.units)], nets: [...COLLECTOR.nets, ...forces.flatMap((f) => f.nets)] },
-  deception: { profiles: Object.assign({}, ...forces.map((f) => f.profiles)), orbat: forces.flatMap((f) => f.nodes), sectors: SECTORS, objective },
+  deception: { profiles: Object.assign({}, ...forces.map((f) => f.profiles)), orbat: forces.flatMap((f) => f.nodes), sectors: SECTORS, objective, plan },
 });
 const REAL_DIVISION = generateForce(1234, { side: 'red', prefix: 'r', name: 'Red', centre: { col: 44, row: 10 }, ramp: [0.7, 1, 1.4], silentFrom: 66, freqMHz: 40 });
+// The ruse (d02-d04): a notional division in the north on 50 MHz and up, the real one in the south on 40 MHz and up.
+const REAL_SOUTH = generateForce(1234, { side: 'red', prefix: 'r', name: 'Red', centre: { col: 44, row: 30 }, ramp: [0.7, 1, 1.4], silentFrom: 66, freqMHz: 40 });
+const NOTIONAL_NORTH = (companies: boolean) => generateForce(1234, { side: 'red', prefix: 'r-n', name: 'Red N', notional: true, companies, centre: { col: 44, row: -20 }, ramp: [0.7, 1, 1.4], freqMHz: 50 });
+const RUSE_WATCH = 'Minute tab: the ruse\'s acknowledgements all from one place; Fix tab: one transmitter per net in the north; the real force\'s companies in the south.';
 
 export const SCENARIOS: Scenario[] = [
   {
@@ -210,6 +214,9 @@ export const SCENARIOS: Scenario[] = [
   { id: 's16', playToEnd: true, title: 'Cut the reports', blurb: 'Blue jams the track-report net once the fire control node is fixed; Red raises radar power.', watch: 'Link tab: report links late then lost; Red\'s power order beside its effect; Minute tab: engagements missed.', mission: 'iads', seed: 1234, forces: iadsForces() },
   { id: 's17', playToEnd: true, title: 'Cut the orders', blurb: 'Blue jams the fire-order net; Red moves a launcher to high ground.', watch: 'Link tab: the path losses that decide which launcher the jammer reaches; the order verdict per launcher.', mission: 'iads', seed: 1234, forces: iadsForces() },
   deceptionScenario('d01', 'A real division', 'A real division east of the water talks for three days, ramping toward an operation and falling silent six hours before it. Blue listens from three sites.', 'Minute tab by the hour: the daily curve, the orders at 6 and 18 going down the tree; Fix tab: 42 nets fixed from three sites; the silence from T+66.', [REAL_DIVISION], { sector: 'centre', tick: 72 }),
+  deceptionScenario('d02', 'The ruse in the north', 'A notional division talks in the north on one transmitter per net while the real one sits in the south. Blue must say which is real, and where the blow falls.', RUSE_WATCH, [NOTIONAL_NORTH(false), REAL_SOUTH], { sector: 'south', tick: 72 }),
+  deceptionScenario('d03', 'The HQ that moves', 'The ruse in the north, and its division HQ moves a few kilometres each night as a real one would.', `${RUSE_WATCH} Fix tab on the northern 50 MHz hub: the fix drifts night by night.`, [NOTIONAL_NORTH(false), REAL_SOUTH], { sector: 'south', tick: 72 }, { moveHqKm: 3 }),
+  deceptionScenario('d04', 'Company nets bought', 'The ruse in the north with company nets of its own, so the tree looks complete; only the single transmitter per net remains to tell.', `${RUSE_WATCH} Both trees have orders at 09: compare station counts and places instead.`, [NOTIONAL_NORTH(true), REAL_SOUTH], { sector: 'south', tick: 72 }),
   { id: 's18', playToEnd: true, title: 'Decoy radar', blurb: 'A Red decoy emits the track net\'s signature 6 km from the real node; Blue fixes it first, then jams the net.', watch: 'Fix tab: the tightest 47 MHz track is the EW team transmitting a decoy; Link tab: a report leg under jamming.', mission: 'iads', seed: 1234, forces: iadsForces(true) },
 ];
 

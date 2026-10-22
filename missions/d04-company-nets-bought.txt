@@ -1,0 +1,12 @@
+# Scenario d04, company nets bought. The ruse in the north pays for company nets, so its tree has orders at 09 like
+# the real one. Only the single transmitter per net is left to tell them apart. The computer plays both sides.
+# Inspector, Minute tab at 09: both trees send company orders; Fix tab: the northern stations sit on their hubs.
+scenario d04
+computer both
+expect red
+wait 24
+blue> picture
+wait 24
+blue> assessment
+wait 24
+blue> assessment

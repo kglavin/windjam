@@ -33,6 +33,8 @@ export type MissionCommand =
   | { type: 'assess'; what: 'strength'; sector: string; radios: number }
   | { type: 'assess'; what: 'objective'; sector: string; at: number }
   | { type: 'assessment' } // show the assessment and, after the game, its score
+  // Deception, Red: shape a net's traffic. silent and loud run for hours from now; order sends one down the net next tick.
+  | { type: 'traffic'; netId: string; action: 'silent' | 'loud' | 'order'; hours?: number; factor?: number }
   | { type: 'move'; unitId: string; to: Hex }
   | { type: 'sortie'; unitId: string; legs: SortieLeg[] } // drone: fly the plan silent, DF on each leg, hand everything over on return
   | { type: 'stop'; unitId: string }
@@ -246,6 +248,8 @@ export interface MissionState {
   sectors?: Sector[];
   objective?: { sector: string; tick: number }; // the real operation: where and when
   assessment?: Assessment; // Blue's, scored at the end
+  extraOrders?: string[]; // nets whose hub sends an order next tick, on the deceiver's word
+  plan?: { moveHqKm?: number }; // the deceiver's plan (computer): how far the ruse's HQ moves each night
   iads?: IadsState;
   actor?: PlayerSide; // transient: which side's console current log lines belong to
 }

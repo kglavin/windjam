@@ -21,6 +21,21 @@ function props(minute?: number): InspectorProps {
 }
 
 describe('Inspector', () => {
+  it('Association (deception): why intercepts became an emitter and a net, and after the reveal the nearest true station', () => {
+    const done = issue(runScript(text('d01-a-real-division.txt')).state, { type: 'reveal' }, 'blue');
+    const m = { ...done, replay: { minute: 30 } };
+    const view = viewOf(m, 'blue', false);
+    const p: InspectorProps = { mission: m, minute: 30, side: 'blue', umpire: false, world: view.truth, tracks: view.tracks, linkViews: [], inspection: { tab: 'assoc' }, onChange: noop, onLesson: noop };
+    const html = renderToString(createElement(Inspector, p));
+    expect(html).toContain('Hour T+30');
+    expect(html).toContain('Association');
+    expect(html).toMatch(/A1: one emitter from \d sites?/);
+    expect(html).toMatch(/s\d: \d+° ± [\d.]+°/);
+    expect(html).toMatch(/N1: the net on 40 MHz/);
+    expect(html).toMatch(/The truth: nearest station on this frequency is Red/);
+    expect(html).toContain('Intercepts on 40 MHz between T+29 and T+30');
+  });
+
   it('Minute: lists what was transmitted, heard and made of it in a minute with captures', () => {
     const p = props();
     const minute = p.mission.events.find((e) => e.kind === 'capture')!.minute + 1;

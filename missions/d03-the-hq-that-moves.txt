@@ -1,0 +1,12 @@
+# Scenario d03, the HQ that moves. The ruse in the north as in d02, and the deceiver moves the notional division HQ
+# three kilometres each night, as a real one would. The computer plays both sides.
+# Inspector, Fix tab on the northern 50 MHz hub: bearings from before and after the move disagree; the fix drifts.
+scenario d03
+computer both
+expect blue
+wait 24
+blue> picture
+wait 24
+blue> assessment
+wait 24
+blue> assessment

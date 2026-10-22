@@ -21,7 +21,8 @@ import { join } from 'node:path';
 import { analyseCoverage, analyseDetect, analyseExposure, analyseFix, analyseJs, analyseLink, analysePath, analysePredict, type HypothesisParams, type Pos } from '../src/engine/mission/analyse';
 import { analysisCounts } from '../src/engine/mission/c2stats';
 import { HELP, UNIT_ALIASES, knownIdsOf, parseCommand } from '../src/engine/mission/commands';
-import { createMission, enableC2, inbox, issue, pictureLines, reportNow, statusLines, unitStatusLines, visibleLog, visibleLogFor } from '../src/engine/mission/mission';
+import { createMission, enableC2, inbox, issue, pictureLines, reportNow, scoreOf, statusLines, unitStatusLines, visibleLog, visibleLogFor } from '../src/engine/mission/mission';
+import { assessmentLines, scoreLines } from '../src/engine/mission/deception';
 import type { JammerMode, UnitKind } from '../src/engine/units';
 import type { LogEntry, MissionKind, MissionState, OrderMessage, PlayerSide } from '../src/engine/mission/types';
 import { SCENARIOS, scenarioById } from '../src/engine/mission/scenarios';
@@ -262,7 +263,7 @@ function post(g: Game, side: PlayerSide, text: string): { accepted: string[]; re
     const line = raw.replace(/#.*$/, '').trim().replace(/^(blue|red)>\s*/i, '');
     if (!line) continue;
     if (/^(mission|expect|rejects|seed)\s+\S+$/i.test(line)) continue;
-    if (g.state.status !== 'running' && !/^(status|picture|help|reveal|next|step|back|exit)$/i.test(line)) {
+    if (g.state.status !== 'running' && !/^(status|picture|help|reveal|next|step|back|exit|assessment|intercepts(\s+\d+)?)$/i.test(line)) {
       rejected.push(`${line}: the mission is over`);
       continue;
     }
@@ -496,7 +497,10 @@ const server = createServer(async (req, res) => {
       const c = consoleSince(game, side, after);
       // The staff the commander has tasked this turn and last, answered or not.
       const staff = game.staff.filter((t) => t.side === side && t.turn >= game.turn - 1).map(({ id, role, question, answer, turn }) => ({ id, role, question, ...(answer !== undefined ? { answer } : {}), turn }));
-      return send(res, 200, { ...summary(game, side), console: c.lines, cursor: c.cursor, status_lines: statusLines(game.state, side), picture: pictureLines(game.state, side), staff });
+      // The deception mission: the collector's assessment so far, and its score once the game is over.
+      const st = game.state;
+      const assessment = st.mission === 'deception' && side === 'blue' ? [...assessmentLines(st.assessment ?? { nets: [], strength: [] }, st.sectors ?? []), ...(st.status !== 'running' ? scoreLines(scoreOf(st)) : [])] : undefined;
+      return send(res, 200, { ...summary(game, side), console: c.lines, cursor: c.cursor, status_lines: statusLines(st, side), picture: pictureLines(st, side), staff, ...(assessment ? { assessment } : {}) });
     }
     if (req.method === 'GET' && url.pathname === '/help') {
       const side = sideOf(q);

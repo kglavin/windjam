@@ -11,9 +11,13 @@ import { canEnter } from '../terrain';
 import type { Unit } from '../units';
 import { unitAt } from '../world';
 import { aliasOf, netAliasOf } from './commands';
+import { type AssocPicture, associate, interceptsOf } from './associate';
+import { sectorOf } from './deception';
+import type { Level } from './orbat';
+import { DECEPTION_RULES as DEC } from './types';
 import { MISSION_RULES as R, type MissionKind, type MissionState, type PlayerSide, type Track } from './types';
 
-export type Behaviour = 'hunt' | 'command' | 'fox' | 'iads-blue' | 'iads-red';
+export type Behaviour = 'hunt' | 'command' | 'fox' | 'iads-blue' | 'iads-red' | 'deceiver' | 'analyst';
 
 export interface ComputerSide {
   behaviour: Behaviour;
@@ -21,17 +25,18 @@ export interface ComputerSide {
   memory: Record<string, unknown>;
 }
 
-export const BEHAVIOURS: Behaviour[] = ['hunt', 'command', 'fox', 'iads-blue', 'iads-red'];
+export const BEHAVIOURS: Behaviour[] = ['hunt', 'command', 'fox', 'iads-blue', 'iads-red', 'deceiver', 'analyst'];
 
 // The behaviour a side plays by default in a mission kind.
 export function defaultBehaviour(mission: MissionKind, side: PlayerSide): Behaviour {
   if (mission === 'iads') return side === 'blue' ? 'iads-blue' : 'iads-red';
+  if (mission === 'deception') return side === 'blue' ? 'analyst' : 'deceiver';
   if (mission === 'fox') return side === 'blue' ? 'fox' : 'command';
   return side === 'blue' ? 'hunt' : 'command';
 }
 
-// One person on a fox hunt acts the minute a listen ends; a staff acts by the turn.
-export const computerSide = (behaviour: Behaviour, turnMin = behaviour === 'fox' ? 1 : 5): ComputerSide => ({ behaviour, turnMin, memory: {} });
+// One person on a fox hunt acts the minute a listen ends; a staff acts by the turn; the deception sides act every hour.
+export const computerSide = (behaviour: Behaviour, turnMin = behaviour === 'fox' || behaviour === 'deceiver' || behaviour === 'analyst' ? 1 : 5): ComputerSide => ({ behaviour, turnMin, memory: {} });
 
 // --- Helpers: what the side knows ---------------------------------------------------------------------------------
 
@@ -337,6 +342,154 @@ function iadsRed(s: MissionState, side: PlayerSide, mem: IadsRedMemory): string[
   return lines;
 }
 
+// --- Deception: the deceiver -------------------------------------------------------------------------------------
+
+interface DeceiverMemory {
+  moved: Record<string, number>; // the day the ruse's HQ last moved
+  loud: Record<number, boolean>; // the days the ruse was turned up
+  ordered: Record<number, boolean>;
+}
+
+// The deceiver runs the plan (docs/design-deception.md section 8): the ruse chatters more as the operation nears, an
+// extra order goes down its tree each afternoon of the last day, and when the plan says so its HQ moves at night the
+// way a real one would. It hears nothing of Blue, so it reacts to the clock, not to being found.
+function deceiver(s: MissionState, side: PlayerSide, mem: DeceiverMemory): string[] {
+  mem.moved ??= {};
+  mem.loud ??= {};
+  mem.ordered ??= {};
+  const lines: string[] = [];
+  const hour = s.minute % 24;
+  const day = Math.floor(s.minute / 24);
+  const orbat = s.orbat ?? [];
+  const roots = orbat.filter((n) => n.notional && !n.parent);
+  for (const root of roots) {
+    const unit = own(s, side).find((u) => u.id === root.id);
+    if (!unit) continue;
+    const under = orbat.filter((n) => n.parent === root.id);
+    if (hour === 2 && s.plan?.moveHqKm && mem.moved[root.id] !== day && idle(s, unit)) {
+      // North one night, south the next: the HQ stays in its sector and keeps its distance from the sites.
+      const line = moveLine(s, unit, hexAlong(s, unit.pos, day % 2 === 0 ? 0 : 180, s.plan.moveHqKm));
+      if (line) {
+        lines.push(line);
+        mem.moved[root.id] = day;
+      }
+    }
+    if (hour === 12 && day >= 1 && !mem.loud[day]) {
+      mem.loud[day] = true;
+      for (const n of [root, ...under]) lines.push(`${netAliasOf(n.netId)}: loud 12 ${day >= 2 ? 2 : 1.5}`);
+    }
+    if (hour === 15 && day >= 2 && !mem.ordered[day]) {
+      mem.ordered[day] = true;
+      lines.push(`${netAliasOf(root.netId)}: order`);
+      for (const n of under.filter((x) => x.level === 'brigade')) lines.push(`${netAliasOf(n.netId)}: order`);
+    }
+  }
+  return lines;
+}
+
+// --- Deception: the analyst --------------------------------------------------------------------------------------
+
+interface AnalystMemory {
+  assessedAt?: number;
+}
+
+const RADIOS_PER_NET = 2.4; // what a net heard stands for: a real division has 102 radios on 42 nets
+
+// The analyst tasks the sites and reads the picture (docs/design-deception.md section 8). Tasking: a sweep first,
+// then each site watches the busiest 8 MHz no other site covers. Every twelve hours from the first day's end it
+// assesses from the association: the hour of a net's orders gives its level, the parent comes from the acknowledging
+// station, a ruse is a sector whose battalions have no company nets under them while another sector's do. Strength
+// is nets times what a net stands for; the objective is the sector that fell silent (six hours after), else the one
+// with most real nets, at the end.
+function analyst(s: MissionState, side: PlayerSide, mem: AnalystMemory): string[] {
+  const lines: string[] = [];
+  const sites = own(s, side).filter((u) => u.kind === 'squad');
+  const captures = s.events.filter((e) => e.kind === 'capture' && e.freqMHz !== undefined && sites.some((u) => u.id === e.sensorId)) as Extract<MissionState['events'][number], { kind: 'capture' }>[];
+  // Tasking.
+  const covered: [number, number][] = sites.filter((u) => !idle(s, u)).map((u) => s.orders[u.id]).filter((o): o is Extract<NonNullable<typeof o>, { kind: 'watch' }> => o?.kind === 'watch').map((o) => [o.loMHz, o.hiMHz]);
+  for (const site of sites) {
+    if (!idle(s, site)) continue;
+    if (captures.length < 20) {
+      lines.push(`${aliasOf(site.id)}: sweep 4`);
+      continue;
+    }
+    let best: { lo: number; score: number } | undefined;
+    for (let lo = DEC.bandMHz[0]; lo + DEC.watchMHz <= DEC.bandMHz[1]; lo += 1) {
+      const hi = lo + DEC.watchMHz;
+      const inBand = captures.filter((c) => c.freqMHz! >= lo && c.freqMHz! < hi);
+      const score = inBand.filter((c) => !covered.some(([a, b]) => c.freqMHz! >= a && c.freqMHz! < b)).length;
+      if (!best || score > best.score) best = { lo, score };
+    }
+    if (best && best.score > 0) {
+      lines.push(`${aliasOf(site.id)}: watch ${best.lo}-${best.lo + DEC.watchMHz} 12`);
+      covered.push([best.lo, best.lo + DEC.watchMHz]);
+    } else lines.push(`${aliasOf(site.id)}: sweep 4`);
+  }
+  // Assessment.
+  const due = (s.minute >= 24 && s.minute % 12 === 0) || s.minute === s.limitMin - 1;
+  if (!due || mem.assessedAt === s.minute || !s.sectors) return lines;
+  mem.assessedAt = s.minute;
+  const sectors = s.sectors;
+  const p = associate(s.world.map, interceptsOf(s.events, new Set(sites.map((u) => u.id)), (id) => s.world.units.find((u) => u.id === id)?.pos));
+  const hubOf = (n: AssocPicture['nets'][number]) => p.emitters.find((e) => e.id === n.hubId);
+  const hourOf = (n: AssocPicture['nets'][number]) => (n.orderTicks.length ? Math.min(...n.orderTicks.map((t) => t % 24)) : undefined);
+  const children = (n: AssocPicture['nets'][number]) => p.nets.filter((x) => x.parentNetId === n.id);
+  const levelOf = (n: AssocPicture['nets'][number]): Level | undefined => {
+    const h = hourOf(n);
+    if (h === undefined) return undefined;
+    if (h <= 6) return 'division';
+    if (h === 7) return children(n).length ? 'brigade' : 'recce';
+    if (h === 8) return 'battalion';
+    return n.emitterIds.length >= 3 ? 'artillery' : 'company';
+  };
+  // Where a net sits: its hub's fix, else any fixed station's. Off the map (a bad crossing) counts as unplaced.
+  const placeOf = (n: AssocPicture['nets'][number]): Hex | undefined => {
+    const fixed = [hubOf(n), ...n.emitterIds.map((id) => p.emitters.find((x) => x.id === id))].filter((e) => e?.fix);
+    const f = fixed[0]?.fix;
+    if (!f) return undefined;
+    const h = hexRound(f.q, f.r);
+    return inBounds(s.world.map, h) ? h : undefined;
+  };
+  const sectorOfNet = (n: AssocPicture['nets'][number]) => {
+    const h = placeOf(n);
+    return h ? sectorOf(sectors, axialToOffset(h).row)?.id : undefined;
+  };
+  // The ruse: a sector whose battalions have no company nets (a lone one is its artillery) while another sector's do.
+  const bySector: Record<string, { nets: AssocPicture['nets'][number][]; bn: number; coy: number; last: number }> = Object.fromEntries(sectors.map((x) => [x.id, { nets: [], bn: 0, coy: 0, last: -1 }]));
+  for (const n of p.nets) {
+    const sec = sectorOfNet(n);
+    if (!sec) continue;
+    const b = bySector[sec];
+    b.nets.push(n);
+    const lv = levelOf(n);
+    if (lv === 'battalion') b.bn++;
+    if (lv === 'company') b.coy++;
+    for (const id of n.emitterIds) b.last = Math.max(b.last, p.emitters.find((x) => x.id === id)?.lastTick ?? -1);
+  }
+  const companiesSeen = Object.values(bySector).some((b) => b.coy >= 5);
+  const ruseSectors = new Set(Object.entries(bySector).filter(([, b]) => companiesSeen && b.bn >= 2 && b.coy <= 1).map(([id]) => id));
+  const ruse = (n: AssocPicture['nets'][number]) => {
+    const sec = sectorOfNet(n);
+    return !!sec && ruseSectors.has(sec);
+  };
+  for (const n of p.nets) {
+    const hub = hubOf(n);
+    const lv = levelOf(n);
+    if (!hub?.fix || !lv || ruse(n)) continue;
+    const h = hexRound(hub.fix.q, hub.fix.r);
+    if (!inBounds(s.world.map, h)) continue;
+    const { col, row } = axialToOffset(h);
+    const parent = n.parentNetId ? p.nets.find((x) => x.id === n.parentNetId) : undefined;
+    lines.push(`assess net ${n.freqMHz} ${lv} at ${col},${row}${parent ? ` under ${parent.freqMHz}` : ''}`);
+  }
+  for (const sec of sectors) lines.push(`assess strength ${sec.id} ${ruseSectors.has(sec.id) ? 0 : Math.round(bySector[sec.id].nets.length * RADIOS_PER_NET)}`);
+  const real = sectors.map((x) => x.id).filter((id) => !ruseSectors.has(id) && bySector[id].nets.length > 0);
+  const quiet = real.filter((id) => s.minute - bySector[id].last >= 2 && bySector[id].nets.length >= 5);
+  const target = quiet[0] ?? real.sort((a, b) => bySector[b].nets.length - bySector[a].nets.length)[0];
+  if (target) lines.push(`assess objective ${target} at T+${quiet.includes(target) ? bySector[target].last + 6 : s.limitMin}`);
+  return lines;
+}
+
 // --- The turn ----------------------------------------------------------------------------------------------------
 
 // The console lines a computer side gives at the start of this turn.
@@ -355,5 +508,9 @@ export function computerTurn(s: MissionState, side: PlayerSide): string[] {
       return iadsBlue(s, side, mem as unknown as IadsBlueMemory, c.turnMin);
     case 'iads-red':
       return iadsRed(s, side, mem as unknown as IadsRedMemory);
+    case 'deceiver':
+      return deceiver(s, side, mem as unknown as DeceiverMemory);
+    case 'analyst':
+      return analyst(s, side, mem as AnalystMemory);
   }
 }

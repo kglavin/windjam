@@ -105,6 +105,7 @@ export const HELP: Record<PlayerSide, string[]> = {
     'emcon <net> <percent>              background chatter on a net, 0-20 percent of minutes',
     "<unit>: power <watts>              transmit power, up to the radio's maximum",
     '<net>: waveform fixed|slow|fast|dsss',
+    '<net>: silent 6  ·  <net>: loud 12 [factor]  ·  <net>: order   deception: a net says nothing for hours, chatters more for hours (twice by default), or sends an order down the net next hour',
     '<unit>: antenna toward <unit>      directional antenna, HQ and relay only; <unit>: antenna omni to undo',
     "ew: decoy <net>  ·  ew: decoy off  transmit a net's signature from where the EW team stands",
     "ew: jam <net> [mode]  ·  ew: jam off   jam Blue's net: spot (default), barrage, partial, pulse, follower or sync (holds Blue's reports; the jammer itself is loud)",
@@ -189,6 +190,18 @@ export function parseCommand(input: string, side: PlayerSide = 'blue', known?: K
     const netId = netIdFor(side, first, known);
     if (!netId) return { ok: false, error: `Unknown net "${first}"` };
     return { ok: true, command: { type: 'waveform', netId, waveform: wf } };
+  }
+
+  // <net>: silent | loud | order (deception, the deceiver)
+  if ((rest[0] === 'silent' || rest[0] === 'loud' || rest[0] === 'order') && (nets[first] || !units[first])) {
+    const netId = netIdFor(side, first, known);
+    if (!netId) return { ok: false, error: `Unknown net "${first}"` };
+    if (rest[0] === 'order') return { ok: true, command: { type: 'traffic', netId, action: 'order' } };
+    const hours = Number(rest[1]);
+    if (!(hours > 0) || !Number.isInteger(hours)) return { ok: false, error: `${rest[0]} needs whole hours, e.g. ${first}: ${rest[0]} 6` };
+    const factor = rest[0] === 'loud' && rest[2] !== undefined ? Number(rest[2]) : undefined;
+    if (factor !== undefined && !(factor > 0)) return { ok: false, error: 'loud takes a factor above 0, e.g. loud 12 1.5' };
+    return { ok: true, command: { type: 'traffic', netId, action: rest[0], hours, factor } };
   }
 
   const unitId = unitIdFor(side, first, known);

@@ -32,18 +32,19 @@ export function ReplayBar({ mission: m, playing, speed, onMove, onJump, onPlay, 
   }
   const at = m.replay.minute;
   const atEnd = at >= last;
+  const unit = m.mission === 'deception' ? 'hour' : 'minute';
   return (
     <div className="replay-bar">
       <button title="To T+0" onClick={() => onMove('start')} disabled={at === 0}>
         ⏮
       </button>
-      <button title="Back one minute" onClick={() => onMove('back')} disabled={at === 0}>
+      <button title={`Back one ${unit}`} onClick={() => onMove('back')} disabled={at === 0}>
         ◀
       </button>
       <button className={playing ? 'active' : ''} title={playing ? 'Pause' : 'Play'} onClick={() => onPlay(!playing)} disabled={atEnd && !playing}>
         {playing ? '⏸' : '▶'}
       </button>
-      <button title="Forward one minute" onClick={() => onMove('step')} disabled={atEnd}>
+      <button title={`Forward one ${unit}`} onClick={() => onMove('step')} disabled={atEnd}>
         ▶|
       </button>
       <button title="Next event" onClick={() => onMove('next')} disabled={atEnd}>
@@ -51,7 +52,7 @@ export function ReplayBar({ mission: m, playing, speed, onMove, onJump, onPlay, 
       </button>
       <input type="range" min={0} max={last} value={at} onChange={(e) => onJump(Number(e.target.value))} />
       <span className="replay-clock">
-        T+{at} / {last}
+        T+{at} / {last}{m.mission === 'deception' ? ' h' : ''}
       </span>
       <select value={speed} onChange={(e) => onSpeed(Number(e.target.value))}>
         {REPLAY_SPEEDS.map((s, i) => (

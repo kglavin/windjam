@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { axialToOffset } from '../hex';
 import { parseCommand, knownIdsOf } from './commands';
 import { type Assessment, assess, emptyAssessment, scoreAssessment, trueStrength } from './deception';
-import { advance, issue, revealLines, scoreOf } from './mission';
+import { advance, dutyOf, issue, revealLines, scoreOf } from './mission';
 import { missionFromScript, runScript } from './script';
 import type { MissionState } from './types';
 
@@ -106,6 +106,32 @@ describe('the assessment and its score (deception, step 4)', () => {
     expect(w.status).toBe('won');
     expect(scoreOf(w).total).toBe(100);
   });
+
+  it("the deceiver's console: silent stops a net's chatter and orders for the hours, loud multiplies it, order sends one next hour", () => {
+    const fresh = start();
+    let s = fresh;
+    const red = (st: MissionState, line: string) => {
+      const p = parseCommand(line, 'red', knownIdsOf(st.world));
+      if (!p.ok) throw new Error(`${line}: ${p.error}`);
+      return issue(st, p.command, 'red');
+    };
+    const net = s.world.nets.find((n) => n.id === 'red-b1')!;
+    s = red(s, 'b1: silent 6');
+    expect(dutyOf(s, net, 5)).toBe(0);
+    expect(dutyOf(s, net, 6)).toBeCloseTo(dutyOf(fresh, net, 6));
+    s = red(s, 'b1: loud 12 1.5');
+    expect(dutyOf(s, net, 7)).toBeCloseTo(dutyOf(fresh, net, 7) * 1.5);
+    expect(s.profiles!['red-b1'].loud).toEqual({ until: 12, factor: 1.5 });
+    // The scenario's own profiles are untouched: the next mission starts clean.
+    expect(fresh.profiles!['red-b1'].silentUntil).toBeUndefined();
+    s = red(s, 'div: order');
+    expect(s.extraOrders).toEqual(['red-div']);
+    s = advance(s, 1);
+    expect(s.bursts.filter((b) => b.netId === 'red-div' && b.what === 'order' && b.minute === 0)).toHaveLength(1);
+    expect(s.extraOrders).toEqual([]);
+    expect(issue(s, { type: 'traffic', netId: 'red-b1', action: 'silent', hours: 6 }, 'blue').log.at(-1)!.text).toMatch(/apply to your own nets/);
+    expect(parseCommand('b1: loud x', 'red', knownIdsOf(s.world)).ok).toBe(false);
+  }, 20000);
 
   it('d01: the scripted analyst places the division and its brigades from the picture and wins on strength and objective', () => {
     const { state: s } = runScript(d01, 1234);

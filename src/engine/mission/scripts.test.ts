@@ -54,6 +54,6 @@ describe('scenarios', () => {
     }
     for (const s of SCENARIOS) expect(byScenario.get(s.id), s.id).toHaveLength(1);
     for (const id of byScenario.keys()) expect(SCENARIOS.some((s) => s.id === id), id).toBe(true);
-    expect(SCENARIOS.length).toBe(19);
+    expect(SCENARIOS.length).toBe(22);
   });
 });

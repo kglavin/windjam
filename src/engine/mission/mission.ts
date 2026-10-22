@@ -57,7 +57,7 @@ export interface MissionOptions {
   scenario?: string;
   playToEnd?: boolean; // no early win: a teaching replay should show every step
   computer?: Partial<Record<PlayerSide, Behaviour | true>>; // sides the engine plays; true picks the mission's default behaviour
-  deception?: { profiles: Record<string, Profile>; orbat: OrbatNode[]; sectors: Sector[]; objective?: { sector: string; tick: number } }; // the nets' traffic, the true tree, the sectors, the real operation
+  deception?: { profiles: Record<string, Profile>; orbat: OrbatNode[]; sectors: Sector[]; objective?: { sector: string; tick: number }; plan?: { moveHqKm?: number } }; // the nets' traffic, the true tree, the sectors, the real operation, the deceiver's plan
 }
 
 export function createMission(seed: number, mission: MissionKind = 'find', opts: MissionOptions = {}): MissionState {
@@ -104,6 +104,7 @@ export function createMission(seed: number, mission: MissionKind = 'find', opts:
     state.orbat = opts.deception.orbat;
     state.sectors = opts.deception.sectors;
     state.objective = opts.deception.objective;
+    state.plan = opts.deception.plan;
     state.assessment = emptyAssessment();
   }
   if (mission === 'deception') {
@@ -395,6 +396,23 @@ export function issue(state: MissionState, cmd: MissionCommand, as: PlayerSide =
     }
     s.emcon[cmd.netId] = cmd.duty;
     log(s, 'order', `${net.name}: chatter set to ${Math.round(cmd.duty * 100)}% of minutes${cmd.duty === 0 ? ' (silence: orders only)' : ''}.`);
+    return s;
+  }
+  if (cmd.type === 'traffic') {
+    const net = s.world.nets.find((n) => n.id === cmd.netId);
+    const profile = s.profiles?.[cmd.netId];
+    if (!net || net.side !== as || !profile) {
+      log(s, 'error', 'silent, loud and order apply to your own nets in the deception mission.');
+      return s;
+    }
+    if (cmd.action === 'order') {
+      s.extraOrders = [...(s.extraOrders ?? []), cmd.netId];
+      log(s, 'order', `${net.name}: an order goes down the net at T+${s.minute + 1}.`);
+    } else {
+      const until = s.minute + cmd.hours!;
+      s.profiles = { ...s.profiles, [cmd.netId]: cmd.action === 'silent' ? { ...profile, silentUntil: until } : { ...profile, loud: { until, factor: cmd.factor ?? 2 } } };
+      log(s, 'order', cmd.action === 'silent' ? `${net.name}: silent until T+${until}.` : `${net.name}: chatter times ${cmd.factor ?? 2} until T+${until}.`);
+    }
     return s;
   }
   if (cmd.type === 'waveform') {
