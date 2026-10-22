@@ -39,8 +39,10 @@ D6. **Association from signals.** Today a track is grouped by the true emitter, 
 collector's picture is built from what was intercepted: frequency, waveform, bearing and time. Captures on one
 frequency and waveform whose bearings from two or more sites cross within the fix's error are one emitter; the same
 frequency at an incompatible place is a second emitter on that net; a net is the set of emitters whose bursts answer
-each other on one frequency. Association can be wrong, and that is part of the game. The old perfect association
-stays for the other missions.
+each other on one frequency. Two sites' clusters are matched by the hours they were heard, not only by where their
+lines cross: two lines always cross somewhere. The hub is the emitter that sends the orders. A net's parent is the net
+whose acknowledging station sits at the hub's fix and whose orders come earlier in the day. Association can be wrong,
+and that is part of the game. The old perfect association stays for the other missions.
 
 D7. **The product is an order of battle the engine scores.** The intelligence cell submits its assessment through the
 console, as structured lines: a node (a net it believes exists, with a location, a level and a parent), a strength

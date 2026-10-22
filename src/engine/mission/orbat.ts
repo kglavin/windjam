@@ -57,7 +57,7 @@ export const DUTY: Record<Level, number[]> = {
 };
 // How many stations a net of each level would have: a notional net's transmitter plays the ones it lacks.
 const STATIONS: Record<Level, number> = { division: 5, brigade: 3, battalion: 3, company: 2, artillery: 3, recce: 3 };
-const ORDER_HOURS: Record<Level, number[]> = { division: [6, 18], brigade: [7, 19], battalion: [8, 20], company: [], artillery: [9, 21], recce: [5, 17] };
+const ORDER_HOURS: Record<Level, number[]> = { division: [6, 18], brigade: [7, 19], battalion: [8, 20], company: [9, 21], artillery: [9, 21], recce: [7, 19] };
 
 export interface ForceSpec {
   side: Side;

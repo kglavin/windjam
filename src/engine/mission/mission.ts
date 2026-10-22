@@ -21,6 +21,7 @@ import { PLAYBOOKS } from './playbooks';
 import { type Behaviour, computerSide, computerTurn, defaultBehaviour } from './computer';
 import { dutyAt, type OrbatNode, type Profile } from './orbat';
 import { trafficTick } from './traffic';
+import { type AssocPicture, associate, interceptsOf } from './associate';
 import {
   MISSION_RULES as R,
   enemyOf,
@@ -1545,6 +1546,53 @@ function deliver(s: MissionState, report: Report, links: LinkView[]): boolean {
 
 const pictureOf = (s: MissionState, side: PlayerSide): Track[] => (side === 'blue' ? s.tracks : s.redTracks);
 
+// --- Association from signals (deception) -------------------------------------------------------------------------
+
+// In the deception mission the collector's picture is what association makes of its intercept log, not the truth.
+const assocSide = (s: MissionState, side: PlayerSide): boolean => s.mission === 'deception' && side === 'blue';
+
+let assocCache: { key: string; picture: AssocPicture } | undefined;
+// The associated picture from the intercepts up to a tick (every intercept by default). Memoised on the event count.
+export function assocPictureOf(s: MissionState, side: PlayerSide, uptoTick = Infinity): AssocPicture {
+  const key = `${s.seed}|${side}|${s.events.length}|${uptoTick}`;
+  if (assocCache?.key === key) return assocCache.picture;
+  const sensors = new Set(s.world.units.filter((u) => u.side === side && canDf(u)).map((u) => u.id));
+  const events = uptoTick === Infinity ? s.events : s.events.filter((e) => e.minute < uptoTick);
+  const picture = associate(s.world.map, interceptsOf(events, sensors, (id) => unitById(s.world, id)?.pos));
+  assocCache = { key, picture };
+  return picture;
+}
+
+// The associated picture as tracks, for the map and the panel: ids A1, A2, ..., no true emitter behind them.
+export function assocTracks(s: MissionState, side: PlayerSide, uptoTick = Infinity): Track[] {
+  return assocPictureOf(s, side, uptoTick).emitters.map((e) => ({
+    id: e.id,
+    emitterId: '',
+    signature: e.signature,
+    bearings: e.lines.map((l) => ({ emitterId: '', signature: e.signature, sensorId: e.sites[e.lines.indexOf(l)], sensorPos: l.sensorPos, bearingDeg: l.bearingDeg, sigmaDeg: l.sigmaDeg, measurements: e.intercepts, samples: [], minute: e.lastTick })),
+    fix: e.fix,
+  }));
+}
+
+// The console's view of the associated picture: nets, their hubs and parents, and the tells.
+export function assocLines(s: MissionState, side: PlayerSide): string[] {
+  const p = assocPictureOf(s, side);
+  if (p.nets.length === 0) return ['No nets associated yet: task the sites and wait an hour.'];
+  const at = (id?: string) => {
+    const e = id ? p.emitters.find((x) => x.id === id) : undefined;
+    if (!e) return 'no hub heard';
+    if (!e.fix) return `${e.id}, one site only, no fix`;
+    const { col, row } = axialToOffset({ q: Math.round(e.fix.q), r: Math.round(e.fix.r) });
+    return `${e.id} near ${col},${row} (CEP ${e.fix.cepKm.toFixed(1)} km)`;
+  };
+  const lines = p.nets.map((n) => {
+    const hours = [...new Set(n.orderTicks.map((t) => t % 24))].sort((a, b) => a - b).map((h) => String(h).padStart(2, '0'));
+    return `${n.id} · ${n.signature} · hub ${at(n.hubId)} · ${n.emitterIds.length} station${n.emitterIds.length === 1 ? '' : 's'}${hours.length ? ` · orders at ${hours.join(', ')}` : ''}${n.parentNetId ? ` · under ${n.parentNetId}` : ''}${n.singleStation ? ' · every acknowledgement from the hub\'s own place' : ''}`;
+  });
+  const roots = p.nets.filter((n) => !n.parentNetId && n.hubId).length;
+  return [`${p.nets.length} nets, ${p.emitters.length} emitters, ${p.emitters.filter((e) => e.fix).length} fixed; ${roots} with no parent heard.`, ...lines];
+}
+
 // Add a delivered report to its side's picture.
 function merge(s: MissionState, report: Report) {
   const side = report.side;
@@ -1924,7 +1972,7 @@ export function statusLines(s: MissionState, side: PlayerSide = s.side): string[
   } else if (s.mission === 'deception') {
     const day = Math.floor(s.minute / 24) + 1;
     const hour = s.minute % 24;
-    lines.push(`T+${s.minute} h of ${s.limitMin}: day ${day}, ${String(hour).padStart(2, '0')}:00. Tracks: ${pictureOf(s, side).length}.`);
+    lines.push(`T+${s.minute} h of ${s.limitMin}: day ${day}, ${String(hour).padStart(2, '0')}:00. ${assocSide(s, side) ? `Nets associated: ${assocPictureOf(s, side).nets.length}, emitters ${assocPictureOf(s, side).emitters.length}` : `Tracks: ${pictureOf(s, side).length}`}.`);
     if (side === 'red') {
       const nets = s.world.nets.filter((n) => n.side === 'red');
       lines.push(`${nets.length} nets, ${s.world.units.filter((u) => u.side === 'red').length} radios; chatter this hour from ${nets.filter((n) => dutyOf(s, n) > 0).length} nets, silent ${nets.filter((n) => dutyOf(s, n) === 0).length}.`);
@@ -1987,6 +2035,7 @@ export function interceptLines(s: MissionState, side: PlayerSide = s.side, hour?
 }
 
 export function pictureLines(s: MissionState, side: PlayerSide = s.side): string[] {
+  if (assocSide(s, side)) return assocLines(s, side);
   const picture = pictureOf(s, side);
   if (picture.length === 0) return ['No tracks yet.'];
   return picture.map((t) => {
@@ -2090,7 +2139,7 @@ export function viewOf(s: MissionState, side: PlayerSide = s.side, umpire = fals
   if (s.replay) {
     const snap = s.history[Math.min(s.replay.minute, s.history.length - 1)];
     const world = worldAt(s, snap);
-    const picture = umpire ? [...snap.tracks, ...snap.redTracks] : side === 'blue' ? snap.tracks : snap.redTracks;
+    const picture = umpire ? [...snap.tracks, ...snap.redTracks] : assocSide(s, side) ? assocTracks(s, side, snap.minute) : side === 'blue' ? snap.tracks : snap.redTracks;
     const found = foundIn(s, picture);
     const dim = umpire ? undefined : new Set(s.world.units.filter((u) => u.side === enemy && !found.has(u.id)).map((u) => u.id));
     const umpireTrails = () => [...trails(s, snap.minute, 'blue'), ...trails(s, snap.minute, 'red')];
@@ -2121,7 +2170,7 @@ export function viewOf(s: MissionState, side: PlayerSide = s.side, umpire = fals
   return {
     truth: s.world,
     world: over ? s.world : visibleWorld(s, side),
-    tracks: pictureOf(s, side),
+    tracks: assocSide(s, side) ? assocTracks(s, side) : pictureOf(s, side),
     sectors: activeSectors(s, side),
     plans: flightPlans(s, side),
     dimUnitIds: over ? unfoundRedIds(s, side) : undefined,

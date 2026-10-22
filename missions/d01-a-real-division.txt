@@ -3,6 +3,7 @@
 # half, one tuned to the division's frequency, then all three on the upper half.
 # Inspector, Minute tab (an hour here): the daily curve and the orders at 06:00 and 18:00 going down the tree;
 # Fix tab: the nets fixed from three sites 30 km away. intercepts 6 lists the hour's bursts without their senders.
+# picture is what association made of the intercepts: nets N1.., emitters A1.., hubs, parents and the tells.
 scenario d01
 expect draw
 blue> s1: watch 40-48 24
