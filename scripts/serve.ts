@@ -102,9 +102,9 @@ function newGame(mission: MissionKind, seedArg: number | undefined, turnMin: num
   const seed = seedArg ?? sc?.seed ?? Math.floor(Math.random() * 1_000_000);
   const comp = computer.length ? Object.fromEntries(computer.map((side) => [side, true as const])) : undefined;
   const kind = sc?.mission ?? mission;
-  const baseHumans: PlayerSide[] = sc?.humans ?? (kind === 'duel' || kind === 'uav' || kind === 'hunt' || kind === 'iads' ? ['blue', 'red'] : kind === 'hide' ? ['red'] : ['blue']);
+  const baseHumans: PlayerSide[] = sc?.humans ?? (kind === 'duel' || kind === 'uav' || kind === 'hunt' || kind === 'iads' || kind === 'deception' ? ['blue', 'red'] : kind === 'hide' ? ['red'] : ['blue']);
   const humans = computer.length ? [...new Set([...baseHumans, ...computer])] : sc?.humans;
-  const state = sc ? createMission(seed, sc.mission, { forces: sc.forces, humans, emcon: sc.emcon, scenario: sc.id, playToEnd: sc.playToEnd, computer: comp }) : createMission(seed, mission, { humans, computer: comp });
+  const state = sc ? createMission(seed, sc.mission, { forces: sc.forces, humans, emcon: sc.emcon, scenario: sc.id, playToEnd: sc.playToEnd, computer: comp, deception: sc.deception }) : createMission(seed, mission, { humans, computer: comp });
   for (const side of ['blue', 'red'] as const) {
     const entry = c2?.[side];
     if (entry) enableC2(state, side, entry.agents);

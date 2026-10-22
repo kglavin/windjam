@@ -44,7 +44,7 @@ export function parseScript(text: string): Script {
       script.scenario = sc[1].toLowerCase();
       continue;
     }
-    const mission = /^mission\s+(find|hide|duel|uav|hunt|fox|iads)$/i.exec(line);
+    const mission = /^mission\s+(find|hide|duel|uav|hunt|fox|iads|deception)$/i.exec(line);
     if (mission) {
       script.mission = mission[1].toLowerCase() as MissionKind;
       continue;
@@ -88,7 +88,7 @@ export interface ScriptRun {
 export function missionFromScript(script: Script, defaultSeed: number, computer: PlayerSide[] = script.computer ?? []) {
   const sc = script.scenario ? scenarioById(script.scenario) : undefined;
   if (script.scenario && !sc) throw new Error(`unknown scenario ${script.scenario}`);
-  const opts: MissionOptions = sc ? { forces: sc.forces, humans: sc.humans, emcon: sc.emcon, scenario: sc.id, playToEnd: sc.playToEnd } : {};
+  const opts: MissionOptions = sc ? { forces: sc.forces, humans: sc.humans, emcon: sc.emcon, scenario: sc.id, playToEnd: sc.playToEnd, deception: sc.deception } : {};
   if (computer.length) {
     opts.computer = Object.fromEntries(computer.map((side) => [side, true as const]));
     // A computer side needs a console to be issued through.

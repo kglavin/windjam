@@ -1,0 +1,21 @@
+# Scenario d01, a real division. Red's division talks for three days east of the water, ramping toward an operation
+# and falling silent six hours before it (T+66). Blue's three sites listen east for a day at a time.
+# Inspector, Minute tab (an hour here): the daily curve and the orders at 06:00 and 18:00 going down the tree;
+# Fix tab: the nets fixed from three sites 45 km away.
+scenario d01
+expect draw
+blue> s1: df e 24
+blue> s2: df e 24
+blue> s3: df e 24
+wait 24
+blue> picture
+blue> s1: df e 24
+blue> s2: df e 24
+blue> s3: df e 24
+wait 24
+blue> picture
+blue> s1: df e 24
+blue> s2: df e 24
+blue> s3: df e 24
+wait 24
+blue> picture

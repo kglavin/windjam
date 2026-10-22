@@ -3,6 +3,7 @@
 import { type Forces, NETS, SQUAD_QUAD, UNIT_SPECS, type UnitSpec } from '../scenario';
 import type { Net, Side, UnitKind, Waveform } from '../units';
 import type { MissionKind, PlayerSide } from './types';
+import { type Force, generateForce } from './orbat';
 
 export interface Scenario {
   id: string;
@@ -15,6 +16,7 @@ export interface Scenario {
   humans?: PlayerSide[]; // consoles; absent: the mission's default
   emcon?: Record<string, number>; // chatter duty per net at the start
   playToEnd?: boolean; // no early win: every scripted step happens before the result is read
+  deception?: { profiles: Force['profiles']; orbat: Force['nodes'] }; // the deception mission's traffic and true tree
 }
 
 // The standard forces cut down to the units named (nets keep the members that remain).
@@ -78,6 +80,28 @@ const iadsForces = (decoy = false): Forces => ({
     net('red-fire', 'Red Fire Net', 'red', 'r-fc', ['r-fc', 'r-l1', 'r-l2', 'r-l3', 'r-l4'], 49),
   ],
 });
+
+// The deception mission's collector: an HQ and three intercept sites on the coast, 30 m masts, 20 km apart.
+const COLLECTOR: { units: UnitSpec[]; nets: Net[] } = {
+  units: [
+    unit('b-hq', 'Blue HQ', 'blue', 'hq', 6, 10),
+    unit('b-s1', 'Blue Site 1', 'blue', 'squad', 14, -8, { highGround: true, radio: { antennaHeightM: 30 } }),
+    unit('b-s2', 'Blue Site 2', 'blue', 'squad', 14, 10, { highGround: true, radio: { antennaHeightM: 30 } }),
+    unit('b-s3', 'Blue Site 3', 'blue', 'squad', 14, 28, { highGround: true, radio: { antennaHeightM: 30 } }),
+  ],
+  nets: [net('blue-cmd', 'Blue Command Net', 'blue', 'b-hq', ['b-hq', 'b-s1', 'b-s2', 'b-s3'], 60)],
+};
+const deceptionScenario = (id: string, title: string, blurb: string, watch: string, forces: Force[]): Scenario => ({
+  id,
+  title,
+  blurb,
+  watch,
+  mission: 'deception',
+  seed: 1234,
+  forces: { units: [...COLLECTOR.units, ...forces.flatMap((f) => f.units)], nets: [...COLLECTOR.nets, ...forces.flatMap((f) => f.nets)] },
+  deception: { profiles: Object.assign({}, ...forces.map((f) => f.profiles)), orbat: forces.flatMap((f) => f.nodes) },
+});
+const REAL_DIVISION = generateForce(1234, { side: 'red', prefix: 'r', name: 'Red', centre: { col: 44, row: 10 }, ramp: [0.7, 1, 1.4], silentFrom: 66, freqMHz: 40 });
 
 export const SCENARIOS: Scenario[] = [
   {
@@ -178,6 +202,7 @@ export const SCENARIOS: Scenario[] = [
   { id: 's15', playToEnd: true, title: 'Map the net', blurb: 'Red runs its engagement cycle; Blue listens and fixes the nodes.', watch: 'Minute tab: the reporting rhythm every 5 minutes, the fire control node sending most; Fix tab on each node.', mission: 'iads', seed: 1234, forces: iadsForces() },
   { id: 's16', playToEnd: true, title: 'Cut the reports', blurb: 'Blue jams the track-report net once the fire control node is fixed; Red raises radar power.', watch: 'Link tab: report links late then lost; Red\'s power order beside its effect; Minute tab: engagements missed.', mission: 'iads', seed: 1234, forces: iadsForces() },
   { id: 's17', playToEnd: true, title: 'Cut the orders', blurb: 'Blue jams the fire-order net; Red moves a launcher to high ground.', watch: 'Link tab: the path losses that decide which launcher the jammer reaches; the order verdict per launcher.', mission: 'iads', seed: 1234, forces: iadsForces() },
+  deceptionScenario('d01', 'A real division', 'A real division east of the water talks for three days, ramping toward an operation and falling silent six hours before it. Blue listens from three sites.', 'Minute tab by the hour: the daily curve, the orders at 6 and 18 going down the tree; Fix tab: 42 nets fixed from three sites; the silence from T+66.', [REAL_DIVISION]),
   { id: 's18', playToEnd: true, title: 'Decoy radar', blurb: 'A Red decoy emits the track net\'s signature 6 km from the real node; Blue fixes it first, then jams the net.', watch: 'Fix tab: the tightest 47 MHz track is the EW team transmitting a decoy; Link tab: a report leg under jamming.', mission: 'iads', seed: 1234, forces: iadsForces(true) },
 ];
 

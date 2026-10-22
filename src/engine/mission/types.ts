@@ -4,13 +4,15 @@ import type { JammerMode, Side, Unit, Waveform } from '../units';
 import type { OrderStatus } from '../timeliness';
 import type { World } from '../world';
 import type { ComputerSide } from './computer';
+import type { OrbatNode, Profile } from './orbat';
 
 export type PlayerSide = 'blue' | 'red';
 // duel: both sides human, hide-mission rules. uav: both sides human; Red flies a UAV that must report, Blue tracks it.
 // hunt: both sides human; each has an HQ and a UAV, and each UAV hunts the other by its reports.
 // fox: a hunter closes on a transmitter on foot. iads: Red runs an air-defence engagement cycle over its nets, Blue
 // denies it (docs/design-scenarios.md).
-export type MissionKind = 'find' | 'hide' | 'duel' | 'uav' | 'hunt' | 'fox' | 'iads';
+// deception: three days of a division's radio traffic, real and notional, against a few intercept sites (docs/design-deception.md).
+export type MissionKind = 'find' | 'hide' | 'duel' | 'uav' | 'hunt' | 'fox' | 'iads' | 'deception';
 
 // One leg of a drone sortie: fly to a point, then listen there (minutes 0 = transit only).
 export interface SortieLeg {
@@ -228,6 +230,9 @@ export interface MissionState {
   scenario?: string; // the scenario this mission was built from, if any
   playToEnd?: boolean; // scenarios: no early win; the result is read at the time limit
   computer?: Partial<Record<PlayerSide, ComputerSide>>; // sides the engine plays (docs/design-computer-player.md)
+  // Deception: the nets' traffic profiles and the true order of battle (for the reveal and the score).
+  profiles?: Record<string, Profile>;
+  orbat?: OrbatNode[];
   iads?: IadsState;
   actor?: PlayerSide; // transient: which side's console current log lines belong to
 }
@@ -302,6 +307,14 @@ export interface IadsState {
   engagements: Engagement[];
   nextLauncher: number;
 }
+
+// The deception mission ticks in hours.
+export const DECEPTION_RULES = {
+  limitTicks: 72, // three days
+  sweepsPerTick: 1500, // an hour of 2.3 s sweeps
+  hqTicksPerHex: 0.1, // an HQ packs up and moves at about 5 km/h
+  ticksPerHex: 0.05, // 10 km/h for the rest
+} as const;
 
 export const FOX_RULES = {
   limitMin: 60,

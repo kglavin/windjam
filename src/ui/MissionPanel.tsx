@@ -41,7 +41,9 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
   const over = m.status !== 'running';
   const fox = m.mission === 'fox';
   const iads = m.mission === 'iads';
-  const title = fox ? 'Fox hunt' : iads ? 'Air defence' : hunt ? 'UAV hunt' : uavMission ? 'Track the UAV' : duel ? 'Duel' : red ? 'Stay hidden' : 'Find the enemy';
+  const deception = m.mission === 'deception';
+  const tick = deception ? 'h' : 'min';
+  const title = deception ? 'Deception' : fox ? 'Fox hunt' : iads ? 'Air defence' : hunt ? 'UAV hunt' : uavMission ? 'Track the UAV' : duel ? 'Duel' : red ? 'Stay hidden' : 'Find the enemy';
   const result = duel
     ? m.status === 'ended'
       ? 'Mission ended for the debrief.'
@@ -107,7 +109,9 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
 
       <section>
         <h2>Objective</h2>
-        {fox ? (
+        {deception ? (
+          <p className="help">Three days, an hour a tick. Red runs a division's radio traffic, real and notional, with the ebb and flow of the day and a ramp toward an operation. Blue's intercept sites listen and take bearings; the intelligence task is to draw the order of battle.</p>
+        ) : fox ? (
           <p className="help">A hunter on foot against a transmitter. Listen, read the bearing, walk along it, listen again. Found when within 1 km.</p>
         ) : iads ? (
           <p className="help">Every 5 minutes each Red radar reports a track to the fire control node, which orders a launcher. An engagement counts when both legs arrive on time. Blue denies them by finding and jamming the links.</p>
@@ -141,7 +145,7 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
         <div className="row">
           <span className="k">Clock</span>
           <span className="v">
-            <b>T+{view.minute}</b> of {m.limitMin} min{m.replay && ' · replay'}
+            <b>T+{view.minute}</b> of {m.limitMin} {tick}{m.replay && ' · replay'}
           </span>
         </div>
         <div className="row">

@@ -1,7 +1,7 @@
 import { type Hex, hexDistance, hexKey, offsetToAxial } from './hex';
 import { type HexMap, generateMap, getTile, inBounds } from './map';
 import { TERRAIN, type TerrainType, canEnter } from './terrain';
-import { RADIO_PRESETS, type Net, type Side, type Unit, type UnitKind } from './units';
+import { RADIO_PRESETS, type Net, type Radio, type Side, type Unit, type UnitKind } from './units';
 import { type GridArea, type World, highestFreeHex, nearestFreeHex } from './world';
 import { linkBudget } from './budget';
 import { orderDelivery } from './timeliness';
@@ -18,6 +18,7 @@ export interface UnitSpec {
   parentId?: string; // drones: the unit flying them
   controlRangeKm?: number;
   drone?: { speedKmh: number; enduranceMin: number };
+  radio?: Partial<Radio>; // overrides the kind's preset
 }
 
 // Squad-launched quadcopter: hand-launched, about 40 km/h, half an hour aloft.
@@ -136,7 +137,7 @@ export function createScenario(seed: number, forces: Forces = STANDARD_FORCES): 
       ? highestFreeHex(map, occupied, target, openGround, Math.round(3 * SCALE))
       : nearestFreeHex(map, occupied, target, openGround, Math.round(6 * SCALE));
     occupied.add(hexKey(pos));
-    const unit: Unit = { id: spec.id, name: spec.name, side: spec.side, kind: spec.kind, pos, radio: { ...RADIO_PRESETS[spec.kind] } };
+    const unit: Unit = { id: spec.id, name: spec.name, side: spec.side, kind: spec.kind, pos, radio: { ...RADIO_PRESETS[spec.kind], ...spec.radio } };
     if (spec.kind === 'jammer') unit.jammer = { mode: 'off' };
     if (spec.parentId) {
       unit.parentId = spec.parentId;

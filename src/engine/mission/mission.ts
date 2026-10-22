@@ -19,6 +19,8 @@ import { TERRAIN, accessLabel, canEnter } from '../terrain';
 import { HELP, UNIT_ALIASES, aliasOf, knownIdsOf, netAliasOf, parseCommand } from './commands';
 import { PLAYBOOKS } from './playbooks';
 import { type Behaviour, computerSide, computerTurn, defaultBehaviour } from './computer';
+import { dutyAt, type OrbatNode, type Profile } from './orbat';
+import { trafficTick } from './traffic';
 import {
   MISSION_RULES as R,
   enemyOf,
@@ -42,6 +44,7 @@ import {
   type UavState,
   FOX_RULES as FOX,
   IADS_RULES as IADS,
+  DECEPTION_RULES as DEC,
 } from './types';
 
 // How a scenario builds its mission: its own forces, which sides are consoles, chatter settings, and its id.
@@ -52,6 +55,7 @@ export interface MissionOptions {
   scenario?: string;
   playToEnd?: boolean; // no early win: a teaching replay should show every step
   computer?: Partial<Record<PlayerSide, Behaviour | true>>; // sides the engine plays; true picks the mission's default behaviour
+  deception?: { profiles: Record<string, Profile>; orbat: OrbatNode[] }; // the nets' traffic and the true tree
 }
 
 export function createMission(seed: number, mission: MissionKind = 'find', opts: MissionOptions = {}): MissionState {
@@ -63,10 +67,10 @@ export function createMission(seed: number, mission: MissionKind = 'find', opts:
     world,
     mission,
     side,
-    humans: opts.humans ?? (mission === 'duel' || mission === 'uav' || mission === 'hunt' || mission === 'iads' ? ['blue', 'red'] : [side]),
+    humans: opts.humans ?? (mission === 'duel' || mission === 'uav' || mission === 'hunt' || mission === 'iads' || mission === 'deception' ? ['blue', 'red'] : [side]),
     seed,
     minute: 0,
-    limitMin: mission === 'hunt' ? H.limitMin : mission === 'fox' ? FOX.limitMin : mission === 'iads' ? IADS.limitMin : R.limitMin,
+    limitMin: mission === 'hunt' ? H.limitMin : mission === 'fox' ? FOX.limitMin : mission === 'iads' ? IADS.limitMin : mission === 'deception' ? DEC.limitTicks : R.limitMin,
     orders: {},
     held: [],
     tracks: [],
@@ -93,7 +97,15 @@ export function createMission(seed: number, mission: MissionKind = 'find', opts:
     }
   }
   if (opts.emcon) state.emcon = { ...opts.emcon };
-  if (mission === 'fox') {
+  if (opts.deception) {
+    state.profiles = opts.deception.profiles;
+    state.orbat = opts.deception.orbat;
+  }
+  if (mission === 'deception') {
+    log(state, 'info', `Mission: deception. Three days, an hour a tick. Red runs a division's radio traffic, some of it real and some a ruse; Blue listens from its sites and must say what is there.`, 'both');
+    log(state, 'info', 'Your sites take bearings (s1: df e 24 listens east for a day). Reports reach HQ over your net. Type help.', 'blue');
+    log(state, 'info', 'Your nets follow their traffic profiles; orders go down each net on the hour and are acknowledged. emcon <net> <percent> overrides a net\'s chatter; <unit>: move relocates a transmitter. Type help.', 'red');
+  } else if (mission === 'fox') {
     log(state, 'info', `Mission: fox hunt. Get a squad within ${FOX.foundKm} km of a Red transmitter within ${FOX.limitMin} minutes.`, 'both');
     log(state, 'info', 'The hunter keeps its own picture: df, read the bearing, move along it, df again. Type help.', 'blue');
   } else if (mission === 'iads') {
@@ -277,6 +289,7 @@ const canDf = (u: Unit) => u.kind === 'squad' || u.kind === 'drone';
 const canIntercept = (u: Unit) => u.kind === 'squad' || u.kind === 'relay';
 
 function minutesPerHex(s: MissionState, u: Unit): number {
+  if (s.mission === 'deception') return u.kind === 'hq' ? DEC.hqTicksPerHex : DEC.ticksPerHex;
   if (u.kind === 'hq') return R.hqMinutesPerHex;
   if (u.kind !== 'drone') return R.squadMinutesPerHex;
   return u.drone ? (s.world.map.hexSizeKm / u.drone.speedKmh) * 60 : R.droneMinutesPerHex;
@@ -881,9 +894,14 @@ export function chatterActive(seed: number, unitId: string, netId: string, minut
 // Mission 1 compatibility: Red chatter at the default duty.
 export const redActive = (seed: number, unitId: string, netId: string, minute: number) => chatterActive(seed, unitId, netId, minute, R.redDuty);
 
-export function dutyOf(s: MissionState, net: Net): number {
+export function dutyOf(s: MissionState, net: Net, at = s.minute): number {
+  const profile = s.profiles?.[net.id];
+  if (profile && s.emcon[net.id] === undefined) return dutyAt(profile, at);
   return s.emcon[net.id] ?? (net.side === 'red' ? R.redDuty : R.blueDuty);
 }
+
+// How many ES sweeps a tick holds: a minute of them, or an hour in the deception mission.
+const sweepsOf = (s: MissionState): number => (s.mission === 'deception' ? DEC.sweepsPerTick : R.sweepsPerMinute);
 
 // Smallest angle between two bearings.
 const angleDiff = (a: number, b: number) => Math.abs((((a - b) % 360) + 540) % 360) - 180;
@@ -934,8 +952,8 @@ export function emissionsAt(s: MissionState, u: Unit, m: number): { em: Emission
     const net = nets.find((n) => n.memberIds.includes(u.id) && n.freqMHz === em.freqMHz);
     if (!net) continue;
     const burst = s.bursts.find((b) => b.minute === m && b.unitId === u.id && b.netId === net.id);
-    if (burst) out.push({ em, signature: signatureOf(net), what: burst.what });
-    else if (chatterActive(s.seed, u.id, net.id, m, dutyOf(s, net))) out.push({ em, signature: signatureOf(net), what: 'chatter' });
+    if (burst) out.push({ em, signature: signatureOf(net), what: burst.what, sweeps: sweepsOf(s) });
+    else if (chatterActive(s.seed, u.id, net.id, m, dutyOf(s, net, m))) out.push({ em, signature: signatureOf(net), what: 'chatter', sweeps: sweepsOf(s) });
   }
   return out;
 }
@@ -970,6 +988,8 @@ function tick(s: MissionState): MissionState {
 
   // Air defence: the engagement cycle, on the links as they stand this minute.
   if (s.mission === 'iads') iadsCycle(s, m, links);
+  // Deception: this hour's orders and acknowledgements down every net.
+  if (s.mission === 'deception') trafficTick(s, m);
 
   // Mission 4: the UAV takes its next leg, and a report is forced if the interval has run out.
   for (const uav of uavStates(s)) {
@@ -1220,6 +1240,14 @@ function resolve(s: MissionState) {
   if (s.mission === 'find') {
     if (early && fixes >= R.fixesToWin) end(s, 'won');
     else if (s.minute >= s.limitMin) end(s, 'lost');
+    return;
+  }
+  if (s.mission === 'deception') {
+    // Scored on the assessment when there is one (docs/design-deception.md D7); until then the days simply run out.
+    if (s.minute >= s.limitMin) {
+      s.winner = 'draw';
+      end(s, 'draw');
+    }
     return;
   }
   if (s.mission === 'fox') {
@@ -1553,6 +1581,8 @@ function end(s: MissionState, status: 'won' | 'lost' | 'draw' | 'ended') {
           : `Mission ended at T+${s.minute} for the debrief: ${fixes} of ${R.fixesToWin} emitters fixed.`,
       'both',
     );
+  } else if (s.mission === 'deception') {
+    log(s, 'hq', status === 'ended' ? `Mission ended at T+${s.minute} h for the debrief. Blue has ${s.tracks.length} tracks on Red's nets.` : `Three days are up at T+${s.minute} h. Blue has ${s.tracks.length} tracks on Red's ${s.world.nets.filter((n) => n.side === 'red').length} nets.`, 'both');
   } else if (s.mission === 'fox') {
     const f = s.found;
     log(
@@ -1855,6 +1885,14 @@ export function statusLines(s: MissionState, side: PlayerSide = s.side): string[
         const w = net.waveform;
         lines.push(`net ${netAliasOf(net.id).padEnd(7)} ${net.name.padEnd(16)} ${net.freqMHz} MHz · ${w.kind === 'fixed' ? 'fixed' : w.kind === 'fh' ? `hopping ${w.hopsPerSec}/s` : `DSSS ${w.chipRateMcps} Mcps`} · chatter ${Math.round(dutyOf(s, net) * 100)}%`);
       }
+    }
+  } else if (s.mission === 'deception') {
+    const day = Math.floor(s.minute / 24) + 1;
+    const hour = s.minute % 24;
+    lines.push(`T+${s.minute} h of ${s.limitMin}: day ${day}, ${String(hour).padStart(2, '0')}:00. Tracks: ${pictureOf(s, side).length}.`);
+    if (side === 'red') {
+      const nets = s.world.nets.filter((n) => n.side === 'red');
+      lines.push(`${nets.length} nets, ${s.world.units.filter((u) => u.side === 'red').length} radios; chatter this hour from ${nets.filter((n) => dutyOf(s, n) > 0).length} nets, silent ${nets.filter((n) => dutyOf(s, n) === 0).length}.`);
     }
   } else if (s.mission === 'fox') {
     const f = s.found;
