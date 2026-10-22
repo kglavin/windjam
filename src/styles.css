@@ -833,6 +833,9 @@ select {
   font-size: inherit;
 }
 .track-row.clickable { cursor: pointer; }
+.orbat h3 { margin: 10px 0 4px; font-size: 12px; color: #9aa4b2; font-weight: 600; }
+.orbat-row { font-size: 12px; }
+.orbat-row .v { text-align: right; }
 .track-row.clickable:hover { background: #111a2e; }
 .script-bar {
   display: flex;

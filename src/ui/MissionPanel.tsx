@@ -4,6 +4,7 @@ import { HUNT_RULES as HR, MISSION_RULES as R, UAV_RULES as UR, type MissionStat
 import { axialToOffset } from '../engine/hex';
 import { type LinkView, unitById } from '../engine/world';
 import { SIDE_COLORS, dfColorOf, toCss } from './colors';
+import { OrbatPanel } from './OrbatPanel';
 
 export type Seat = PlayerSide | 'umpire';
 
@@ -288,6 +289,8 @@ export function MissionPanel({ mission: m, view, linkViews, timeline, seat, onSe
           <span><span className="sym sym-red" /> solid enemy unit: revealed</span>
         </div>
       </section>
+
+      {deception && side === 'blue' && <OrbatPanel mission={m} />}
 
       <section>
         <h2>Tracks</h2>

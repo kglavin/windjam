@@ -5,7 +5,7 @@
 # Fix tab: the nets fixed from three sites 30 km away. intercepts 6 lists the hour's bursts without their senders.
 # picture is what association made of the intercepts: nets N1.., emitters A1.., hubs, parents and the tells.
 scenario d01
-expect draw
+expect blue
 blue> s1: watch 40-48 24
 blue> s2: watch 40-48 24
 blue> s3: tune 40 24
@@ -18,8 +18,23 @@ blue> s2: watch 40-48 24
 blue> s3: watch 48-56 24
 wait 24
 blue> picture
+# The analyst reads the picture: the net with orders at 06 is the division; those at 07 under it are brigades.
+blue> assess net 40 division at 187,79
+blue> assess net 42.6 brigade at 194,96 under 40
+blue> assess net 45.2 brigade at 169,71 under 40
+blue> assess net 47.8 brigade at 181,66 under 40
+blue> assess net 48 artillery at 181,74 under 40
+blue> assess strength centre 100
+blue> assess strength south 8
+blue> assess objective centre at T+72
 blue> s1: sweep 24
 blue> s2: watch 40-48 24
 blue> s3: watch 48-56 24
-wait 24
+wait 23
 blue> picture
+blue> assess net 41 battalion at 180,87 under 42.6
+blue> assess net 43.6 battalion at 158,68 under 45.2
+blue> assess net 42.8 battalion at 177,76 under 45.2
+blue> assessment
+wait 1
+blue> assessment

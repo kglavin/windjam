@@ -4,7 +4,7 @@
 // Both run on the same engine: ground truth in `world`, one set of unit orders, a picture per side.
 
 import { type DetectOptions, type Emission, type Fix, bearingDeg, bearingSigmaDeg, emissions, fixFromBearings, gaussian, sensorLook } from '../detect';
-import { type Hex, axialToOffset, hexEquals, hexKey, hexLine } from '../hex';
+import { type Hex, axialToOffset, hexEquals, hexKey, hexLine, offsetToAxial } from '../hex';
 import { hexDistanceKm } from '../rf';
 import { createRng } from '../rng';
 import { type Forces, createScenario, refToHex } from '../scenario';
@@ -22,6 +22,7 @@ import { type Behaviour, computerSide, computerTurn, defaultBehaviour } from './
 import { dutyAt, type OrbatNode, type Profile } from './orbat';
 import { trafficTick } from './traffic';
 import { type AssocPicture, associate, interceptsOf } from './associate';
+import { type Score, type Sector, assess, assessmentLines, emptyAssessment, scoreAssessment, scoreLines } from './deception';
 import {
   MISSION_RULES as R,
   enemyOf,
@@ -56,7 +57,7 @@ export interface MissionOptions {
   scenario?: string;
   playToEnd?: boolean; // no early win: a teaching replay should show every step
   computer?: Partial<Record<PlayerSide, Behaviour | true>>; // sides the engine plays; true picks the mission's default behaviour
-  deception?: { profiles: Record<string, Profile>; orbat: OrbatNode[] }; // the nets' traffic and the true tree
+  deception?: { profiles: Record<string, Profile>; orbat: OrbatNode[]; sectors: Sector[]; objective?: { sector: string; tick: number } }; // the nets' traffic, the true tree, the sectors, the real operation
 }
 
 export function createMission(seed: number, mission: MissionKind = 'find', opts: MissionOptions = {}): MissionState {
@@ -101,6 +102,9 @@ export function createMission(seed: number, mission: MissionKind = 'find', opts:
   if (opts.deception) {
     state.profiles = opts.deception.profiles;
     state.orbat = opts.deception.orbat;
+    state.sectors = opts.deception.sectors;
+    state.objective = opts.deception.objective;
+    state.assessment = emptyAssessment();
   }
   if (mission === 'deception') {
     log(state, 'info', `Mission: deception. Three days, an hour a tick. Red runs a division's radio traffic, some of it real and some a ruse; Blue listens from its sites and must say what is there.`, 'both');
@@ -342,6 +346,28 @@ export function issue(state: MissionState, cmd: MissionCommand, as: PlayerSide =
   }
   if (cmd.type === 'intercepts') {
     for (const line of interceptLines(s, as, cmd.hour)) log(s, 'info', line);
+    return s;
+  }
+  if (cmd.type === 'assessment') {
+    for (const line of assessmentLines(s.assessment ?? emptyAssessment(), s.sectors ?? [])) log(s, 'info', line);
+    if (s.status !== 'running') for (const line of scoreLines(scoreOf(s))) log(s, 'info', line);
+    return s;
+  }
+  if (cmd.type === 'assess') {
+    if (s.mission !== 'deception' || as !== 'blue') {
+      log(s, 'error', 'Only the collector in the deception mission assesses.');
+      return s;
+    }
+    if (s.status !== 'running') {
+      log(s, 'error', 'The assessment closed with the mission: assessment shows its score.');
+      return s;
+    }
+    if ((cmd.what === 'strength' || cmd.what === 'objective') && !s.sectors?.some((x) => x.id === cmd.sector)) {
+      log(s, 'error', `Unknown sector "${cmd.sector}". Sectors: ${(s.sectors ?? []).map((x) => `${x.id} (rows ${x.rowLo}-${x.rowHi - 1})`).join(', ')}`);
+      return s;
+    }
+    s.assessment = assess(s.assessment ?? emptyAssessment(), cmd.what === 'net' ? { what: 'net', net: { freqMHz: cmd.freqMHz, level: cmd.level, col: cmd.col, row: cmd.row, underMHz: cmd.underMHz } } : cmd.what === 'strength' ? { what: 'strength', sector: cmd.sector, radios: cmd.radios } : { what: 'objective', sector: cmd.sector, at: cmd.at }, s.minute);
+    log(s, 'order', cmd.what === 'net' ? `Assessed: ${cmd.freqMHz} MHz ${cmd.level} at ${cmd.col},${cmd.row}${cmd.underMHz !== undefined ? ` under ${cmd.underMHz}` : ''}.` : cmd.what === 'strength' ? `Assessed: ${cmd.radios} radios in ${cmd.sector}.` : `Assessed: the objective is ${cmd.sector} at T+${cmd.at}.`);
     return s;
   }
   if (cmd.type === 'reveal' || cmd.type === 'replay') {
@@ -1275,10 +1301,11 @@ function resolve(s: MissionState) {
     return;
   }
   if (s.mission === 'deception') {
-    // Scored on the assessment when there is one (docs/design-deception.md D7); until then the days simply run out.
+    // Scored on the assessment at the end (docs/design-deception.md D7): the collector wins at 50.
     if (s.minute >= s.limitMin) {
-      s.winner = 'draw';
-      end(s, 'draw');
+      const blue = scoreOf(s).total >= SCORE_WIN;
+      s.winner = blue ? 'blue' : 'red';
+      end(s, blue ? 'won' : 'lost');
     }
     return;
   }
@@ -1546,6 +1573,44 @@ function deliver(s: MissionState, report: Report, links: LinkView[]): boolean {
 
 const pictureOf = (s: MissionState, side: PlayerSide): Track[] => (side === 'blue' ? s.tracks : s.redTracks);
 
+// --- The assessment and the reveal (deception) --------------------------------------------------------------------
+
+const SCORE_WIN = 50;
+
+export function scoreOf(s: MissionState): Score {
+  return scoreAssessment(s.assessment ?? emptyAssessment(), { map: s.world.map, orbat: s.orbat ?? [], nets: s.world.nets, units: s.world.units, sectors: s.sectors ?? [], objective: s.objective, limit: s.limitMin });
+}
+
+// The true tree beside what was assessed of each node, then the ruse, the strength and the objective, then the score.
+function revealDeception(s: MissionState): string[] {
+  const lines: string[] = [];
+  const sc = scoreOf(s);
+  const orbat = s.orbat ?? [];
+  const walk = (parent: string | undefined, depth: number) => {
+    for (const node of orbat.filter((n) => n.parent === parent)) {
+      const net = s.world.nets.find((n) => n.id === node.netId);
+      const unit = unitById(s.world, node.id);
+      const { col, row } = unit ? axialToOffset(unit.pos) : { col: node.col, row: node.row };
+      const ns = sc.nodes.find((n) => net && Math.abs(n.freqMHz - net.freqMHz) < 0.05);
+      const verdict = node.notional
+        ? sc.falseNodes.some((f) => net && Math.abs(f.freqMHz - net.freqMHz) < 0.05)
+          ? 'a ruse, and assessed as real'
+          : 'a ruse, not assessed'
+        : !ns?.assessed
+          ? 'not assessed'
+          : `assessed ${ns.assessed.level} at ${ns.assessed.col},${ns.assessed.row}: ${ns.placed ? 'placed' : `${hexDistanceKm(s.world.map, offsetToAxialHex(ns.assessed), unit?.pos ?? offsetToAxialHex(node)).toFixed(1)} km off`}, level ${ns.levelRight ? 'right' : 'wrong'}, parent ${ns.parentRight ? 'right' : 'wrong'}${ns.early ? ', early' : ''}`;
+      lines.push(`Reveal: ${'  '.repeat(depth)}${node.name} (${net?.freqMHz ?? '?'} MHz, ${node.level}) at ${col},${row}: ${verdict}.`);
+      if (depth < 8) walk(node.id, depth + 1);
+    }
+  };
+  walk(undefined, 0);
+  for (const f of sc.falseNodes) if (!orbat.some((n) => n.notional && Math.abs((s.world.nets.find((x) => x.id === n.netId)?.freqMHz ?? -1) - f.freqMHz) < 0.05)) lines.push(`Reveal: assessed ${f.freqMHz} MHz ${f.level} at ${f.col},${f.row}: no such net.`);
+  for (const line of scoreLines(sc).slice(1)) lines.push(`Reveal: ${line}`);
+  lines.push(`Reveal: ${scoreLines(sc)[0]}`);
+  return lines;
+}
+const offsetToAxialHex = (a: { col: number; row: number }): Hex => offsetToAxial(a.col, a.row);
+
 // --- Association from signals (deception) -------------------------------------------------------------------------
 
 // In the deception mission the collector's picture is what association makes of its intercept log, not the truth.
@@ -1663,7 +1728,8 @@ function end(s: MissionState, status: 'won' | 'lost' | 'draw' | 'ended') {
       'both',
     );
   } else if (s.mission === 'deception') {
-    log(s, 'hq', status === 'ended' ? `Mission ended at T+${s.minute} h for the debrief. Blue has ${s.tracks.length} tracks on Red's nets.` : `Three days are up at T+${s.minute} h. Blue has ${s.tracks.length} tracks on Red's ${s.world.nets.filter((n) => n.side === 'red').length} nets.`, 'both');
+    const sc = scoreOf(s);
+    log(s, 'hq', `${status === 'ended' ? `Mission ended at T+${s.minute} h for the debrief` : `Three days are up at T+${s.minute} h`}. ${scoreLines(sc)[0]} ${status === 'ended' ? '' : sc.total >= SCORE_WIN ? 'The collector wins.' : 'The deceiver wins.'}`.trim(), 'both');
   } else if (s.mission === 'fox') {
     const f = s.found;
     log(
@@ -1757,6 +1823,7 @@ function end(s: MissionState, status: 'won' | 'lost' | 'draw' | 'ended') {
 // The truth against what each side made of it.
 export function revealLines(s: MissionState): string[] {
   const lines: string[] = [];
+  if (s.mission === 'deception') return revealDeception(s);
   const describe = (picture: Track[], e: Unit) => {
     const t = picture.find((x) => x.emitterId === e.id);
     return !t ? 'never heard' : !t.fix ? `${t.id}, ${t.bearings.length} bearing, no fix` : `${t.id}, fix ${t.fix.missKm.toFixed(2)} km off (CEP ${t.fix.cepKm.toFixed(2)} km)`;

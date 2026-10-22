@@ -1,3 +1,5 @@
+import { LEVELS } from './deception';
+import type { Level } from './orbat';
 import { type Hex, offsetToAxial } from '../hex';
 import type { JammerMode, Waveform } from '../units';
 
@@ -90,6 +92,7 @@ export const HELP: Record<PlayerSide, string[]> = {
   blue: [
     '<unit>: df <direction> <minutes>   bearing sweep over a 90° sector; direction n ne e se s sw w nw, or degrees 0-359',
     '<site>: watch 40-48 24  ·  <site>: tune 42.4 24  ·  <site>: sweep 24   deception: intercept a band (8 MHz at most), one frequency, or sweep everything, for hours; intercepts [hour] lists what was heard',
+    'assess net 42.6 brigade at 191,95 [under 40]  ·  assess strength centre 100  ·  assess objective centre at T+72  ·  assessment   deception: say what is there (division brigade battalion company artillery recce), radios per sector, where and when the blow falls; scored at T+72',
     'uav: sortie <col>,<row> <dir> <min>; ...   silent sortie: fly each leg, DF there, then home; all legs reported on return',
     "ew: jam <net> [mode]  ·  ew: jam off   jam an enemy net: spot (default), barrage, partial, pulse, follower or sync (the jammer itself is loud)",
     'uav: launch  ·  uav: route <col>,<row>; ...  ·  uav: hold  ·  uav: resume  ·  uav: burst   mission 5: fly, re-route, pause, report now',
@@ -136,6 +139,32 @@ export function parseCommand(input: string, side: PlayerSide = 'blue', known?: K
   if (first === 'intercepts') {
     if (rest[0] !== undefined && !/^\d+$/.test(rest[0])) return { ok: false, error: 'intercepts takes an hour, e.g. intercepts 6, or nothing for the last hour' };
     return { ok: true, command: { type: 'intercepts', hour: rest[0] !== undefined ? Number(rest[0]) : undefined } };
+  }
+  if (first === 'assessment') return { ok: true, command: { type: 'assessment' } };
+  if (first === 'assess') {
+    const usage = 'assess net <MHz> <level> at <col>,<row> [under <MHz>] · assess strength <sector> <radios> · assess objective <sector> at T+<hour>';
+    if (rest[0] === 'net') {
+      const freqMHz = Number(rest[1]);
+      const level = rest[2] as Level;
+      if (!(freqMHz > 0) || !LEVELS.includes(level) || rest[3] !== 'at') return { ok: false, error: `${usage}; levels: ${LEVELS.join(' ')}` };
+      const underAt = rest.indexOf('under');
+      const at = /^(\d+),(\d+)$/.exec(rest.slice(4, underAt < 0 ? undefined : underAt).join(''));
+      if (!at) return { ok: false, error: 'assess net needs the hub position as col,row, e.g. assess net 40 division at 185,80' };
+      const underMHz = underAt < 0 ? undefined : Number(rest[underAt + 1]);
+      if (underAt >= 0 && !(underMHz! > 0)) return { ok: false, error: 'under needs the parent net\'s frequency, e.g. under 40' };
+      return { ok: true, command: { type: 'assess', what: 'net', freqMHz, level, col: Number(at[1]), row: Number(at[2]), underMHz } };
+    }
+    if (rest[0] === 'strength') {
+      const radios = Number(rest[2]);
+      if (!rest[1] || !(radios >= 0) || !Number.isInteger(radios)) return { ok: false, error: 'assess strength <sector> <radios>, e.g. assess strength centre 100' };
+      return { ok: true, command: { type: 'assess', what: 'strength', sector: rest[1], radios } };
+    }
+    if (rest[0] === 'objective') {
+      const hour = /^t?\+?(\d+)$/.exec(rest[3] ?? '');
+      if (!rest[1] || rest[2] !== 'at' || !hour) return { ok: false, error: 'assess objective <sector> at T+<hour>, e.g. assess objective centre at T+72' };
+      return { ok: true, command: { type: 'assess', what: 'objective', sector: rest[1], at: Number(hour[1]) } };
+    }
+    return { ok: false, error: usage };
   }
   if (first === 'reveal') return { ok: true, command: { type: 'reveal' } };
   if (first === 'next' || first === 'step' || first === 'back' || first === 'exit') return { ok: true, command: { type: 'replay', move: first } };

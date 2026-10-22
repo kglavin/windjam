@@ -102,7 +102,16 @@ assess objective north at T+66                 where the blow falls, and when
 assessment                                     show the current assessment and, after the game, its score
 ```
 
+Sectors are bands of map rows the collector looks east across: north (rows 0-59), centre (60-99), south (100 and
+beyond). Levels are division, brigade, battalion, company, artillery and recce. Positions are map grid columns and
+rows, as the picture prints them.
+
 Scoring against the truth is in `deception.ts`, pure, and the reveal shows the true tree beside the assessed one.
+A real net earns 0.5 for a hub placed within 3 km, 0.25 for the level and 0.25 for the parent, times 1.2 when the
+line was given 12 hours or more before the end; an assessed net that is a ruse or nothing adds to the denominator.
+Strength per sector counts in full within a factor of 1.5 of the real radios, half within 2.25. The objective is 50
+for the sector and 50 for the hour within 6. Total: nodes 60 percent, strength 20, objective 20; the collector wins
+at 50 and the deceiver's score is 100 minus it. `assessment` after the end prints the score.
 
 ## 6. Engine changes
 

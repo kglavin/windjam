@@ -4,7 +4,8 @@ import type { JammerMode, Side, Unit, Waveform } from '../units';
 import type { OrderStatus } from '../timeliness';
 import type { World } from '../world';
 import type { ComputerSide } from './computer';
-import type { OrbatNode, Profile } from './orbat';
+import type { Level, OrbatNode, Profile } from './orbat';
+import type { Assessment, Sector } from './deception';
 
 export type PlayerSide = 'blue' | 'red';
 // duel: both sides human, hide-mission rules. uav: both sides human; Red flies a UAV that must report, Blue tracks it.
@@ -27,6 +28,11 @@ export type MissionCommand =
   // Deception: an intercept site watches a band, tunes one frequency, or sweeps the whole band, for `minutes` ticks (hours).
   | { type: 'watch'; unitId: string; mode: 'band' | 'freq' | 'sweep'; loMHz: number; hiMHz: number; minutes: number }
   | { type: 'intercepts'; hour?: number } // the intercept log for an hour (the last by default)
+  // Deception: the collector's assessment (docs/design-deception.md section 5), the latest line per net, sector or objective stands.
+  | { type: 'assess'; what: 'net'; freqMHz: number; level: Level; col: number; row: number; underMHz?: number }
+  | { type: 'assess'; what: 'strength'; sector: string; radios: number }
+  | { type: 'assess'; what: 'objective'; sector: string; at: number }
+  | { type: 'assessment' } // show the assessment and, after the game, its score
   | { type: 'move'; unitId: string; to: Hex }
   | { type: 'sortie'; unitId: string; legs: SortieLeg[] } // drone: fly the plan silent, DF on each leg, hand everything over on return
   | { type: 'stop'; unitId: string }
@@ -237,6 +243,9 @@ export interface MissionState {
   // Deception: the nets' traffic profiles and the true order of battle (for the reveal and the score).
   profiles?: Record<string, Profile>;
   orbat?: OrbatNode[];
+  sectors?: Sector[];
+  objective?: { sector: string; tick: number }; // the real operation: where and when
+  assessment?: Assessment; // Blue's, scored at the end
   iads?: IadsState;
   actor?: PlayerSide; // transient: which side's console current log lines belong to
 }

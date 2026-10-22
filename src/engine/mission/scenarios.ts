@@ -1,5 +1,6 @@
 // Scenario definitions (docs/design-scenarios.md): forces, rules, seed, consoles and chatter. A scenario is played
 // by the script in missions/ that names it with a `scenario <id>` directive.
+import type { Sector } from './deception';
 import { type Forces, NETS, SQUAD_QUAD, UNIT_SPECS, type UnitSpec } from '../scenario';
 import type { Net, Side, UnitKind, Waveform } from '../units';
 import type { MissionKind, PlayerSide } from './types';
@@ -16,7 +17,7 @@ export interface Scenario {
   humans?: PlayerSide[]; // consoles; absent: the mission's default
   emcon?: Record<string, number>; // chatter duty per net at the start
   playToEnd?: boolean; // no early win: every scripted step happens before the result is read
-  deception?: { profiles: Force['profiles']; orbat: Force['nodes'] }; // the deception mission's traffic and true tree
+  deception?: { profiles: Force['profiles']; orbat: Force['nodes']; sectors: Sector[]; objective?: { sector: string; tick: number } }; // the deception mission's traffic, true tree, sectors and real operation
 }
 
 // The standard forces cut down to the units named (nets keep the members that remain).
@@ -91,7 +92,13 @@ const COLLECTOR: { units: UnitSpec[]; nets: Net[] } = {
   ],
   nets: [net('blue-cmd', 'Blue Command Net', 'blue', 'b-hq', ['b-hq', 'b-s1', 'b-s2', 'b-s3'], 60)],
 };
-const deceptionScenario = (id: string, title: string, blurb: string, watch: string, forces: Force[]): Scenario => ({
+// The collector looks east across three sectors, bands of map rows: the sites sit at rows 44, 80 and 116.
+export const SECTORS: Sector[] = [
+  { id: 'north', rowLo: 0, rowHi: 60 },
+  { id: 'centre', rowLo: 60, rowHi: 100 },
+  { id: 'south', rowLo: 100, rowHi: 1000 },
+];
+const deceptionScenario = (id: string, title: string, blurb: string, watch: string, forces: Force[], objective?: { sector: string; tick: number }): Scenario => ({
   id,
   title,
   blurb,
@@ -99,7 +106,7 @@ const deceptionScenario = (id: string, title: string, blurb: string, watch: stri
   mission: 'deception',
   seed: 1234,
   forces: { units: [...COLLECTOR.units, ...forces.flatMap((f) => f.units)], nets: [...COLLECTOR.nets, ...forces.flatMap((f) => f.nets)] },
-  deception: { profiles: Object.assign({}, ...forces.map((f) => f.profiles)), orbat: forces.flatMap((f) => f.nodes) },
+  deception: { profiles: Object.assign({}, ...forces.map((f) => f.profiles)), orbat: forces.flatMap((f) => f.nodes), sectors: SECTORS, objective },
 });
 const REAL_DIVISION = generateForce(1234, { side: 'red', prefix: 'r', name: 'Red', centre: { col: 44, row: 10 }, ramp: [0.7, 1, 1.4], silentFrom: 66, freqMHz: 40 });
 
@@ -202,7 +209,7 @@ export const SCENARIOS: Scenario[] = [
   { id: 's15', playToEnd: true, title: 'Map the net', blurb: 'Red runs its engagement cycle; Blue listens and fixes the nodes.', watch: 'Minute tab: the reporting rhythm every 5 minutes, the fire control node sending most; Fix tab on each node.', mission: 'iads', seed: 1234, forces: iadsForces() },
   { id: 's16', playToEnd: true, title: 'Cut the reports', blurb: 'Blue jams the track-report net once the fire control node is fixed; Red raises radar power.', watch: 'Link tab: report links late then lost; Red\'s power order beside its effect; Minute tab: engagements missed.', mission: 'iads', seed: 1234, forces: iadsForces() },
   { id: 's17', playToEnd: true, title: 'Cut the orders', blurb: 'Blue jams the fire-order net; Red moves a launcher to high ground.', watch: 'Link tab: the path losses that decide which launcher the jammer reaches; the order verdict per launcher.', mission: 'iads', seed: 1234, forces: iadsForces() },
-  deceptionScenario('d01', 'A real division', 'A real division east of the water talks for three days, ramping toward an operation and falling silent six hours before it. Blue listens from three sites.', 'Minute tab by the hour: the daily curve, the orders at 6 and 18 going down the tree; Fix tab: 42 nets fixed from three sites; the silence from T+66.', [REAL_DIVISION]),
+  deceptionScenario('d01', 'A real division', 'A real division east of the water talks for three days, ramping toward an operation and falling silent six hours before it. Blue listens from three sites.', 'Minute tab by the hour: the daily curve, the orders at 6 and 18 going down the tree; Fix tab: 42 nets fixed from three sites; the silence from T+66.', [REAL_DIVISION], { sector: 'centre', tick: 72 }),
   { id: 's18', playToEnd: true, title: 'Decoy radar', blurb: 'A Red decoy emits the track net\'s signature 6 km from the real node; Blue fixes it first, then jams the net.', watch: 'Fix tab: the tightest 47 MHz track is the EW team transmitting a decoy; Link tab: a report leg under jamming.', mission: 'iads', seed: 1234, forces: iadsForces(true) },
 ];
 
